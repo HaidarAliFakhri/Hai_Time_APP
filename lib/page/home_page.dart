@@ -1,0 +1,267 @@
+import 'package:flutter/material.dart';
+
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFE9F3FF),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text(
+              "Selamat siang 👋",
+              style: TextStyle(color: Colors.black54, fontSize: 16),
+            ),
+            Text(
+              "Haidar",
+              style: TextStyle(
+                color: Colors.black87,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person, color: Colors.black54),
+            onPressed: () {
+              Navigator.pushNamed(context, '/profile');
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings, color: Colors.black54),
+            onPressed: () {
+              Navigator.pushNamed(context, '/settings');
+            },
+          ),
+        ],
+      ),
+
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            // Card Cuaca Utama
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF5FA4F8), Color(0xFF0079FF)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Jakarta, Indonesia",
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    "28°C  Cerah ☀️",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: const [
+                      Icon(Icons.water_drop, color: Colors.white),
+                      SizedBox(width: 6),
+                      Text("65%", style: TextStyle(color: Colors.white)),
+                      SizedBox(width: 20),
+                      Icon(Icons.air, color: Colors.white),
+                      SizedBox(width: 6),
+                      Text("15 km/h", style: TextStyle(color: Colors.white)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.blue,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/cuaca');
+                      },
+                      child: const Text("Detail →"),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Card Jadwal Sholat
+            _buildCard(
+              title: "Jadwal Sholat Hari Ini",
+              trailing: TextButton(
+                onPressed: () {},
+                child: const Text("Lihat semua"),
+              ),
+              child: Column(
+                children: const [
+                  _PrayerRow(
+                    icon: Icons.wb_twighlight,
+                    name: "Subuh",
+                    time: "04:45",
+                  ),
+                  _PrayerRow(icon: Icons.sunny, name: "Dzuhur", time: "12:05"),
+                  _PrayerRow(
+                    icon: Icons.wb_sunny_outlined,
+                    name: "Ashar",
+                    time: "15:20",
+                  ),
+                  SizedBox(height: 10),
+                  Text("Waktu Ashar dalam 2 jam 15 menit"),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Cuaca sore mendung
+            _buildCard(
+              color: const Color(0xFFFFF6E5),
+              child: const ListTile(
+                leading: Icon(Icons.cloud, color: Colors.orange),
+                title: Text("Cuaca sore mendung"),
+                subtitle: Text(
+                  "Pertimbangkan berangkat lebih awal untuk kegiatan sore ini.",
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Kegiatan Anda
+            _buildCard(
+              title: "Kegiatan Anda",
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text("1 Kegiatan"),
+              ),
+              child: const ListTile(
+                leading: Icon(Icons.event, color: Colors.blue),
+                title: Text("Nonton Bioskop"),
+                subtitle: Text(
+                  "CGV Grand Indonesia\n2025-10-28 • 17:00 • 26°C",
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.blue,
+        onPressed: () {},
+        child: const Icon(Icons.add),
+      ),
+
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: Colors.blue,
+        unselectedItemColor: Colors.blueAccent.withOpacity(0.6),
+        currentIndex: 0,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Beranda"),
+          BottomNavigationBarItem(icon: Icon(Icons.schedule), label: "Jadwal"),
+          BottomNavigationBarItem(icon: Icon(Icons.cloud), label: "Cuaca"),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCard({
+    String? title,
+    Widget? trailing,
+    required Widget child,
+    Color color = Colors.white,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (title != null)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                if (trailing != null) trailing,
+              ],
+            ),
+          const SizedBox(height: 8),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _PrayerRow extends StatelessWidget {
+  final IconData icon;
+  final String name;
+  final String time;
+
+  const _PrayerRow({
+    required this.icon,
+    required this.name,
+    required this.time,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: Colors.blue),
+              const SizedBox(width: 8),
+              Text(name),
+            ],
+          ),
+          Text(time, style: const TextStyle(fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+}

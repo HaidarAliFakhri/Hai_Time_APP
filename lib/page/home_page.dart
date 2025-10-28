@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:hai_time_app/page/jadwal_page.dart';
+import 'package:hai_time_app/screen/cuaca.dart';
+import 'package:hai_time_app/screen/profile.dart';
+import 'package:hai_time_app/screen/setting.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textColor = theme.brightness == Brightness.dark ? Colors.white : Colors.black;
+
     return Scaffold(
       backgroundColor: const Color(0xFFE9F3FF),
       appBar: AppBar(
@@ -31,12 +38,24 @@ class HomePage extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.person, color: Colors.black54),
             onPressed: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ProfilePage(),
+                            ),
+                          );
               Navigator.pushNamed(context, '/profile');
             },
           ),
           IconButton(
             icon: const Icon(Icons.settings, color: Colors.black54),
             onPressed: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SettingPage(),
+                            ),
+                          );
               Navigator.pushNamed(context, '/settings');
             },
           ),
@@ -99,6 +118,12 @@ class HomePage extends StatelessWidget {
                         ),
                       ),
                       onPressed: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const Cuaca(),
+                            ),
+                          );
                         Navigator.pushNamed(context, '/cuaca');
                       },
                       child: const Text("Detail →"),
@@ -113,7 +138,15 @@ class HomePage extends StatelessWidget {
             _buildCard(
               title: "Jadwal Sholat Hari Ini",
               trailing: TextButton(
-                onPressed: () {},
+                onPressed: () {
+                  
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const JadwalPage(),
+                            ),
+                          );
+                },
                 child: const Text("Lihat semua"),
               ),
               child: Column(

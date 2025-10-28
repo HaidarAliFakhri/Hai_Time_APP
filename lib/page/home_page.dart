@@ -1,33 +1,60 @@
 import 'package:flutter/material.dart';
-import 'package:hai_time_app/page/jadwal_page.dart';
-import 'package:hai_time_app/screen/cuaca.dart';
 import 'package:hai_time_app/screen/profile.dart';
 import 'package:hai_time_app/screen/setting.dart';
+import 'package:hai_time_app/view/cuaca.dart';
+import 'package:hai_time_app/view/jadwal_page.dart';
+import 'package:hai_time_app/view/kegiatan_page.dart';
+import 'package:hai_time_app/view/tambah_kegiatan.dart';
 
-class HomePage extends StatelessWidget {
+import '../db/db_kegiatan.dart';
+import '../model/kegiatan.dart';
+
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  List<Kegiatan> _listKegiatan = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadKegiatan();
+  }
+
+  Future<void> _loadKegiatan() async {
+    final data = await DBKegiatan().getKegiatanList();
+    if (mounted) {
+      setState(() {
+        _listKegiatan = data;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final textColor = theme.brightness == Brightness.dark ? Colors.white : Colors.black;
+    final bool dark = isDarkMode.value;
+    final Color textColor = dark ? Colors.white : Colors.black87;
+    final Color bgColor = dark
+        ? const Color(0xFF121212)
+        : const Color(0xFFF2F6FC);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFE9F3FF),
+      backgroundColor: bgColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Text(
-              "Selamat siang 👋",
-              style: TextStyle(color: Colors.black54, fontSize: 16),
-            ),
+          children: [
+            Text("Selamat siang 👋", style: TextStyle(color: textColor)),
             Text(
               "Haidar",
               style: TextStyle(
-                color: Colors.black87,
+                color: textColor,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
@@ -38,24 +65,20 @@ class HomePage extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.person, color: Colors.black54),
             onPressed: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const ProfilePage(),
-                            ),
-                          );
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const ProfilePage()),
+              );
               Navigator.pushNamed(context, '/profile');
             },
           ),
           IconButton(
             icon: const Icon(Icons.settings, color: Colors.black54),
             onPressed: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const SettingPage(),
-                            ),
-                          );
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingPage()),
+              );
               Navigator.pushNamed(context, '/settings');
             },
           ),
@@ -118,12 +141,12 @@ class HomePage extends StatelessWidget {
                         ),
                       ),
                       onPressed: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const Cuaca(),
-                            ),
-                          );
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const Cuaca(),
+                          ),
+                        );
                         Navigator.pushNamed(context, '/cuaca');
                       },
                       child: const Text("Detail →"),
@@ -139,13 +162,10 @@ class HomePage extends StatelessWidget {
               title: "Jadwal Sholat Hari Ini",
               trailing: TextButton(
                 onPressed: () {
-                  
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const JadwalPage(),
-                            ),
-                          );
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => const JadwalPage()),
+                  );
                 },
                 child: const Text("Lihat semua"),
               ),
@@ -182,7 +202,7 @@ class HomePage extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // Kegiatan Anda
+            // Kegiatan Anda (DIUBAH jadi dinamis)
             _buildCard(
               title: "Kegiatan Anda",
               trailing: Container(
@@ -191,23 +211,62 @@ class HomePage extends StatelessWidget {
                   color: Colors.blue.shade100,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text("1 Kegiatan"),
+                child: Text("${_listKegiatan.length} Kegiatan"),
               ),
-              child: const ListTile(
-                leading: Icon(Icons.event, color: Colors.blue),
-                title: Text("Nonton Bioskop"),
-                subtitle: Text(
-                  "CGV Grand Indonesia\n2025-10-28 • 17:00 • 26°C",
-                ),
+              child: Column(
+                children: _listKegiatan.isEmpty
+                    ? [
+                        const Text(
+                          "Belum ada kegiatan.\nTekan tombol + untuk menambah.",
+                          textAlign: TextAlign.center,
+                        ),
+                      ]
+                    : _listKegiatan.map((kegiatan) {
+                        return ListTile(
+                          leading: const Icon(Icons.event, color: Colors.blue),
+                          title: Text(kegiatan.judul),
+                          subtitle: Text(
+                            "${kegiatan.lokasi}\n${kegiatan.tanggal} • ${kegiatan.waktu}",
+                          ),
+                          onTap: () async {
+                            final result = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    KegiatanPage(kegiatan: kegiatan),
+                              ),
+                            );
+                            if (result == true) _loadKegiatan();
+                          },
+                        );
+                      }).toList(),
               ),
             ),
           ],
         ),
       ),
 
+      // Floating button: buka page tambah & simpan ke DB ketika kembali
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.blue,
-        onPressed: () {},
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const TambahKegiatanPage()),
+          );
+
+          if (result != null && result is Map<String, dynamic>) {
+            final kegiatan = Kegiatan(
+              judul: result['judul'] ?? '',
+              lokasi: result['lokasi'] ?? '',
+              tanggal: result['tanggal'] ?? '',
+              waktu: result['waktu'] ?? '',
+              catatan: result['catatan'] ?? '',
+            );
+            await DBKegiatan().insertKegiatan(kegiatan);
+            _loadKegiatan();
+          }
+        },
         child: const Icon(Icons.add),
       ),
 

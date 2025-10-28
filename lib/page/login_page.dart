@@ -1,22 +1,76 @@
 import 'package:flutter/material.dart';
+import 'package:hai_time_app/page/form_register.dart';
 import 'package:hai_time_app/page/home_page.dart';
-import 'package:hai_time_app/page/register_page.dart';
+import 'package:hai_time_app/view/dashborad_admin.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
+  static const id = "/HaiTime";
 
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
-  bool _isHidden = true;
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+
+  bool _isHidden = true;
+
+  @override
+  void dispose() {
+    emailController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final prefs = await SharedPreferences.getInstance();
+
+    final registeredEmail = prefs.getString('registered_email');
+    final registeredPassword = prefs.getString('registered_password');
+
+    final emailInput = emailController.text.trim();
+    final passwordInput = passwordController.text.trim();
+
+    // 🔹 1. Cek login admin
+    if (emailInput == 'admin@haitime.com' && passwordInput == 'admin123') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Login sebagai Admin berhasil!')),
+      );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const DashboardAdminPage()),
+      );
+      return;
+    }
+
+    // 🔹 2. Cek login user terdaftar
+    if (emailInput == registeredEmail && passwordInput == registeredPassword) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Login berhasil! Selamat datang 👋')),
+      );
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomePage()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Email atau password salah')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
+          // Background
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
@@ -25,14 +79,14 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
           ),
-          Container(
-            color: Colors.black.withOpacity(0.5), // 0.5 = 50% transparan
-          ),
-          //form login
+          Container(color: Colors.black.withOpacity(0.5)),
+
+          // Form Login
           Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Form(
+                key: _formKey,
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -51,6 +105,7 @@ class _LoginPageState extends State<LoginPage> {
 
                     // Email
                     TextFormField(
+                      controller: emailController,
                       keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(
                         hintText: "Email",
@@ -75,6 +130,8 @@ class _LoginPageState extends State<LoginPage> {
 
                     // Password
                     TextFormField(
+                      controller: passwordController,
+                      obscureText: _isHidden,
                       decoration: InputDecoration(
                         hintText: "Password",
                         filled: true,
@@ -101,42 +158,21 @@ class _LoginPageState extends State<LoginPage> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 28),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: TextButton(
-                        onPressed: () {},
-                        child: const Text(
-                          "Lupa password?",
-                          style: TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
-                        ),
-                      ),
-                    ),
 
+                    const SizedBox(height: 28),
+
+                    // Tombol Login
                     SizedBox(
                       width: double.infinity,
                       height: 50,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color.fromARGB(
-                            255,
-                            47,
-                            75,
-                            122,
-                          ),
+                          backgroundColor: const Color(0xFF2F4B7A),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(15),
                           ),
                         ),
-                        onPressed: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const HomePage(),
-                            ),
-                          );
-                        },
-
+                        onPressed: _login,
                         child: const Text(
                           "Masuk",
                           style: TextStyle(
@@ -229,6 +265,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
+// Tombol sosial media
 Widget _socialButton(String assetPath) {
   return Container(
     padding: const EdgeInsets.all(10),

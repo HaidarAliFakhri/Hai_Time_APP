@@ -28,9 +28,7 @@ class ProfilePage extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.vertical(
-              bottom: Radius.circular(25),
-            ),
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(25)),
           ),
         ),
       ),
@@ -61,7 +59,7 @@ class ProfilePage extends StatelessWidget {
                     const CircleAvatar(
                       radius: 40,
                       backgroundColor: Colors.white,
-                      child: Icon(Icons.person, size: 45, color: Colors.grey),
+                      child: Icon(Icons.person, size: 60, color: Colors.grey),
                     ),
                     const SizedBox(height: 8),
                     const Text(
@@ -79,16 +77,23 @@ class ProfilePage extends StatelessWidget {
                   ],
                 ),
                 Positioned(
-                  bottom: 30,
+                  bottom: 70,
                   right: MediaQuery.of(context).size.width * 0.35,
+
                   child: Container(
+                    width: 30,
+                    height: 30,
                     decoration: BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.blueAccent),
                     ),
                     child: IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.blueAccent, size: 18),
+                      icon: const Icon(
+                        Icons.edit,
+                        color: Colors.blueAccent,
+                        size: 18,
+                      ),
                       onPressed: () {},
                     ),
                   ),
@@ -100,7 +105,9 @@ class ProfilePage extends StatelessWidget {
 
             // --- Informasi dasar ---
             Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(
@@ -168,8 +175,18 @@ class ProfilePage extends StatelessWidget {
             ),
             const SizedBox(height: 10),
 
-            _buildActivityCard("Nonton Bioskop", "27 Okt 2025", "Akan Datang", false),
-            _buildActivityCard("Meeting Kantor", "26 Okt 2025", "Selesai", true),
+            _buildActivityCard(
+              "Nonton Bioskop",
+              "27 Okt 2025",
+              "Akan Datang",
+              false,
+            ),
+            _buildActivityCard(
+              "Meeting Kantor",
+              "26 Okt 2025",
+              "Selesai",
+              true,
+            ),
             _buildActivityCard("Olahraga Pagi", "25 Okt 2025", "Selesai", true),
 
             const SizedBox(height: 30),
@@ -180,7 +197,10 @@ class ProfilePage extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: () {},
                 icon: const Icon(Icons.edit, color: Colors.white),
-                label: const Text("Edit Profil"),
+                label: const Text(
+                  "Edit Profil",
+                  style: TextStyle(color: Colors.black),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF007BFF),
                   shape: RoundedRectangleBorder(
@@ -199,16 +219,21 @@ class ProfilePage extends StatelessWidget {
   Widget _buildStatCard(String title, String value, IconData icon) {
     return Expanded(
       child: Card(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
           child: Column(
             children: [
               Icon(icon, color: Colors.blue),
               const SizedBox(height: 6),
-              Text(value,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 18, color: Colors.blue)),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: Colors.blue,
+                ),
+              ),
               Text(title, style: const TextStyle(fontSize: 12)),
             ],
           ),
@@ -217,7 +242,12 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildActivityCard(String title, String date, String status, bool done) {
+  Widget _buildActivityCard(
+    String title,
+    String date,
+    String status,
+    bool done,
+  ) {
     return Card(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ListTile(

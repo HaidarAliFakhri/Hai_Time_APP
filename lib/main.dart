@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:hai_time_app/screen/splash_screen.dart';
 
-import 'package:hai_time_app/page/login_page.dart';
-
-
-
-// Variabel global untuk kontrol tema
+// 🔹 Variabel global untuk kontrol tema (bisa diakses dari mana saja)
 ValueNotifier<bool> isDarkMode = ValueNotifier(false);
 
 void main() {
@@ -16,30 +13,40 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder(
+    return ValueListenableBuilder<bool>(
       valueListenable: isDarkMode,
-      builder: (context, value, _) {
+      builder: (context, dark, _) {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'HaiTime',
-          themeMode: value ? ThemeMode.dark : ThemeMode.light,
+
+          // 🔹 Tema terang
           theme: ThemeData(
             brightness: Brightness.light,
             scaffoldBackgroundColor: const Color(0xFFF2F6FC),
-            cardColor: Colors.white,
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF007BFF),
+            primarySwatch: Colors.blue,
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
             ),
           ),
+
+          // 🔹 Tema gelap
           darkTheme: ThemeData(
             brightness: Brightness.dark,
             scaffoldBackgroundColor: const Color(0xFF121212),
-            cardColor: const Color(0xFF1E1E1E),
-            colorScheme: const ColorScheme.dark(
-              primary: Color(0xFF4CAEFE),
+            primarySwatch: Colors.blueGrey,
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Color(0xFF1E1E1E),
+              foregroundColor: Colors.white,
             ),
           ),
-          home: const LoginPage(),
+
+          // 🔹 Tentukan mode aktif (berdasarkan ValueNotifier)
+          themeMode: dark ? ThemeMode.dark : ThemeMode.light,
+
+          // 🔹 Halaman awal
+          home: const SplashScreenHaiTime(),
         );
       },
     );

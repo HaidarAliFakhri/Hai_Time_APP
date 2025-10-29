@@ -5,6 +5,7 @@ import 'package:hai_time_app/view/cuaca.dart';
 import 'package:hai_time_app/view/jadwal_page.dart';
 import 'package:hai_time_app/view/kegiatan_page.dart';
 import 'package:hai_time_app/view/tambah_kegiatan.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../db/db_kegiatan.dart';
 import '../model/kegiatan.dart';
@@ -19,10 +20,33 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   List<Kegiatan> _listKegiatan = [];
 
+  String namaUser = "";
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+
+    if (hour >= 4 && hour < 11) {
+      return "Selamat pagi 👋";
+    } else if (hour >= 11 && hour < 15) {
+      return "Selamat siang 👋";
+    } else if (hour >= 15 && hour < 18) {
+      return "Selamat sore 👋";
+    } else {
+      return "Selamat malam 👋";
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _loadKegiatan();
+    _loadNamaUser();
+  }
+
+  Future<void> _loadNamaUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      namaUser = prefs.getString('registered_name') ?? "User";
+    });
   }
 
   Future<void> _loadKegiatan() async {
@@ -50,9 +74,9 @@ class _HomePageState extends State<HomePage> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Selamat siang 👋", style: TextStyle(color: textColor)),
+            Text(_getGreeting(), style: TextStyle(color: textColor)),
             Text(
-              "Haidar",
+              namaUser,
               style: TextStyle(
                 color: textColor,
                 fontSize: 20,
@@ -254,6 +278,10 @@ class _HomePageState extends State<HomePage> {
             context,
             MaterialPageRoute(builder: (_) => const TambahKegiatanPage()),
           );
+
+          if (result == true) {
+            _loadKegiatan(); // refresh data setelah kembali
+          }
 
           if (result != null && result is Map<String, dynamic>) {
             final kegiatan = Kegiatan(

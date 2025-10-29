@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hai_time_app/db/db_kegiatan.dart';
 import 'package:intl/intl.dart';
 
 import '../model/kegiatan.dart';
@@ -55,15 +56,40 @@ class _TambahKegiatanPageState extends State<TambahKegiatanPage> {
     }
   }
 
-  void _simpanKegiatan() {
+  void _simpanKegiatan() async {
     if (_formKey.currentState!.validate()) {
-      Navigator.pop(context, {
+      final data = {
         "judul": _judulController.text,
         "lokasi": _lokasiController.text,
         "tanggal": _tanggalController.text,
         "waktu": _waktuController.text,
         "catatan": _catatanController.text,
-      });
+      };
+
+      if (widget.kegiatan != null) {
+        // EDIT DATA
+        final updated = Kegiatan(
+          id: widget.kegiatan!.id,
+          judul: data['judul']!,
+          lokasi: data['lokasi']!,
+          tanggal: data['tanggal']!,
+          waktu: data['waktu']!,
+          catatan: data['catatan'],
+        );
+        await DBKegiatan().updateKegiatan(updated);
+      } else {
+        // TAMBAH BARU
+        final newData = Kegiatan(
+          judul: data['judul']!,
+          lokasi: data['lokasi']!,
+          tanggal: data['tanggal']!,
+          waktu: data['waktu']!,
+          catatan: data['catatan'],
+        );
+        await DBKegiatan().insertKegiatan(newData);
+      }
+
+      if (context.mounted) Navigator.pop(context, true);
     }
   }
 
@@ -186,10 +212,24 @@ class _TambahKegiatanPageState extends State<TambahKegiatanPage> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: _simpanKegiatan,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blueAccent,
-                      ),
+                      onPressed: () async {
+                        final kegiatan = Kegiatan(
+                          id: widget.kegiatan?.id, // pastikan ini ada!
+                          judul: _judulController.text,
+                          lokasi: _lokasiController.text,
+                          tanggal: _tanggalController.text,
+                          waktu: _waktuController.text,
+                          catatan: _catatanController.text,
+                        );
+
+                        if (widget.kegiatan == null) {
+                          await DBKegiatan().insertKegiatan(kegiatan);
+                        } else {
+                          await DBKegiatan().updateKegiatan(kegiatan);
+                        }
+
+                        if (context.mounted) Navigator.pop(context, true);
+                      },
                       child: const Text("Simpan"),
                     ),
                   ),

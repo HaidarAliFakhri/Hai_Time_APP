@@ -3,6 +3,7 @@ import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:hai_time_app/page/home_page.dart';
 import 'package:hai_time_app/page/login_page.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // 🔹 Notifier global untuk tema gelap
 ValueNotifier<bool> isDarkMode = ValueNotifier(false);
@@ -74,7 +75,7 @@ class _SettingPageState extends State<SettingPage> {
 
     // Jika sudah diizinkan
     Position position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
     );
 
     List<Placemark> placemarks = await placemarkFromCoordinates(
@@ -88,7 +89,32 @@ class _SettingPageState extends State<SettingPage> {
     });
   }
 
-  // 🔹 Ambil zona waktu sistem
+  Future<void> _openInGoogleMaps() async {
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+
+      final Uri uri = Uri.parse(
+        "https://www.google.com/maps/search/?api=1&query=${position.latitude},${position.longitude}",
+      );
+
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Tidak dapat membuka Google Maps")),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Gagal membuka peta: $e")));
+    }
+  }
+
   void _getTimeZone() {
     final now = DateTime.now();
     final offset = now.timeZoneOffset;
@@ -209,6 +235,7 @@ class _SettingPageState extends State<SettingPage> {
               },
               cardColor,
               textColor,
+              onTap: _openInGoogleMaps, // 🔹 Tambahan
             ),
 
             _buildNavTile(
@@ -330,8 +357,9 @@ class _SettingPageState extends State<SettingPage> {
     bool value,
     Function(bool) onChanged,
     Color cardColor,
-    Color textColor,
-  ) {
+    Color textColor, {
+    VoidCallback? onTap, // 🔹 Tambahan opsional
+  }) {
     return Card(
       color: cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -343,6 +371,7 @@ class _SettingPageState extends State<SettingPage> {
           style: TextStyle(color: textColor.withOpacity(0.7)),
         ),
         trailing: Switch(value: value, onChanged: onChanged),
+        onTap: onTap, // 🔹 Tambahan agar bisa ditekan
       ),
     );
   }

@@ -15,9 +15,9 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   String nama = "";
   String email = "";
-  String lokasi = "";
   String username = "";
   File? _imageFile;
+  String lokasi = "Mendeteksi lokasi...";
 
   @override
   void initState() {
@@ -32,7 +32,6 @@ class _ProfilePageState extends State<ProfilePage> {
     setState(() {
       nama = prefs.getString('registered_name') ?? "User";
       email = prefs.getString('registered_email') ?? "user@email.com";
-      lokasi = prefs.getString('registered_city') ?? "Belum diatur";
       username = nama.toLowerCase().replaceAll(' ', '_');
       if (imagePath != null) _imageFile = File(imagePath);
     });
@@ -41,7 +40,6 @@ class _ProfilePageState extends State<ProfilePage> {
   void _showEditBottomSheet(BuildContext context) {
     final nameController = TextEditingController(text: nama);
     final emailController = TextEditingController(text: email);
-    final cityController = TextEditingController(text: lokasi);
 
     showModalBottomSheet(
       context: context,
@@ -101,16 +99,6 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
                 const SizedBox(height: 12),
 
-                TextField(
-                  controller: cityController,
-                  decoration: const InputDecoration(
-                    labelText: "Kota / Lokasi",
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.location_on),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -135,19 +123,14 @@ class _ProfilePageState extends State<ProfilePage> {
                           'registered_email',
                           emailController.text.trim(),
                         );
-                        await prefs.setString(
-                          'registered_city',
-                          cityController.text.trim(),
-                        );
 
                         if (mounted) {
                           setState(() {
                             nama = nameController.text.trim();
                             email = emailController.text.trim();
-                            lokasi = cityController.text.trim();
                             username = nama.toLowerCase().replaceAll(' ', '_');
                           });
-                          Navigator.pop(context); // Tutup bottom sheet
+                          Navigator.pop(context);
                         }
                       },
                       child: const Text(
@@ -232,7 +215,6 @@ class _ProfilePageState extends State<ProfilePage> {
                       children: [
                         Stack(
                           children: [
-                            // 🖼 Foto Profil
                             CircleAvatar(
                               radius: 55,
                               backgroundColor: Colors.white,
@@ -247,8 +229,6 @@ class _ProfilePageState extends State<ProfilePage> {
                                     )
                                   : null,
                             ),
-
-                            // ✏️ Tombol Edit menempel di kanan bawah lingkaran
                             Positioned(
                               bottom: 0,
                               right: 0,
@@ -270,14 +250,12 @@ class _ProfilePageState extends State<ProfilePage> {
                                     color: Colors.white,
                                     size: 18,
                                   ),
-                                  onPressed:
-                                      _gantiFotoProfil, // fungsi untuk ubah foto
+                                  onPressed: _gantiFotoProfil,
                                 ),
                               ),
                             ),
                           ],
                         ),
-
                         const SizedBox(height: 10),
                         Text(
                           "@$username",
@@ -294,7 +272,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ),
 
-          // --- Bagian isi bawah ---
+          // Bagian isi bawah
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -344,7 +322,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
                   const SizedBox(height: 25),
 
-                  // 📊 Statistik Aktivitas
+                  // 📊 Statistik Aktivitas (scroll horizontal)
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
@@ -358,17 +336,19 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   const SizedBox(height: 10),
 
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildStatCard("Total Kegiatan", "24", Icons.event),
-                      _buildStatCard(
-                        "Kegiatan Selesai",
-                        "18",
-                        Icons.check_circle,
-                      ),
-                      _buildStatCard("Minggu Ini", "5", Icons.calendar_today),
-                    ],
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildStatCard("Total Kegiatan", "24", Icons.event),
+                        _buildStatCard(
+                          "Kegiatan Selesai",
+                          "18",
+                          Icons.check_circle,
+                        ),
+                        _buildStatCard("Minggu Ini", "5", Icons.calendar_today),
+                      ],
+                    ),
                   ),
 
                   const SizedBox(height: 25),
@@ -439,11 +419,12 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildStatCard(String title, String value, IconData icon) {
-    return Expanded(
+    return Padding(
+      padding: const EdgeInsets.only(right: 12),
       child: Card(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
           child: Column(
             children: [
               Icon(icon, color: Colors.blue),

@@ -97,10 +97,53 @@ class _TambahKegiatanPageState extends State<TambahKegiatanPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FC),
-      appBar: AppBar(
-        title: const Text("Tambah Kegiatan"),
-        backgroundColor: Colors.blueAccent,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(100), // 🔹 tinggi AppBar
+        child: AppBar(
+          automaticallyImplyLeading: true,
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          flexibleSpace: ClipRRect(
+            borderRadius: const BorderRadius.only(
+              bottomLeft: Radius.circular(30), // 🔹 lengkungan kiri bawah
+              bottomRight: Radius.circular(30), // 🔹 lengkungan kanan bawah
+            ),
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Color(0xFF2196F3),
+                    Color(0xFF64B5F6),
+                  ], // 🔹 gradasi biru
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+            ),
+          ),
+          title: Padding(
+            padding: const EdgeInsets.only(top: 25), // 🔹 geser teks ke bawah
+            child: Row(
+              children: [
+                Icon(
+                  widget.kegiatan == null ? Icons.add : Icons.edit,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  widget.kegiatan == null ? "Tambah Kegiatan" : "Edit Kegiatan",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          centerTitle: false,
+        ),
       ),
+
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
@@ -212,24 +255,7 @@ class _TambahKegiatanPageState extends State<TambahKegiatanPage> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () async {
-                        final kegiatan = Kegiatan(
-                          id: widget.kegiatan?.id, // pastikan ini ada!
-                          judul: _judulController.text,
-                          lokasi: _lokasiController.text,
-                          tanggal: _tanggalController.text,
-                          waktu: _waktuController.text,
-                          catatan: _catatanController.text,
-                        );
-
-                        if (widget.kegiatan == null) {
-                          await DBKegiatan().insertKegiatan(kegiatan);
-                        } else {
-                          await DBKegiatan().updateKegiatan(kegiatan);
-                        }
-
-                        if (context.mounted) Navigator.pop(context, true);
-                      },
+                      onPressed: _simpanKegiatan, // ✅ cukup panggil ini
                       child: const Text("Simpan"),
                     ),
                   ),

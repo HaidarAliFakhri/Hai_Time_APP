@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:hai_time_app/page/home_page.dart';
 import 'package:hai_time_app/page/login_page.dart';
 
-// Variabel global agar tema bisa digunakan lintas halaman
+// 🔹 Notifier global untuk tema gelap
 ValueNotifier<bool> isDarkMode = ValueNotifier(false);
 
 class SettingPage extends StatefulWidget {
@@ -15,6 +17,115 @@ class SettingPage extends StatefulWidget {
 class _SettingPageState extends State<SettingPage> {
   bool isAutoLocation = true;
   bool isPushNotif = true;
+
+  String _currentLocation = "Jakarta, Indonesia";
+  String _timezone = "";
+
+  @override
+  void initState() {
+    super.initState();
+    _getTimeZone();
+    if (isAutoLocation) {
+      _getCurrentLocation();
+    }
+  }
+
+  // 🔹 Fungsi ambil lokasi otomatis
+  Future<void> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Cek apakah layanan lokasi aktif
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      _showLocationDialog(
+        title: "Layanan Lokasi Tidak Aktif",
+        message: "Aktifkan GPS agar aplikasi bisa mendeteksi lokasi kamu.",
+        openSettings: true,
+      );
+      setState(() => _currentLocation = "Layanan lokasi tidak aktif");
+      return;
+    }
+
+    // Cek dan minta izin
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        _showLocationDialog(
+          title: "Izin Lokasi Ditolak",
+          message:
+              "Aplikasi memerlukan izin lokasi untuk menampilkan lokasi otomatis.",
+        );
+        setState(() => _currentLocation = "Izin lokasi ditolak");
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      _showLocationDialog(
+        title: "Izin Lokasi Ditolak Permanen",
+        message: "Buka pengaturan untuk mengaktifkan izin lokasi.",
+        openSettings: true,
+      );
+      setState(() => _currentLocation = "Izin lokasi permanen ditolak");
+      return;
+    }
+
+    // Jika sudah diizinkan
+    Position position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+
+    List<Placemark> placemarks = await placemarkFromCoordinates(
+      position.latitude,
+      position.longitude,
+    );
+
+    Placemark place = placemarks.first;
+    setState(() {
+      _currentLocation = "${place.locality}, ${place.country}";
+    });
+  }
+
+  // 🔹 Ambil zona waktu sistem
+  void _getTimeZone() {
+    final now = DateTime.now();
+    final offset = now.timeZoneOffset;
+    final sign = offset.isNegative ? "-" : "+";
+    final hours = offset.inHours.abs().toString().padLeft(2, '0');
+    _timezone = "GMT$sign$hours";
+  }
+
+  // 🔹 Dialog Peringatan Lokasi
+  void _showLocationDialog({
+    required String title,
+    required String message,
+    bool openSettings = false,
+  }) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            child: const Text("Tutup"),
+            onPressed: () => Navigator.pop(context),
+          ),
+          if (openSettings)
+            TextButton(
+              child: const Text("Buka Pengaturan"),
+              onPressed: () {
+                Geolocator.openLocationSettings();
+                Navigator.pop(context);
+              },
+            ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,19 +195,26 @@ class _SettingPageState extends State<SettingPage> {
 
             const SizedBox(height: 16),
             _buildSectionTitle("Lokasi & Waktu", textColor),
+
             _buildSwitchTile(
               Icons.location_on,
               "Lokasi Otomatis",
-              "Jakarta, Indonesia",
+              _currentLocation,
               isAutoLocation,
-              (v) => setState(() => isAutoLocation = v),
+              (v) {
+                setState(() {
+                  isAutoLocation = v;
+                });
+                if (v) _getCurrentLocation();
+              },
               cardColor,
               textColor,
             ),
+
             _buildNavTile(
               Icons.access_time,
               "Zona Waktu",
-              "WIB (GMT+7)",
+              "WIB ($_timezone)",
               cardColor,
               textColor,
             ),
@@ -167,8 +285,7 @@ class _SettingPageState extends State<SettingPage> {
                     Navigator.pushAndRemoveUntil(
                       context,
                       MaterialPageRoute(
-                        builder: (context) =>
-                            const LoginPage(), // kembali ke login
+                        builder: (context) => const LoginPage(),
                       ),
                       (route) => false,
                     );
@@ -193,6 +310,7 @@ class _SettingPageState extends State<SettingPage> {
     );
   }
 
+  // 🔹 Widget pendukung
   Widget _buildSectionTitle(String title, Color textColor) => Padding(
     padding: const EdgeInsets.only(bottom: 8),
     child: Text(

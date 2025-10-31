@@ -23,8 +23,8 @@ class _EditParticipantPageState extends State<EditParticipantPage> {
     super.initState();
     _nameC = TextEditingController(text: widget.participant.name);
     _emailC = TextEditingController(text: widget.participant.email);
-    _phoneC = TextEditingController(text: widget.participant.phone);
-    _cityC = TextEditingController(text: widget.participant.city);
+    // _phoneC = TextEditingController(text: widget.participant.phone);
+    // _cityC = TextEditingController(text: widget.participant.city);
     _passwordC = TextEditingController(text: widget.participant.password);
   }
 
@@ -85,8 +85,8 @@ class _EditParticipantPageState extends State<EditParticipantPage> {
                       id: widget.participant.id,
                       name: _nameC.text.trim(),
                       email: _emailC.text.trim(),
-                      phone: _phoneC.text.trim(),
-                      city: _cityC.text.trim(),
+                      // phone: _phoneC.text.trim(),
+                      // city: _cityC.text.trim(),
                       password: _passwordC.text.trim(),
                     );
 

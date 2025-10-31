@@ -38,8 +38,8 @@ class _RegisterPageState extends State<RegisterPage> {
     final participant = Participant(
       name: _nameC.text.trim(),
       email: _emailC.text.trim(),
-      phone: _phoneC.text.trim(),
-      city: _cityC.text.trim(),
+      // phone: _phoneC.text.trim(),
+      // city: _cityC.text.trim(),
       password: _passwordC.text.trim(),
     );
 

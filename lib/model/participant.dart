@@ -2,16 +2,16 @@ class Participant {
   final int? id;
   final String name;
   final String email;
-  final String phone;
-  final String city;
+  // final String phone;
+  // final String city;
   final String password;
 
   Participant({
     this.id,
     required this.name,
     required this.email,
-    required this.phone,
-    required this.city,
+    // required this.phone,
+    // required this.city,
     required this.password,
   });
 
@@ -20,8 +20,8 @@ class Participant {
       'id': id,
       'name': name,
       'email': email,
-      'phone': phone,
-      'city': city,
+      // 'phone': phone,
+      // 'city': city,
       'password': password,
     };
   }
@@ -31,8 +31,8 @@ class Participant {
       id: map['id'],
       name: map['name'],
       email: map['email'],
-      phone: map['phone'],
-      city: map['city'],
+      // phone: map['phone'],
+      // city: map['city'],
       password: map['password'],
     );
   }

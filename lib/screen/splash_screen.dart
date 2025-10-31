@@ -14,42 +14,50 @@ class _SplashScreenHaiTimeState extends State<SplashScreenHaiTime> {
   @override
   void initState() {
     super.initState();
-    isLoginFunction();
+    _checkLoginStatus();
   }
 
-  isLoginFunction() async {
-    Future.delayed(Duration(seconds: 3)).then((value) async {
-      var isLogin = await PreferenceHandler.getLogin();
-      print(isLogin);
-      if (isLogin != null && isLogin == true) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => BottomNavigator()),
-          (route) => false,
-        );
-      } else {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => LoginPage()),
-          (route) => false,
-        );
-      }
-    });
+  Future<void> _checkLoginStatus() async {
+    final isLogin = await PreferenceHandler.getLogin();
+
+    // Tunggu 2 detik untuk splash effect
+    await Future.delayed(const Duration(seconds: 2));
+
+    if (!mounted) return;
+
+    if (isLogin == true) {
+      // ✅ Masuk langsung ke BottomNavigator
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const BottomNavigator()),
+      );
+    } else {
+      // ⛔ Belum login → ke LoginPage
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Center(child: Image.asset('assets/images/logo/logo_app.png')),
-          Text(
-            "Welcome!!",
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-        ],
+      backgroundColor: Colors.white,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset('assets/images/logo/logo_app.png', height: 120),
+            const SizedBox(height: 20),
+            const Text(
+              "Welcome!!",
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            const CircularProgressIndicator(color: Colors.blueAccent),
+          ],
+        ),
       ),
     );
   }

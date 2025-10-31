@@ -1,37 +1,38 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PreferenceHandler {
-  static const String isLogin = "isLogin";
-  static const String emailKey = "email"; // tambahkan key email
+  // 🔹 Key untuk menyimpan data
+  static const String _isLoginKey = "isLogin";
+  static const String _emailKey = "email";
 
-  // ✅ simpan email user
+  /// ✅ Simpan email user
   static Future<void> setEmail(String email) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(emailKey, email);
+    await prefs.setString(_emailKey, email);
   }
 
-  // ✅ ambil email user
+  /// ✅ Ambil email user
   static Future<String?> getEmail() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(emailKey);
+    return prefs.getString(_emailKey);
   }
 
-  // ✅ simpan status login
+  /// ✅ Simpan status login
   static Future<void> saveLogin(bool value) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(isLogin, value);
+    await prefs.setBool(_isLoginKey, value);
   }
 
-  // ✅ ambil status login
+  /// ✅ Ambil status login
   static Future<bool?> getLogin() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(isLogin);
+    return prefs.getBool(_isLoginKey);
   }
 
-  // ✅ hapus data login + email saat logout
+  /// ✅ Hapus data login & email (saat logout)
   static Future<void> removeLogin() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(isLogin);
-    await prefs.remove(emailKey);
+    await prefs.remove(_isLoginKey);
+    await prefs.remove(_emailKey);
   }
 }

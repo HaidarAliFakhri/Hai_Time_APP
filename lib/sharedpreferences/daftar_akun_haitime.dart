@@ -59,7 +59,7 @@ class _DaftarAkunHaitimeState extends State<DaftarAkunHaitime> {
                         child: CircleAvatar(
                           radius: 40,
                           backgroundImage: AssetImage(
-                            "assets/images/logoHaiTime/haidar.jpg",
+                            "assets/images/logo/logo_app.png",
                           ),
                         ),
                       ),

@@ -61,96 +61,117 @@ class _HomePageState extends State<HomePage> {
         slivers: [
           // 🔹 SLIVER APPBAR: naik saat scroll, gradasi, melengkung
           SliverAppBar(
-            pinned: false,
-            floating: true,
-            expandedHeight: 120,
+            automaticallyImplyLeading: false,
+            pinned: true,
+            floating: false,
+            snap: false,
+            expandedHeight: 100,
             backgroundColor: Colors.transparent,
             elevation: 0,
-            flexibleSpace: ClipRRect(
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(30),
-                bottomRight: Radius.circular(30),
-              ),
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF2196F3), Color(0xFF64B5F6)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                      vertical: 8,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // 🔹 Greeting + nama
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              _getGreeting(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                              ),
-                            ),
-                            Text(
-                              namaUser,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
+            flexibleSpace: LayoutBuilder(
+              builder: (context, constraints) {
+                final percent =
+                    ((constraints.maxHeight - kToolbarHeight) /
+                            (180 - kToolbarHeight))
+                        .clamp(0.0, 1.0);
 
-                        // 🔹 Tombol Profile & Setting
-                        Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(
-                                Icons.person,
-                                color: Colors.white,
-                              ),
-                              onPressed: () {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const ProfilePage(),
+                return ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(30),
+                    bottomRight: Radius.circular(30),
+                  ),
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Color(0xFF2196F3), Color(0xFF64B5F6)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: SafeArea(
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          // 🔹 "Selamat Pagi dll" tetap di kiri
+                          Positioned(
+                            left: 5,
+                            top: 12,
+                            child: Row(
+                              children: [
+                                const SizedBox(width: 6),
+                                Text(
+                                  _getGreeting(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
                                   ),
-                                );
-                                Navigator.pushNamed(context, '/profile');
-                              },
+                                ),
+                              ],
                             ),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.settings,
-                                color: Colors.white,
+                          ),
+
+                          // 🔹 Nama user: bergerak ke tengah saat di-scroll
+                          AnimatedAlign(
+                            alignment: Alignment(0, percent > 0.5 ? 0.5 : 0.0),
+                            duration: const Duration(milliseconds: 200),
+                            curve: Curves.easeOut,
+                            child: Opacity(
+                              opacity: percent > 0.1 ? 1 : 0,
+                              child: Text(
+                                namaUser,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize:
+                                      22 + (4 * percent), // agar mengecil halus
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
-                              onPressed: () {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const SettingPage(),
-                                  ),
-                                );
-                                Navigator.pushNamed(context, '/settings');
-                              },
                             ),
-                          ],
-                        ),
-                      ],
+                          ),
+
+                          // 🔹 Tombol profil dan setting tetap di kanan atas
+                          Positioned(
+                            right: 0,
+                            top: 0,
+                            child: Row(
+                              children: [
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.person,
+                                    color: Colors.white,
+                                  ),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => const ProfilePage(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.settings,
+                                    color: Colors.white,
+                                  ),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => const SettingPage(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
             ),
           ),
 
@@ -215,13 +236,12 @@ class _HomePageState extends State<HomePage> {
                               ),
                             ),
                             onPressed: () {
-                              Navigator.pushReplacement(
+                              Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => const Cuaca(),
+                                  builder: (context) => const CuacaPage(),
                                 ),
                               );
-                              Navigator.pushNamed(context, '/cuaca');
                             },
                             child: const Text("Detail →"),
                           ),
@@ -236,7 +256,7 @@ class _HomePageState extends State<HomePage> {
                     title: "Jadwal Sholat Hari Ini",
                     trailing: TextButton(
                       onPressed: () {
-                        Navigator.pushReplacement(
+                        Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => const JadwalPage(),
@@ -262,6 +282,17 @@ class _HomePageState extends State<HomePage> {
                           name: "Ashar",
                           time: "15:20",
                         ),
+                        _PrayerRow(
+                          icon: Icons.nights_stay_outlined,
+                          name: "Magrib",
+                          time: "18:10",
+                        ),
+                        _PrayerRow(
+                          icon: Icons.dark_mode_outlined,
+                          name: "Isya",
+                          time: "19:25",
+                        ),
+
                         SizedBox(height: 10),
                         Text("Waktu Ashar dalam 2 jam 15 menit"),
                       ],
@@ -347,17 +378,17 @@ class _HomePageState extends State<HomePage> {
         child: const Icon(Icons.add),
       ),
 
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.blue,
-        unselectedItemColor: Colors.blueAccent.withOpacity(0.6),
-        currentIndex: 0,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Beranda"),
-          BottomNavigationBarItem(icon: Icon(Icons.schedule), label: "Jadwal"),
-          BottomNavigationBarItem(icon: Icon(Icons.cloud), label: "Cuaca"),
-        ],
-      ),
+      // bottomNavigationBar: BottomNavigationBar(
+      //   type: BottomNavigationBarType.fixed,
+      //   selectedItemColor: Colors.blue,
+      //   unselectedItemColor: Colors.blueAccent.withOpacity(0.6),
+      //   currentIndex: 0,
+      //   items: const [
+      //     BottomNavigationBarItem(icon: Icon(Icons.home), label: "Beranda"),
+      //     BottomNavigationBarItem(icon: Icon(Icons.schedule), label: "Jadwal"),
+      //     BottomNavigationBarItem(icon: Icon(Icons.cloud), label: "Cuaca"),
+      //   ],
+      // ),
     );
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:hai_time_app/page/bottom_navigator.dart';
 import 'package:hai_time_app/page/form_register.dart';
-import 'package:hai_time_app/page/home_page.dart';
+import 'package:hai_time_app/preferences/preferences_handler.dart';
 import 'package:hai_time_app/view/dashborad_admin.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -37,11 +38,16 @@ class _LoginPageState extends State<LoginPage> {
     final emailInput = emailController.text.trim();
     final passwordInput = passwordController.text.trim();
 
-    // 🔹 1. Cek login admin
+    // 🔹 1. Login Admin
     if (emailInput == 'admin@haitime.com' && passwordInput == 'admin123') {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Login sebagai Admin berhasil!')),
       );
+
+      // ✅ Simpan status login admin
+      await PreferenceHandler.saveLogin(true);
+      await PreferenceHandler.setEmail(emailInput);
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const DashboardAdminPage()),
@@ -49,14 +55,19 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    // 🔹 2. Cek login user terdaftar
+    // 🔹 2. Login User
     if (emailInput == registeredEmail && passwordInput == registeredPassword) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Login berhasil! Selamat datang 👋')),
       );
+
+      // ✅ Simpan status login user
+      await PreferenceHandler.saveLogin(true);
+      await PreferenceHandler.setEmail(emailInput);
+
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const HomePage()),
+        MaterialPageRoute(builder: (_) => const BottomNavigator()),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -186,7 +197,7 @@ class _LoginPageState extends State<LoginPage> {
 
                     const SizedBox(height: 24),
 
-                    // Pembatas “Or continue with”
+                    // Pembatas
                     Row(
                       children: const [
                         Expanded(
@@ -213,7 +224,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Tombol sosial media
+                    // Tombol Sosial Media
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -227,7 +238,7 @@ class _LoginPageState extends State<LoginPage> {
 
                     const SizedBox(height: 20),
 
-                    // Link ke register
+                    // Register
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [

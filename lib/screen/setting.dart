@@ -294,7 +294,7 @@ class _SettingPageState extends State<SettingPage> {
                     context: context,
                     builder: (context) => AlertDialog(
                       title: const Text("Konfirmasi"),
-                      content: const Text("Yakin ingin keluar dari HaiTrip?"),
+                      content: const Text("Yakin ingin keluar dari HaiTime?"),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context, false),

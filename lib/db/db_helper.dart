@@ -28,8 +28,6 @@ class DBHelperTime {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             email TEXT NOT NULL,
-            phone TEXT NOT NULL,
-            city TEXT NOT NULL,
              password TEXT NOT NULL
           )
         ''');

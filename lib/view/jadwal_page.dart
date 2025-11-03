@@ -1,8 +1,100 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:ionicons/ionicons.dart';
 
-class JadwalPage extends StatelessWidget {
+class JadwalPage extends StatefulWidget {
   const JadwalPage({super.key});
+
+  @override
+  State<JadwalPage> createState() => _JadwalPageState();
+}
+
+class _JadwalPageState extends State<JadwalPage> {
+  late Timer _timer;
+
+  // 🔹 Data jadwal sholat manual
+  final List<Map<String, dynamic>> jadwalSholat = [
+    {
+      "nama": "Subuh",
+      "waktu": "04:45",
+      "pengingat": "10 menit sebelumnya",
+      "ikon": Icons.brightness_2_outlined,
+      "aktif": true,
+      "selesai": false,
+    },
+    {
+      "nama": "Dzuhur",
+      "waktu": "12:05",
+      "pengingat": "10 menit sebelumnya",
+      "ikon": Icons.wb_sunny_outlined,
+      "aktif": true,
+      "selesai": false,
+    },
+    {
+      "nama": "Ashar",
+      "waktu": "15:20",
+      "pengingat": "10 menit sebelumnya",
+      "ikon": Icons.wb_twilight,
+      "aktif": true,
+      "selesai": false,
+    },
+    {
+      "nama": "Maghrib",
+      "waktu": "18:10",
+      "pengingat": "10 menit sebelumnya",
+      "ikon": Icons.nightlight_round_outlined,
+      "aktif": true,
+      "selesai": false,
+    },
+    {
+      "nama": "Isya",
+      "waktu": "19:25",
+      "pengingat": "10 menit sebelumnya",
+      "ikon": Icons.nightlight_round,
+      "aktif": true,
+      "selesai": false,
+    },
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _updateStatusSholat(); // Jalankan sekali saat awal
+    // 🔁 Update otomatis tiap 1 menit
+    _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      _updateStatusSholat();
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  // 🔹 Fungsi: Update status otomatis berdasarkan waktu
+  void _updateStatusSholat() {
+    final now = DateTime.now();
+    final format = DateFormat("HH:mm");
+
+    setState(() {
+      for (var data in jadwalSholat) {
+        final DateTime waktuSholat = format.parse(data["waktu"]);
+        final DateTime waktuHariIni = DateTime(
+          now.year,
+          now.month,
+          now.day,
+          waktuSholat.hour,
+          waktuSholat.minute,
+        );
+
+        // Jika waktu sekarang sudah melewati waktu sholat
+        data["selesai"] = now.isAfter(waktuHariIni);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,15 +106,10 @@ class JadwalPage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // HEADER GRADIENT
+            // 🔹 HEADER
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(
-                24,
-                60,
-                24,
-                28,
-              ), // ✅ beri jarak manual di atas
+              padding: const EdgeInsets.fromLTRB(24, 60, 24, 28),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [Color(0xFF3FA9F5), Color(0xFF0077FF)],
@@ -36,18 +123,11 @@ class JadwalPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // 🔸 Tombol Back (hapus kalau mau tanpa tombol back)
                   Align(
                     alignment: Alignment.topLeft,
                     child: IconButton(
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
                       onPressed: () => Navigator.pop(context),
-                      tooltip: 'Kembali',
-                      iconSize: 26,
-                      splashColor:
-                          Colors.transparent, // 🔹 Hilangkan efek percikan
-                      highlightColor:
-                          Colors.transparent, // 🔹 Hilangkan efek tekanan
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -72,7 +152,6 @@ class JadwalPage extends StatelessWidget {
                     style: TextStyle(color: Colors.white70),
                   ),
                   const SizedBox(height: 20),
-
                   // 🔸 KARTU SHOLAT BERIKUTNYA
                   Container(
                     width: double.infinity,
@@ -130,161 +209,43 @@ class JadwalPage extends StatelessWidget {
                 ],
               ),
             ),
-
             const SizedBox(height: 24),
 
-            // 🔹 JUDUL DAFTAR SHOLAT
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "Semua Waktu Sholat",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF333333),
-                    ),
-                  ),
-                  Row(
-                    children: const [
-                      Icon(
-                        Ionicons.notifications_outline,
-                        size: 18,
-                        color: Colors.grey,
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        "Pengingat",
-                        style: TextStyle(color: Colors.grey, fontSize: 13),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            // 🔸 DAFTAR SHOLAT TANPA OVERFLOW
+            // 🔹 DAFTAR WAKTU SHOLAT
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Column(
-                children: [
-                  _buildPrayerCard(
-                    "Subuh",
-                    "04:45",
-                    "10 menit sebelumnya",
-                    Icons.brightness_2_outlined,
-                    true,
-                    true,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildPrayerCard(
-                    "Dzuhur",
-                    "12:05",
-                    "10 menit sebelumnya",
-                    Icons.wb_sunny_outlined,
-                    true,
-                    true,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildPrayerCard(
-                    "Ashar",
-                    "15:20",
-                    "10 menit sebelumnya",
-                    Icons.wb_twilight,
-                    true,
-                    false,
-                    highlight: true,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildPrayerCard(
-                    "Maghrib",
-                    "18:10",
-                    "10 menit sebelumnya",
-                    Icons.nightlight_round_outlined,
-                    true,
-                    true,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildPrayerCard(
-                    "Isya",
-                    "19:25",
-                    "10 menit sebelumnya",
-                    Icons.nightlight_round,
-                    true,
-                    true,
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // 🔹 KARTU ARAH KIBLAT
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.15),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 16,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: const [
-                    Icon(Icons.navigation, color: Color(0xFF0077FF), size: 28),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Arah Kiblat",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF333333),
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          "Jakarta → Mekkah   Barat Laut",
-                          style: TextStyle(fontSize: 13, color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                    Text(
-                      "294°",
-                      style: TextStyle(
-                        color: Color(0xFF0077FF),
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
+                children: List.generate(jadwalSholat.length, (index) {
+                  final data = jadwalSholat[index];
+                  return Column(
+                    children: [
+                      _buildPrayerCard(
+                        data["nama"],
+                        data["waktu"],
+                        data["pengingat"],
+                        data["ikon"],
+                        data["aktif"],
+                        data["selesai"],
+                        highlight: index == 2,
+                        onChanged: (val) {
+                          setState(() {
+                            data["aktif"] = val;
+                          });
+                        },
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(height: 12),
+                    ],
+                  );
+                }),
               ),
             ),
-
-            const SizedBox(height: 30),
           ],
         ),
       ),
     );
   }
 
-  // 🕌 WIDGET KARTU SHOLAT
+  // 🕌 Kartu Sholat
   Widget _buildPrayerCard(
     String title,
     String time,
@@ -293,6 +254,7 @@ class JadwalPage extends StatelessWidget {
     bool isOn,
     bool done, {
     bool highlight = false,
+    required Function(bool) onChanged,
   }) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -326,11 +288,13 @@ class JadwalPage extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(subtitle, style: const TextStyle(color: Colors.grey)),
                 const SizedBox(height: 6),
-                if (done)
-                  const Text(
-                    "✔ Sudah dilaksanakan",
-                    style: TextStyle(color: Colors.blue),
+                Text(
+                  done ? "✔ Sudah dilaksanakan" : "Belum dilaksanakan",
+                  style: TextStyle(
+                    color: done ? Colors.green : Colors.red,
+                    fontWeight: FontWeight.w500,
                   ),
+                ),
               ],
             ),
           ),
@@ -347,7 +311,7 @@ class JadwalPage extends StatelessWidget {
               const SizedBox(height: 8),
               Switch(
                 value: isOn,
-                onChanged: (val) {},
+                onChanged: onChanged,
                 activeThumbColor: Colors.blue,
               ),
             ],

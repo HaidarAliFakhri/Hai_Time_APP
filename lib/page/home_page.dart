@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hai_time_app/screen/profile.dart';
-import 'package:hai_time_app/screen/setting.dart' as setting; // 👈 kasih alias
+import 'package:hai_time_app/screen/setting.dart' as setting;
 import 'package:hai_time_app/view/cuaca.dart';
-import 'package:hai_time_app/screen/setting.dart';
 import 'package:hai_time_app/view/jadwal_page.dart';
 import 'package:hai_time_app/view/kegiatan_page.dart';
 import 'package:hai_time_app/view/tambah_kegiatan.dart';
@@ -11,7 +10,8 @@ import '../db/db_kegiatan.dart';
 import '../model/kegiatan.dart';
 import 'dart:async';
 import 'package:intl/intl.dart';
-import '../main.dart' as main_app; // 👈 kasih alias juga
+import '../main.dart' as main_app;
+import 'package:audioplayers/audioplayers.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -21,11 +21,16 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  final AudioPlayer _audioPlayer = AudioPlayer();
+
   List<Kegiatan> _listKegiatan = [];
   String namaUser = "";
   String nextPrayerName = "";
+  String nextPrayerTime = "";
   String remainingTime = "";
+  bool _isAdzanPlaying = false;
 
+  // Jadwal sholat sementara (bisa kamu ubah sesuai data API nanti)
   final Map<String, String> prayerTimes = {
     "Subuh": "04:45",
     "Dzuhur": "12:05",
@@ -40,7 +45,9 @@ class _HomePageState extends State<HomePage> {
     _loadKegiatan();
     _loadNamaUser();
     _updateNextPrayer();
-    Timer.periodic(const Duration(minutes: 1), (_) => _updateNextPrayer());
+
+    // Perbarui setiap 30 detik agar lebih responsif mendeteksi waktu adzan
+    Timer.periodic(const Duration(seconds: 30), (_) => _updateNextPrayer());
   }
 
   Future<void> _loadNamaUser() async {
@@ -48,31 +55,64 @@ class _HomePageState extends State<HomePage> {
     setState(() => namaUser = prefs.getString('registered_name') ?? "User");
   }
 
+  Future<void> _playAdzanSound() async {
+    if (_isAdzanPlaying) return; // biar gak dobel
+    try {
+      _isAdzanPlaying = true;
+      await _audioPlayer.play(AssetSource('audio/adzan.mp3'));
+      debugPrint("🔊 Adzan diputar");
+      _audioPlayer.onPlayerComplete.listen((_) {
+        _isAdzanPlaying = false; // reset setelah selesai
+      });
+    } catch (e) {
+      debugPrint("❌ Gagal memutar adzan: $e");
+      _isAdzanPlaying = false;
+    }
+  }
+
   Future<void> _loadKegiatan() async {
     final data = await DBKegiatan().getKegiatanList();
     if (mounted) setState(() => _listKegiatan = data);
   }
 
-  void _updateNextPrayer() {
+  void _updateNextPrayer() async {
     final now = DateTime.now();
+    DateFormat format = DateFormat("HH:mm");
     DateTime? nextTime;
     String? nextName;
 
+    bool isPrayerNow = false;
+
     for (var entry in prayerTimes.entries) {
-      final prayer = DateFormat("HH:mm").parse(entry.value);
-      final prayerTime = DateTime(now.year, now.month, now.day, prayer.hour, prayer.minute);
-      if (prayerTime.isAfter(now)) {
-        nextTime = prayerTime;
+      final prayerDate = format.parse(entry.value);
+      final prayerDateTime = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        prayerDate.hour,
+        prayerDate.minute,
+      );
+
+      if ((now.difference(prayerDateTime).inMinutes).abs() == 0) {
+        // Tepat waktu sholat
+        isPrayerNow = true;
+        break;
+      } else if (prayerDateTime.isAfter(now)) {
+        nextTime = prayerDateTime;
         nextName = entry.key;
         break;
       }
     }
 
-    if (nextTime == null) {
-      final subuh = prayerTimes["Subuh"]!.split(":");
-      nextTime = DateTime(now.year, now.month, now.day + 1, int.parse(subuh[0]), int.parse(subuh[1]));
-      nextName = "Subuh";
-    }
+    // Kalau semua sudah lewat, set ke Subuh besok
+    nextTime ??= DateTime(
+      now.year,
+      now.month,
+      now.day + 1,
+      int.parse(prayerTimes["Subuh"]!.split(":")[0]),
+      int.parse(prayerTimes["Subuh"]!.split(":")[1]),
+    );
+    nextName ??= "Subuh";
 
     final diff = nextTime.difference(now);
     final hours = diff.inHours;
@@ -80,8 +120,14 @@ class _HomePageState extends State<HomePage> {
 
     setState(() {
       nextPrayerName = nextName!;
+      nextPrayerTime = DateFormat("HH:mm").format(nextTime!);
       remainingTime = "Dalam $hours jam $minutes menit";
     });
+
+    // 🔊 Putar adzan jika tepat waktu sholat
+    if (isPrayerNow) {
+      await _playAdzanSound();
+    }
   }
 
   String _getGreeting() {
@@ -94,7 +140,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final bool dark = isDarkMode.value; 
+    final bool dark = main_app.isDarkMode.value;
     final Color bgColor = dark ? const Color(0xFF121212) : const Color(0xFFF2F6FC);
 
     return Scaffold(
@@ -141,7 +187,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // 🔹 BAGIAN APP BAR
+  // 🔹 APP BAR
   Widget _buildAppBar() {
     return SliverAppBar(
       automaticallyImplyLeading: false,
@@ -206,7 +252,7 @@ class _HomePageState extends State<HomePage> {
                           IconButton(
                             icon: const Icon(Icons.settings, color: Colors.white),
                             onPressed: () {
-                              Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingPage()));
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => const setting.SettingPage()));
                             },
                           ),
                         ],
@@ -288,7 +334,7 @@ class _HomePageState extends State<HomePage> {
           const _PrayerRow(icon: Icons.brightness_2_outlined, name: "Subuh", time: "04:45"),
           const _PrayerRow(icon: Icons.sunny, name: "Dzuhur", time: "12:05"),
           const _PrayerRow(icon: Icons.wb_sunny_outlined, name: "Ashar", time: "15:20"),
-          const _PrayerRow(icon: Icons.nightlight_round_outlined, name: "Magrib", time: "18:10"),
+          const _PrayerRow(icon: Icons.nightlight_round_outlined, name: "Maghrib", time: "18:10"),
           const _PrayerRow(icon: Icons.nightlight_round, name: "Isya", time: "19:25"),
           const SizedBox(height: 10),
           Text("Waktu $nextPrayerName $remainingTime",

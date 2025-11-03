@@ -1,5 +1,5 @@
 import 'dart:async';
-
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:ionicons/ionicons.dart';
@@ -13,6 +13,7 @@ class JadwalPage extends StatefulWidget {
 
 class _JadwalPageState extends State<JadwalPage> {
   late Timer _timer;
+  late AudioPlayer _audioPlayer;
   Map<String, dynamic>? nextPrayer;
 
   // 🔹 Jadwal sholat manual
@@ -62,7 +63,9 @@ class _JadwalPageState extends State<JadwalPage> {
   @override
   void initState() {
     super.initState();
+    _audioPlayer = AudioPlayer();
     _updateStatusSholat();
+
     // update otomatis tiap menit
     _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
       _updateStatusSholat();
@@ -71,13 +74,25 @@ class _JadwalPageState extends State<JadwalPage> {
 
   @override
   void dispose() {
+    _audioPlayer.dispose();
     _timer.cancel();
     super.dispose();
   }
 
+  /// 🔊 Putar suara adzan lokal
+  Future<void> _playAdzanSound() async {
+    try {
+      await _audioPlayer.play(AssetSource('audio/adzan.mp3'));
+    } catch (e) {
+      debugPrint("❌ Gagal memutar adzan: $e");
+    }
+  }
+
+  /// 🕒 Update status sholat
   void _updateStatusSholat() {
     final now = DateTime.now();
     final format = DateFormat("HH:mm");
+    bool adzanPlayed = false;
 
     setState(() {
       for (var data in jadwalSholat) {
@@ -89,7 +104,18 @@ class _JadwalPageState extends State<JadwalPage> {
           waktuSholat.hour,
           waktuSholat.minute,
         );
+
+        // tandai selesai
         data["selesai"] = now.isAfter(waktuHariIni);
+
+        // jika waktu tepat, mainkan adzan
+        if (now.hour == waktuHariIni.hour &&
+            now.minute == waktuHariIni.minute &&
+            !adzanPlayed &&
+            data["aktif"] == true) {
+          _playAdzanSound();
+          adzanPlayed = true;
+        }
       }
 
       // cari sholat berikutnya
@@ -105,11 +131,12 @@ class _JadwalPageState extends State<JadwalPage> {
           );
           return now.isBefore(waktuHariIni);
         },
-        orElse: () => jadwalSholat.last, // kalau semua sudah lewat
+        orElse: () => jadwalSholat.last,
       );
     });
   }
 
+  /// 🧮 Hitung sisa waktu menuju sholat berikutnya
   String _hitungSisaWaktu(String waktu) {
     final now = DateTime.now();
     final format = DateFormat("HH:mm");
@@ -142,7 +169,7 @@ class _JadwalPageState extends State<JadwalPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // HEADER
+            // 🔹 HEADER
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(24, 60, 24, 28),
@@ -183,16 +210,14 @@ class _JadwalPageState extends State<JadwalPage> {
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    DateFormat(
-                      "EEEE, d MMMM yyyy",
-                      "id_ID",
-                    ).format(DateTime.now()),
+                    DateFormat("EEEE, d MMMM yyyy", "id_ID")
+                        .format(DateTime.now()),
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: Colors.white70),
                   ),
                   const SizedBox(height: 20),
 
-                  // KARTU SHOLAT BERIKUTNYA
+                  // 🔸 KARTU SHOLAT BERIKUTNYA
                   Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
@@ -251,7 +276,7 @@ class _JadwalPageState extends State<JadwalPage> {
             ),
             const SizedBox(height: 24),
 
-            // LIST SHOLAT
+            // 🔸 LIST SHOLAT
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Column(
@@ -318,13 +343,9 @@ class _JadwalPageState extends State<JadwalPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
+                Text(title,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 4),
                 Text(subtitle, style: const TextStyle(color: Colors.grey)),
                 const SizedBox(height: 6),
@@ -341,13 +362,9 @@ class _JadwalPageState extends State<JadwalPage> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                time,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
+              Text(time,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16)),
               const SizedBox(height: 8),
               Switch(
                 value: isOn,

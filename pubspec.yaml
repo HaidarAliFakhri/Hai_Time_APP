@@ -45,6 +45,9 @@ dependencies:
   shared_preferences: ^2.5.3
   sqflite: ^2.4.2
   url_launcher: ^6.3.2
+  audioplayers: ^6.0.0
+  flutter_local_notifications: ^17.2.0
+  timezone: ^0.9.3
 
 dev_dependencies:
   flutter_lints: ^5.0.0
@@ -66,6 +69,7 @@ flutter:
     - assets/images/background/
     - assets/images/icon/
     - assets/images/logo/
+    - assets/audio/adzan.mp3
     # An image asset can refer to one or more resolution-specific "variants", see
     # https://flutter.dev/to/resolution-aware-images
     # For details regarding adding assets from package dependencies, see

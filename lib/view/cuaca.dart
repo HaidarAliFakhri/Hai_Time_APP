@@ -29,19 +29,19 @@ class CuacaPage extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Align(
-                  //   alignment: Alignment.topLeft,
-                  //   child: IconButton(
-                  //     icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  //     onPressed: () => Navigator.pop(context),
-                  //     tooltip: 'Kembali',
-                  //     iconSize: 26,
-                  //     splashColor:
-                  //         Colors.transparent, // 🔹 Hilangkan efek percikan
-                  //     highlightColor:
-                  //         Colors.transparent, // 🔹 Hilangkan efek tekanan
-                  //   ),
-                  // ),
+                  Align(
+                    alignment: Alignment.topLeft,
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: () => Navigator.pop(context),
+                      tooltip: 'Kembali',
+                      iconSize: 26,
+                      splashColor:
+                          Colors.transparent, // 🔹 Hilangkan efek percikan
+                      highlightColor:
+                          Colors.transparent, // 🔹 Hilangkan efek tekanan
+                    ),
+                  ),
                   const SizedBox(height: 10),
                   const Text(
                     "Jakarta, Indonesia",

@@ -336,8 +336,37 @@ class _KegiatanPageState extends State<KegiatanPage> {
                     style: TextStyle(color: Colors.red),
                   ),
                   onPressed: () async {
-                    await DBKegiatan().deleteKegiatan(kegiatan.id!);
-                    if (context.mounted) Navigator.pop(context, true);
+                    // Tampilkan dialog konfirmasi
+                    final konfirmasi = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text("Konfirmasi Hapus"),
+                        content: const Text(
+                          "Apakah kamu yakin ingin menghapus kegiatan ini?",
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () =>
+                                Navigator.pop(context, false), // batal
+                            child: const Text("Batal"),
+                          ),
+                          TextButton(
+                            onPressed: () =>
+                                Navigator.pop(context, true), // lanjut hapus
+                            child: const Text(
+                              "Hapus",
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    // Jika user menekan "Hapus", baru eksekusi hapus
+                    if (konfirmasi == true) {
+                      await DBKegiatan().deleteKegiatan(kegiatan.id!);
+                      if (context.mounted) Navigator.pop(context, true);
+                    }
                   },
                 ),
               ],

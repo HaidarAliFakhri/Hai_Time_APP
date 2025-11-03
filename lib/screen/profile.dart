@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:hai_time_app/page/home_page.dart';
+import 'package:hai_time_app/page/bottom_navigator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -182,7 +182,9 @@ class _ProfilePageState extends State<ProfilePage> {
               onPressed: () {
                 Navigator.pushReplacement(
                   context,
-                  MaterialPageRoute(builder: (context) => const HomePage()),
+                  MaterialPageRoute(
+                    builder: (context) => const BottomNavigator(),
+                  ),
                 );
               },
             ),

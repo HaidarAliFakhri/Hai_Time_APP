@@ -48,7 +48,7 @@ class _SplashScreenHaiTimeState extends State<SplashScreenHaiTime> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset('assets/images/logo/logo_app.png', height: 120),
+            Image.asset('assets/images/logo/logo_app.png', height: 200),
             const SizedBox(height: 20),
             const Text(
               "Welcome!!",

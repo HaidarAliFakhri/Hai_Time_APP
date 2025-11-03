@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:hai_time_app/page/home_page.dart';
+import 'package:hai_time_app/page/bottom_navigator.dart';
 import 'package:hai_time_app/page/login_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -171,7 +171,7 @@ class _SettingPageState extends State<SettingPage> {
           onPressed: () {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const HomePage()),
+              MaterialPageRoute(builder: (context) => const BottomNavigator()),
             );
           },
         ),

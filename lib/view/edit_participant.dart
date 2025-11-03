@@ -32,8 +32,8 @@ class _EditParticipantPageState extends State<EditParticipantPage> {
   void dispose() {
     _nameC.dispose();
     _emailC.dispose();
-    _phoneC.dispose();
-    _cityC.dispose();
+    // _phoneC.dispose();
+    // _cityC.dispose();
     _passwordC.dispose();
     super.dispose();
   }

@@ -21,6 +21,19 @@ class _TambahKegiatanPageState extends State<TambahKegiatanPage> {
   final TextEditingController _catatanController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    // Jika ada kegiatan (mode edit), isi controller dari data lama
+    if (widget.kegiatan != null) {
+      _judulController.text = widget.kegiatan!.judul;
+      _lokasiController.text = widget.kegiatan!.lokasi;
+      _tanggalController.text = widget.kegiatan!.tanggal;
+      _waktuController.text = widget.kegiatan!.waktu;
+      _catatanController.text = widget.kegiatan!.catatan ?? '';
+    }
+  }
+
+  @override
   void dispose() {
     _judulController.dispose();
     _lokasiController.dispose();
@@ -30,11 +43,37 @@ class _TambahKegiatanPageState extends State<TambahKegiatanPage> {
     super.dispose();
   }
 
+  // helper: parse waktu string ke TimeOfDay (mencoba beberapa format umum)
+  TimeOfDay? _tryParseTimeOfDay(String text) {
+    if (text.isEmpty) return null;
+    try {
+      // Coba format jam:menit 24-jam (HH:mm)
+      final d1 = DateFormat.Hm().parseLoose(text);
+      return TimeOfDay(hour: d1.hour, minute: d1.minute);
+    } catch (_) {}
+    try {
+      // Coba format 12-jam seperti "7:30 PM" atau locale-specific (jm)
+      final d2 = DateFormat.jm().parseLoose(text);
+      return TimeOfDay(hour: d2.hour, minute: d2.minute);
+    } catch (_) {}
+    // kalau gagal, return null
+    return null;
+  }
+
   // Fungsi pilih tanggal
   Future<void> _pilihTanggal() async {
+    DateTime initial = DateTime.now();
+    if (_tanggalController.text.isNotEmpty) {
+      try {
+        initial = DateFormat('dd/MM/yyyy').parseLoose(_tanggalController.text);
+      } catch (_) {
+        initial = DateTime.now();
+      }
+    }
+
     DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate: initial,
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
@@ -46,51 +85,56 @@ class _TambahKegiatanPageState extends State<TambahKegiatanPage> {
 
   // Fungsi pilih waktu
   Future<void> _pilihWaktu() async {
+    TimeOfDay initial = TimeOfDay.now();
+    final parsed = _tryParseTimeOfDay(_waktuController.text);
+    if (parsed != null) initial = parsed;
+
     TimeOfDay? picked = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay.now(),
+      initialTime: initial,
     );
 
     if (picked != null) {
+      // format waktu sesuai lokal (contoh: 07:30 PM atau 19:30 tergantung locale)
       _waktuController.text = picked.format(context);
     }
   }
 
   void _simpanKegiatan() async {
-    if (_formKey.currentState!.validate()) {
-      final data = {
-        "judul": _judulController.text,
-        "lokasi": _lokasiController.text,
-        "tanggal": _tanggalController.text,
-        "waktu": _waktuController.text,
-        "catatan": _catatanController.text,
-      };
+    if (!_formKey.currentState!.validate()) return;
 
-      if (widget.kegiatan != null) {
-        // EDIT DATA
-        final updated = Kegiatan(
-          id: widget.kegiatan!.id,
-          judul: data['judul']!,
-          lokasi: data['lokasi']!,
-          tanggal: data['tanggal']!,
-          waktu: data['waktu']!,
-          catatan: data['catatan'],
-        );
-        await DBKegiatan().updateKegiatan(updated);
-      } else {
-        // TAMBAH BARU
-        final newData = Kegiatan(
-          judul: data['judul']!,
-          lokasi: data['lokasi']!,
-          tanggal: data['tanggal']!,
-          waktu: data['waktu']!,
-          catatan: data['catatan'],
-        );
-        await DBKegiatan().insertKegiatan(newData);
-      }
+    final data = {
+      "judul": _judulController.text,
+      "lokasi": _lokasiController.text,
+      "tanggal": _tanggalController.text,
+      "waktu": _waktuController.text,
+      "catatan": _catatanController.text,
+    };
 
-      if (context.mounted) Navigator.pop(context, true);
+    if (widget.kegiatan != null) {
+      // EDIT DATA
+      final updated = Kegiatan(
+        id: widget.kegiatan!.id,
+        judul: data['judul']!,
+        lokasi: data['lokasi']!,
+        tanggal: data['tanggal']!,
+        waktu: data['waktu']!,
+        catatan: data['catatan'],
+      );
+      await DBKegiatan().updateKegiatan(updated);
+    } else {
+      // TAMBAH BARU
+      final newData = Kegiatan(
+        judul: data['judul']!,
+        lokasi: data['lokasi']!,
+        tanggal: data['tanggal']!,
+        waktu: data['waktu']!,
+        catatan: data['catatan'],
+      );
+      await DBKegiatan().insertKegiatan(newData);
     }
+
+    if (context.mounted) Navigator.pop(context, true);
   }
 
   @override
@@ -255,7 +299,7 @@ class _TambahKegiatanPageState extends State<TambahKegiatanPage> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: _simpanKegiatan, // ✅ cukup panggil ini
+                      onPressed: _simpanKegiatan,
                       child: const Text("Simpan"),
                     ),
                   ),

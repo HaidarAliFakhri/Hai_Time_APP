@@ -35,14 +35,14 @@ class _JadwalPageState extends State<JadwalPage> {
     },
     {
       "nama": "Ashar",
-      "waktu": "15:20",
+      "waktu": "15:10",
       "pengingat": "10 menit sebelumnya",
       "ikon": Icons.wb_twilight,
       "aktif": true,
       "selesai": false,
     },
     {
-      "nama": "Maghrib",
+      "nama": "Magrib",
       "waktu": "18:10",
       "pengingat": "10 menit sebelumnya",
       "ikon": Icons.nightlight_round_outlined,

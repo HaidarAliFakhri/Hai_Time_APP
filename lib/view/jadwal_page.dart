@@ -13,8 +13,9 @@ class JadwalPage extends StatefulWidget {
 
 class _JadwalPageState extends State<JadwalPage> {
   late Timer _timer;
+  Map<String, dynamic>? nextPrayer;
 
-  // 🔹 Data jadwal sholat manual
+  // 🔹 Jadwal sholat manual
   final List<Map<String, dynamic>> jadwalSholat = [
     {
       "nama": "Subuh",
@@ -61,8 +62,8 @@ class _JadwalPageState extends State<JadwalPage> {
   @override
   void initState() {
     super.initState();
-    _updateStatusSholat(); // Jalankan sekali saat awal
-    // 🔁 Update otomatis tiap 1 menit
+    _updateStatusSholat();
+    // update otomatis tiap menit
     _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
       _updateStatusSholat();
     });
@@ -74,30 +75,65 @@ class _JadwalPageState extends State<JadwalPage> {
     super.dispose();
   }
 
-  // 🔹 Fungsi: Update status otomatis berdasarkan waktu
   void _updateStatusSholat() {
     final now = DateTime.now();
     final format = DateFormat("HH:mm");
 
     setState(() {
       for (var data in jadwalSholat) {
-        final DateTime waktuSholat = format.parse(data["waktu"]);
-        final DateTime waktuHariIni = DateTime(
+        final waktuSholat = format.parse(data["waktu"]);
+        final waktuHariIni = DateTime(
           now.year,
           now.month,
           now.day,
           waktuSholat.hour,
           waktuSholat.minute,
         );
-
-        // Jika waktu sekarang sudah melewati waktu sholat
         data["selesai"] = now.isAfter(waktuHariIni);
       }
+
+      // cari sholat berikutnya
+      nextPrayer = jadwalSholat.firstWhere(
+        (data) {
+          final waktu = format.parse(data["waktu"]);
+          final waktuHariIni = DateTime(
+            now.year,
+            now.month,
+            now.day,
+            waktu.hour,
+            waktu.minute,
+          );
+          return now.isBefore(waktuHariIni);
+        },
+        orElse: () => jadwalSholat.last, // kalau semua sudah lewat
+      );
     });
+  }
+
+  String _hitungSisaWaktu(String waktu) {
+    final now = DateTime.now();
+    final format = DateFormat("HH:mm");
+    final waktuSholat = format.parse(waktu);
+    final waktuHariIni = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      waktuSholat.hour,
+      waktuSholat.minute,
+    );
+
+    final diff = waktuHariIni.difference(now);
+    if (diff.isNegative) return "Sudah lewat";
+
+    final jam = diff.inHours;
+    final menit = diff.inMinutes % 60;
+    return "Dalam ${jam > 0 ? '$jam jam ' : ''}$menit menit";
   }
 
   @override
   Widget build(BuildContext context) {
+    final currentNext = nextPrayer ?? jadwalSholat[0];
+
     return Scaffold(
       backgroundColor: const Color(0xFFF6F9FC),
       extendBodyBehindAppBar: true,
@@ -106,7 +142,7 @@ class _JadwalPageState extends State<JadwalPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🔹 HEADER
+            // HEADER
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(24, 60, 24, 28),
@@ -146,13 +182,17 @@ class _JadwalPageState extends State<JadwalPage> {
                     ),
                   ),
                   const SizedBox(height: 5),
-                  const Text(
-                    "Senin, 27 Oktober 2025\nJakarta, Indonesia",
+                  Text(
+                    DateFormat(
+                      "EEEE, d MMMM yyyy",
+                      "id_ID",
+                    ).format(DateTime.now()),
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white70),
+                    style: const TextStyle(color: Colors.white70),
                   ),
                   const SizedBox(height: 20),
-                  // 🔸 KARTU SHOLAT BERIKUTNYA
+
+                  // KARTU SHOLAT BERIKUTNYA
                   Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
@@ -167,37 +207,37 @@ class _JadwalPageState extends State<JadwalPage> {
                       ],
                     ),
                     padding: const EdgeInsets.all(16),
-                    child: const Row(
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            const Text(
                               "Waktu Sholat Berikutnya",
                               style: TextStyle(
                                 color: Colors.white70,
                                 fontSize: 13,
                               ),
                             ),
-                            SizedBox(height: 6),
+                            const SizedBox(height: 6),
                             Text(
-                              "Ashar",
-                              style: TextStyle(
+                              currentNext["nama"],
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             Text(
-                              "Dalam 2 jam 15 menit",
-                              style: TextStyle(color: Colors.white70),
+                              _hitungSisaWaktu(currentNext["waktu"]),
+                              style: const TextStyle(color: Colors.white70),
                             ),
                           ],
                         ),
                         Text(
-                          "15:20",
-                          style: TextStyle(
+                          currentNext["waktu"],
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 26,
                             fontWeight: FontWeight.bold,
@@ -211,7 +251,7 @@ class _JadwalPageState extends State<JadwalPage> {
             ),
             const SizedBox(height: 24),
 
-            // 🔹 DAFTAR WAKTU SHOLAT
+            // LIST SHOLAT
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Column(
@@ -226,7 +266,7 @@ class _JadwalPageState extends State<JadwalPage> {
                         data["ikon"],
                         data["aktif"],
                         data["selesai"],
-                        highlight: index == 2,
+                        highlight: data == nextPrayer,
                         onChanged: (val) {
                           setState(() {
                             data["aktif"] = val;
@@ -245,7 +285,7 @@ class _JadwalPageState extends State<JadwalPage> {
     );
   }
 
-  // 🕌 Kartu Sholat
+  // 🕌 Widget Kartu Sholat
   Widget _buildPrayerCard(
     String title,
     String time,

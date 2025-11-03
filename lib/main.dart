@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:hai_time_app/screen/splash_screen.dart';
+import 'package:intl/date_symbol_data_local.dart'; // ✅ Tambahkan impor ini
 
 // 🔹 Variabel global untuk kontrol tema (bisa diakses dari mana saja)
 ValueNotifier<bool> isDarkMode = ValueNotifier(false);
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized(); // ✅ Wajib sebelum async operation
+  await initializeDateFormatting(
+    'id_ID',
+    null,
+  ); // ✅ Inisialisasi locale Indonesia
+
   runApp(const MyApp());
 }
 

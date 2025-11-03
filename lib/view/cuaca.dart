@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:ionicons/ionicons.dart';
 
-class CuacaPage extends StatelessWidget {
-  const CuacaPage({super.key});
+class CuacaPage extends StatefulWidget {
+  final VoidCallback? onBackToHome; // Callback opsional untuk navigasi balik ke Home
 
+  const CuacaPage({super.key, this.onBackToHome});
+
+  @override
+  State<CuacaPage> createState() => _CuacaPageState();
+}
+
+class _CuacaPageState extends State<CuacaPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -29,19 +36,27 @@ class CuacaPage extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // 🔙 Tombol kembali
                   Align(
                     alignment: Alignment.topLeft,
                     child: IconButton(
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () {
+                        if (Navigator.of(context).canPop()) {
+                          // kalau halaman ini dibuka via Navigator.push
+                          Navigator.of(context).pop();
+                        } else {
+                          // kalau halaman ini dari BottomNavigationBar
+                          widget.onBackToHome?.call();
+                        }
+                      },
                       tooltip: 'Kembali',
                       iconSize: 26,
-                      splashColor:
-                          Colors.transparent, // 🔹 Hilangkan efek percikan
-                      highlightColor:
-                          Colors.transparent, // 🔹 Hilangkan efek tekanan
+                      splashColor: Colors.transparent,
+                      highlightColor: Colors.transparent,
                     ),
                   ),
+
                   const SizedBox(height: 10),
                   const Text(
                     "Jakarta, Indonesia",
@@ -122,7 +137,7 @@ class CuacaPage extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // 🔹 Prakiraan Per Jam
+            // 🔹 PRAKIRAAN PER JAM
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               child: Container(
@@ -149,10 +164,8 @@ class CuacaPage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 10),
-
-                    // 🔸 Scroll horizontal
                     SizedBox(
-                      height: 100, // ✅ Batas tinggi biar gak overflow
+                      height: 100,
                       child: ListView.builder(
                         scrollDirection: Axis.horizontal,
                         itemCount: 5,
@@ -269,20 +282,6 @@ class CuacaPage extends StatelessWidget {
                         temp: "25°C",
                         icon: Ionicons.rainy_outline,
                       ),
-                      _DailyForecast(
-                        day: "Sab",
-                        date: "1 Nov",
-                        weather: "Berawan",
-                        temp: "27°C",
-                        icon: Ionicons.cloud_outline,
-                      ),
-                      _DailyForecast(
-                        day: "Min",
-                        date: "2 Nov",
-                        weather: "Cerah",
-                        temp: "30°C",
-                        icon: Ionicons.sunny_outline,
-                      ),
                     ],
                   ),
                 ],
@@ -295,7 +294,7 @@ class CuacaPage extends StatelessWidget {
   }
 }
 
-// 🌦️ Widget untuk Info Cuaca Detail
+// 🌦️ Widget Info Cuaca Detail
 class _WeatherInfo extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -322,41 +321,6 @@ class _WeatherInfo extends StatelessWidget {
           Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
           const SizedBox(height: 4),
           Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-}
-
-// ☀️ Widget Prakiraan Per Jam
-class _HourlyForecast extends StatelessWidget {
-  final String time;
-  final String temp;
-  final IconData icon;
-  const _HourlyForecast({
-    required this.time,
-    required this.temp,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 80,
-      margin: const EdgeInsets.only(right: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF6F9FC),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      padding: const EdgeInsets.all(10),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(time, style: const TextStyle(color: Colors.grey)),
-          const SizedBox(height: 6),
-          Icon(icon, color: Colors.orange, size: 28),
-          const SizedBox(height: 6),
-          Text(temp, style: const TextStyle(fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -404,22 +368,18 @@ class _DailyForecast extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    "$day, $date",
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    weather,
-                    style: const TextStyle(color: Colors.grey, fontSize: 13),
-                  ),
+                  Text("$day, $date",
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(weather,
+                      style:
+                          const TextStyle(color: Colors.grey, fontSize: 13)),
                 ],
               ),
             ],
           ),
-          Text(
-            temp,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
+          Text(temp,
+              style:
+                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         ],
       ),
     );

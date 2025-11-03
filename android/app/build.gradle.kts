@@ -18,20 +18,37 @@ android {
         versionName = flutter.versionName
     }
 
-    // ✅ Tambahkan bagian ini (desugaring aktif + kompatibilitas Java 11)
+    // ✅ Kompatibilitas Java 11 + desugaring aktif
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
-        isCoreLibraryDesugaringEnabled = true // WAJIB agar flutter_local_notifications jalan
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = "11"
     }
 
     buildTypes {
-        release {
-            signingConfig = signingConfigs.getByName("debug")
+    release {
+        signingConfig = signingConfigs.getByName("debug")
+
+        // ✅ Tambahkan dua baris ini:
+        isMinifyEnabled = false
+        isShrinkResources = false
+    }
+    debug {
+        isMinifyEnabled = false
+        isShrinkResources = false
+    }
+}
+
+
+    // ✅ Optional: biar build stabil di semua versi Gradle
+    packagingOptions {
+        resources {
+            excludes.add("/META-INF/{AL2.0,LGPL2.1}")
+
         }
     }
 }
@@ -41,12 +58,15 @@ flutter {
 }
 
 dependencies {
-    // ✅ Tambahkan library ini (wajib untuk desugaring)
+    // ✅ Desugaring library wajib (biar support API modern di versi Android lama)
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 
-    // ✅ Pastikan ada kotlin stdlib
+    // ✅ Kotlin stdlib
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 
-    // Tambahkan dependency lain jika diperlukan
+    // ✅ AndroidX Core
     implementation("androidx.core:core-ktx:1.12.0")
+
+    // 🔔 Tambahkan ini kalau pakai notifikasi & alarm
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
 }

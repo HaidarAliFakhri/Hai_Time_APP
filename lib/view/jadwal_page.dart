@@ -3,9 +3,13 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:ionicons/ionicons.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest.dart' as tzdata;
 
-class JadwalPage extends StatefulWidget {
-  const JadwalPage({super.key});
+class JadwalPage extends StatefulWidget {final VoidCallback? onBackToHome; // <-- tambahkan ini
+
+  const JadwalPage({super.key, this.onBackToHome});
 
   @override
   State<JadwalPage> createState() => _JadwalPageState();
@@ -15,6 +19,8 @@ class _JadwalPageState extends State<JadwalPage> {
   late Timer _timer;
   late AudioPlayer _audioPlayer;
   Map<String, dynamic>? nextPrayer;
+  final FlutterLocalNotificationsPlugin _notifikasi =
+      FlutterLocalNotificationsPlugin();
 
   // 🔹 Jadwal sholat manual
   final List<Map<String, dynamic>> jadwalSholat = [
@@ -64,12 +70,17 @@ class _JadwalPageState extends State<JadwalPage> {
   void initState() {
     super.initState();
     _audioPlayer = AudioPlayer();
+    tzdata.initializeTimeZones();
+    _initNotifikasi();
     _updateStatusSholat();
 
     // update otomatis tiap menit
     _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
       _updateStatusSholat();
     });
+
+    // jadwalkan notifikasi adzan
+    _jadwalkanSemuaSholat();
   }
 
   @override
@@ -85,6 +96,55 @@ class _JadwalPageState extends State<JadwalPage> {
       await _audioPlayer.play(AssetSource('audio/adzan.mp3'));
     } catch (e) {
       debugPrint("❌ Gagal memutar adzan: $e");
+    }
+  }
+
+  /// Inisialisasi notifikasi
+  Future<void> _initNotifikasi() async {
+    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const initSettings = InitializationSettings(android: androidInit);
+    await _notifikasi.initialize(initSettings);
+  }
+
+  /// Jadwalkan semua notifikasi sholat
+  Future<void> _jadwalkanSemuaSholat() async {
+    final now = DateTime.now();
+    final format = DateFormat("HH:mm");
+
+    for (int i = 0; i < jadwalSholat.length; i++) {
+      final data = jadwalSholat[i];
+      final waktu = format.parse(data["waktu"]);
+      final waktuHariIni = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        waktu.hour,
+        waktu.minute,
+      );
+
+      // kalau sudah lewat, jadwalkan untuk besok
+      final waktuFinal =
+          now.isAfter(waktuHariIni) ? waktuHariIni.add(const Duration(days: 1)) : waktuHariIni;
+
+      await _notifikasi.zonedSchedule(
+        i,
+        "Waktu Sholat ${data["nama"]}",
+        "Sudah masuk waktu ${data["nama"]}. Ayo sholat dulu 🕌",
+        tz.TZDateTime.from(waktuFinal, tz.local), // ✅ FIX disini
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'adzan_channel',
+            'Adzan Reminder',
+            channelDescription: 'Notifikasi pengingat waktu sholat',
+            importance: Importance.max,
+            priority: Priority.high,
+            sound: RawResourceAndroidNotificationSound('adzan'),
+          ),
+        ),
+        androidAllowWhileIdle: true,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+      );
     }
   }
 
@@ -105,10 +165,8 @@ class _JadwalPageState extends State<JadwalPage> {
           waktuSholat.minute,
         );
 
-        // tandai selesai
         data["selesai"] = now.isAfter(waktuHariIni);
 
-        // jika waktu tepat, mainkan adzan
         if (now.hour == waktuHariIni.hour &&
             now.minute == waktuHariIni.minute &&
             !adzanPlayed &&
@@ -118,7 +176,6 @@ class _JadwalPageState extends State<JadwalPage> {
         }
       }
 
-      // cari sholat berikutnya
       nextPrayer = jadwalSholat.firstWhere(
         (data) {
           final waktu = format.parse(data["waktu"]);
@@ -169,7 +226,8 @@ class _JadwalPageState extends State<JadwalPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🔹 HEADER
+            // 🔹 HEADER (desain tetap)
+            
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(24, 60, 24, 28),
@@ -187,27 +245,37 @@ class _JadwalPageState extends State<JadwalPage> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Align(
-                    alignment: Alignment.topLeft,
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ),
+  alignment: Alignment.topLeft,
+  child: IconButton(
+    icon: const Icon(Icons.arrow_back, color: Colors.white),
+    onPressed: () {
+      // Jika ada route sebelumnya, pop (misal dibuka lewat Navigator.push)
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      } else {
+        // Kalau tidak bisa pop, ini berarti dibuka via BottomNavigator
+        // panggil callback onBackToHome jika tersedia
+        widget.onBackToHome?.call();
+        // jika callback tidak diberikan, tidak melakukan apa-apa
+      }
+    },
+    tooltip: 'Kembali',
+    iconSize: 26,
+    splashColor: Colors.transparent,
+    highlightColor: Colors.transparent,
+  ),
+),
+
+
                   const SizedBox(height: 10),
-                  const Icon(
-                    Ionicons.moon_outline,
-                    color: Colors.white,
-                    size: 60,
-                  ),
+                  const Icon(Ionicons.moon_outline,
+                      color: Colors.white, size: 60),
                   const SizedBox(height: 10),
-                  const Text(
-                    "Jadwal Sholat",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  const Text("Jadwal Sholat",
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold)),
                   const SizedBox(height: 5),
                   Text(
                     DateFormat("EEEE, d MMMM yyyy", "id_ID")
@@ -216,8 +284,7 @@ class _JadwalPageState extends State<JadwalPage> {
                     style: const TextStyle(color: Colors.white70),
                   ),
                   const SizedBox(height: 20),
-
-                  // 🔸 KARTU SHOLAT BERIKUTNYA
+                  // 🔸 Kartu Sholat Berikutnya (tetap sama)
                   Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
@@ -236,38 +303,27 @@ class _JadwalPageState extends State<JadwalPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "Waktu Sholat Berikutnya",
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 13,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              currentNext["nama"],
-                              style: const TextStyle(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("Waktu Sholat Berikutnya",
+                                  style: TextStyle(
+                                      color: Colors.white70, fontSize: 13)),
+                              const SizedBox(height: 6),
+                              Text(currentNext["nama"],
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold)),
+                              Text(
+                                  _hitungSisaWaktu(currentNext["waktu"]),
+                                  style:
+                                      const TextStyle(color: Colors.white70)),
+                            ]),
+                        Text(currentNext["waktu"],
+                            style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              _hitungSisaWaktu(currentNext["waktu"]),
-                              style: const TextStyle(color: Colors.white70),
-                            ),
-                          ],
-                        ),
-                        Text(
-                          currentNext["waktu"],
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ),
@@ -275,10 +331,10 @@ class _JadwalPageState extends State<JadwalPage> {
               ),
             ),
             const SizedBox(height: 24),
-
-            // 🔸 LIST SHOLAT
+            // 🔸 List Sholat (tidak diubah)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Column(
                 children: List.generate(jadwalSholat.length, (index) {
                   final data = jadwalSholat[index];
@@ -310,7 +366,7 @@ class _JadwalPageState extends State<JadwalPage> {
     );
   }
 
-  // 🕌 Widget Kartu Sholat
+  // 🕌 Widget Kartu Sholat (tidak diubah)
   Widget _buildPrayerCard(
     String title,
     String time,
@@ -328,51 +384,46 @@ class _JadwalPageState extends State<JadwalPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2))
         ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(icon, color: highlight ? Colors.orange : Colors.blue, size: 28),
+          Icon(icon,
+              color: highlight ? Colors.orange : Colors.blue, size: 28),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                 Text(title,
                     style: const TextStyle(
                         fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 4),
-                Text(subtitle, style: const TextStyle(color: Colors.grey)),
+                Text(subtitle,
+                    style: const TextStyle(color: Colors.grey)),
                 const SizedBox(height: 6),
                 Text(
-                  done ? "✔ Sudah dilaksanakan" : "Belum dilaksanakan",
-                  style: TextStyle(
-                    color: done ? Colors.green : Colors.red,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(time,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16)),
-              const SizedBox(height: 8),
-              Switch(
+                    done
+                        ? "✔ Sudah dilaksanakan"
+                        : "Belum dilaksanakan",
+                    style: TextStyle(
+                        color: done ? Colors.green : Colors.red,
+                        fontWeight: FontWeight.w500)),
+              ])),
+          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Text(time,
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold, fontSize: 16)),
+            const SizedBox(height: 8),
+            Switch(
                 value: isOn,
                 onChanged: onChanged,
-                activeThumbColor: Colors.blue,
-              ),
-            ],
-          ),
+                activeThumbColor: Colors.blue)
+          ]),
         ],
       ),
     );

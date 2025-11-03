@@ -1,30 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:hai_time_app/screen/splash_screen.dart';
-import 'package:intl/date_symbol_data_local.dart'; // ✅ Locale Indonesia
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
-// 🔹 Variabel global untuk kontrol tema (bisa diakses dari mana saja)
+
+// 🔹 Variabel global untuk kontrol tema
 ValueNotifier<bool> isDarkMode = ValueNotifier(false);
 
-// 🔔 Plugin notifikasi global
+// 🔹 Notifikasi instance
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized(); // ✅ Wajib sebelum async operation
-  await initializeDateFormatting('id_ID', null); // ✅ Locale Indonesia
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('id_ID', null);
 
-  // ✅ Inisialisasi timezone untuk jadwal notifikasi
+
+  // 🔹 Inisialisasi timezone
   tz.initializeTimeZones();
-  tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
 
-  // ✅ Inisialisasi notifikasi lokal
-  const AndroidInitializationSettings androidInit =
+  // 🔹 Inisialisasi Alarm Manager
+  await AndroidAlarmManager.initialize();
+
+  // 🔹 Inisialisasi notifikasi lokal
+  const AndroidInitializationSettings initSettingsAndroid =
       AndroidInitializationSettings('@mipmap/ic_launcher');
   const InitializationSettings initSettings =
-      InitializationSettings(android: androidInit);
+      InitializationSettings(android: initSettingsAndroid);
   await flutterLocalNotificationsPlugin.initialize(initSettings);
 
   runApp(const MyApp());
@@ -41,33 +46,20 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'HaiTime',
+          themeMode: dark ? ThemeMode.dark : ThemeMode.light,
 
-          // 🔹 Tema terang
           theme: ThemeData(
             brightness: Brightness.light,
             scaffoldBackgroundColor: const Color(0xFFF2F6FC),
             primarySwatch: Colors.blue,
-            appBarTheme: const AppBarTheme(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-            ),
           ),
 
-          // 🔹 Tema gelap
           darkTheme: ThemeData(
             brightness: Brightness.dark,
             scaffoldBackgroundColor: const Color(0xFF121212),
             primarySwatch: Colors.blueGrey,
-            appBarTheme: const AppBarTheme(
-              backgroundColor: Color(0xFF1E1E1E),
-              foregroundColor: Colors.white,
-            ),
           ),
 
-          // 🔹 Tentukan mode aktif (berdasarkan ValueNotifier)
-          themeMode: dark ? ThemeMode.dark : ThemeMode.light,
-
-          // 🔹 Halaman awal
           home: const SplashScreenHaiTime(),
         );
       },

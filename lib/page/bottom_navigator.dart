@@ -13,11 +13,30 @@ class BottomNavigator extends StatefulWidget {
 class _BottomNavigatorState extends State<BottomNavigator> {
   int _selectedIndex = 0;
 
-  // 🔹 Simpan halaman hanya sekali (tidak rebuild terus)
-  final List<Widget> _pages = const [HomePage(), JadwalPage(), CuacaPage()];
+  // ❗ Jangan langsung gunakan const list kalau ada parameter non-const
+  late final List<Widget> _pages;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // inisialisasi pages; kita kirim callback onBackToHome ke JadwalPage
+    _pages = [
+      const HomePage(),
+      // Beri JadwalPage sebuah callback yang mengubah tab ke index 0
+      JadwalPage(
+        onBackToHome: () {
+          setState(() {
+            _selectedIndex = 0;
+          });
+        },
+      ),
+      CuacaPage(onBackToHome: () => _onItemTapped(0)), 
+    ];
+  }
 
   void _onItemTapped(int index) {
-    if (_selectedIndex == index) return; // ✅ cegah rebuild jika sama
+    if (_selectedIndex == index) return; // cegah rebuild jika sama
     setState(() {
       _selectedIndex = index;
     });
@@ -26,16 +45,18 @@ class _BottomNavigatorState extends State<BottomNavigator> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // 🔹 AnimatedSwitcher untuk efek transisi halus antar halaman
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
         transitionBuilder: (child, animation) {
           return FadeTransition(opacity: animation, child: child);
         },
-        child: _pages[_selectedIndex],
+        // gunakan key supaya AnimatedSwitcher tahu child berubah
+        child: IndexedStack(
+          index: _selectedIndex,
+          children: _pages,
+        ),
       ),
 
-      // 🔹 Bottom Navigation
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,

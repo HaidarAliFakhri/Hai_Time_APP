@@ -383,7 +383,7 @@ class _HomePageState extends State<HomePage> {
           const _PrayerRow(
             icon: Icons.wb_sunny_outlined,
             name: "Ashar",
-            time: "15:20",
+            time: "15:00",
           ),
           const _PrayerRow(
             icon: Icons.nightlight_round_outlined,

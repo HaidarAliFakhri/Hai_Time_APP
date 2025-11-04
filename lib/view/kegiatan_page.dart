@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../db/db_kegiatan.dart';
 import '../model/kegiatan.dart';
 import 'tambah_kegiatan.dart';
 
 class KegiatanPage extends StatefulWidget {
-  final Kegiatan
-  kegiatan; // tetap wajib (karena halaman ini memang detail 1 kegiatan)
+  final Kegiatan kegiatan;
 
   const KegiatanPage({super.key, required this.kegiatan});
 
@@ -15,45 +16,117 @@ class KegiatanPage extends StatefulWidget {
 }
 
 class _KegiatanPageState extends State<KegiatanPage> {
+  bool loading = false;
+  String? estimasiWaktu;
+  String? waktuIdeal;
+  String mode = "driving"; // default = mobil
+  final Map<String, String> modeLabel = {
+    "walking": "Jalan Kaki",
+    "bicycling": "Sepeda",
+    "two_wheeler": "Motor",
+    "driving": "Mobil",
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _hitungPerjalanan();
+  }
+
+  Future<void> _hitungPerjalanan() async {
+    setState(() => loading = true);
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied ||
+            permission == LocationPermission.deniedForever) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text("Izin lokasi ditolak")));
+          setState(() => loading = false);
+          return;
+        }
+      }
+
+      // Dapatkan lokasi pengguna
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      // Hitung jarak manual (estimasi)
+      final tujuan = widget.kegiatan.lokasi;
+      // Dummy estimasi waktu berdasarkan mode
+      String estimasi;
+      switch (mode) {
+        case "walking":
+          estimasi = "15-25 menit";
+          break;
+        case "bicycling":
+          estimasi = "10-15 menit";
+          break;
+        case "two_wheeler":
+          estimasi = "5-10 menit";
+          break;
+        default:
+          estimasi = "5-8 menit";
+      }
+
+      setState(() {
+        estimasiWaktu = estimasi;
+        waktuIdeal = "Berangkat 30 menit sebelum kegiatan";
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Gagal menghitung estimasi: $e")));
+    } finally {
+      setState(() => loading = false);
+    }
+  }
+
+  Future<void> _bukaMaps() async {
+    try {
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      final asal = '${pos.latitude},${pos.longitude}';
+      final tujuan = Uri.encodeComponent(widget.kegiatan.lokasi);
+      String travelMode = mode == "two_wheeler" ? "driving" : mode;
+
+      final url =
+          'https://www.google.com/maps/dir/?api=1&origin=$asal&destination=$tujuan&travelmode=$travelMode';
+
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        throw "Tidak bisa membuka Google Maps";
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Gagal membuka Google Maps: $e")));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final kegiatan = widget.kegiatan;
 
-    // === Data dummy untuk cuaca & perjalanan ===
-    const cuaca = "Hujan"; // ubah ke Cerah / Berawan / Hujan
-    const suhu = "26°C";
+    // Dummy cuaca
+    const cuaca = "Cerah";
+    const suhu = "30°C";
     final jamCuaca = kegiatan.waktu;
-    const estimasiWaktu = "45 menit";
-    const waktuIdeal = "15:30";
     const saran =
-        "Berangkat lebih awal karena cuaca diprediksi hujan. Siapkan payung atau jas hujan.";
+        "Berangkat lebih awal agar tidak terjebak macet. Pastikan kondisi kendaraan prima.";
 
-    // === Logika tampilan cuaca dinamis ===
-    IconData ikonCuaca;
-    Color warnaCuaca;
-
-    switch (cuaca.toLowerCase()) {
-      case "cerah":
-        ikonCuaca = Icons.wb_sunny;
-        warnaCuaca = Colors.orangeAccent;
-        break;
-      case "berawan":
-        ikonCuaca = Icons.cloud_queue;
-        warnaCuaca = Colors.grey;
-        break;
-      case "hujan":
-        ikonCuaca = Icons.cloudy_snowing;
-        warnaCuaca = Colors.blueAccent;
-        break;
-      default:
-        ikonCuaca = Icons.wb_cloudy_outlined;
-        warnaCuaca = Colors.blueGrey;
-    }
+    IconData ikonCuaca = Icons.wb_sunny;
+    Color warnaCuaca = Colors.orangeAccent;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF3F8FF),
-
-      // ====== APP BAR DENGAN GRADIENT + LENGKUNGAN ======
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(100),
         child: AppBar(
@@ -85,17 +158,14 @@ class _KegiatanPageState extends State<KegiatanPage> {
               ),
             ),
           ),
-          centerTitle: false,
         ),
       ),
-
-      // ====== BODY ======
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // === CARD: INFO KEGIATAN ===
+            // === INFO KEGIATAN ===
             _buildCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -116,12 +186,7 @@ class _KegiatanPageState extends State<KegiatanPage> {
                         color: Colors.blue,
                       ),
                       const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          kegiatan.lokasi,
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      ),
+                      Expanded(child: Text(kegiatan.lokasi)),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -150,53 +215,70 @@ class _KegiatanPageState extends State<KegiatanPage> {
 
             const SizedBox(height: 16),
 
-            // === CARD: CUACA ===
+            // === INFORMASI PERJALANAN ===
             _buildCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const Text(
+                    "Informasi Perjalanan",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // PILIHAN MODE TRANSPORTASI
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      const Text(
-                        "Perkiraan Cuaca",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: warnaCuaca.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(cuaca, style: TextStyle(color: warnaCuaca)),
-                      ),
+                      _buildTransportOption(Icons.directions_walk, "walking"),
+                      _buildTransportOption(Icons.directions_bike, "bicycling"),
+                      _buildTransportOption(Icons.motorcycle, "two_wheeler"),
+                      _buildTransportOption(Icons.directions_car, "driving"),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(ikonCuaca, color: warnaCuaca, size: 36),
-                      const SizedBox(width: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            suhu,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+
+                  const SizedBox(height: 12),
+                  loading
+                      ? const Center(child: CircularProgressIndicator())
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("Mode: ${modeLabel[mode]}"),
+                            Text(
+                              "Estimasi Waktu Tempuh: ${estimasiWaktu ?? '-'}",
                             ),
-                          ),
-                          Text("Pada $jamCuaca"),
-                        ],
+                            Text(
+                              "Waktu Berangkat Ideal: ${waktuIdeal ?? '-'}",
+                              style: const TextStyle(color: Colors.red),
+                            ),
+                          ],
+                        ),
+
+                  const SizedBox(height: 12),
+
+                  // Tombol buka Google Maps
+                  GestureDetector(
+                    onTap: _bukaMaps,
+                    child: Container(
+                      width: double.infinity,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ],
+                      child: const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.map, color: Colors.blue, size: 30),
+                            Text(
+                              "Lihat rute di Google Maps",
+                              style: TextStyle(color: Colors.blue),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -204,50 +286,25 @@ class _KegiatanPageState extends State<KegiatanPage> {
 
             const SizedBox(height: 16),
 
-            // === CARD: INFORMASI PERJALANAN ===
+            // === CARD CUACA ===
             _buildCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
+                  Icon(ikonCuaca, color: warnaCuaca, size: 36),
+                  const SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        "Informasi Perjalanan",
+                        cuaca,
                         style: TextStyle(
+                          color: warnaCuaca,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      Text("Buka Peta", style: TextStyle(color: Colors.blue)),
+                      Text("Suhu: $suhu • Pada $jamCuaca"),
                     ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text("Estimasi Waktu Tempuh: $estimasiWaktu"),
-                  Text(
-                    "Waktu Berangkat Ideal: $waktuIdeal",
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    width: double.infinity,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.location_on, color: Colors.blue, size: 30),
-                          Text(
-                            "Lihat rute lengkap",
-                            style: TextStyle(color: Colors.blue),
-                          ),
-                        ],
-                      ),
-                    ),
                   ),
                 ],
               ),
@@ -255,12 +312,11 @@ class _KegiatanPageState extends State<KegiatanPage> {
 
             const SizedBox(height: 16),
 
-            // === CARD: SARAN ===
+            // === CARD SARAN ===
             _buildCard(
               color: const Color(0xFFFFF7E5),
               borderColor: const Color(0xFFFFC107),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: const [
                   Icon(
                     Icons.warning_amber_rounded,
@@ -275,8 +331,7 @@ class _KegiatanPageState extends State<KegiatanPage> {
               ),
             ),
 
-            const SizedBox(height: 16),
-
+            const SizedBox(height: 24),
             // === CARD: CATATAN ===
             if (kegiatan.catatan != null && kegiatan.catatan!.isNotEmpty)
               _buildCard(
@@ -297,7 +352,6 @@ class _KegiatanPageState extends State<KegiatanPage> {
               ),
 
             const SizedBox(height: 24),
-
             // === TOMBOL EDIT & HAPUS ===
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -336,7 +390,6 @@ class _KegiatanPageState extends State<KegiatanPage> {
                     style: TextStyle(color: Colors.red),
                   ),
                   onPressed: () async {
-                    // Tampilkan dialog konfirmasi
                     final konfirmasi = await showDialog<bool>(
                       context: context,
                       builder: (context) => AlertDialog(
@@ -346,13 +399,11 @@ class _KegiatanPageState extends State<KegiatanPage> {
                         ),
                         actions: [
                           TextButton(
-                            onPressed: () =>
-                                Navigator.pop(context, false), // batal
+                            onPressed: () => Navigator.pop(context, false),
                             child: const Text("Batal"),
                           ),
                           TextButton(
-                            onPressed: () =>
-                                Navigator.pop(context, true), // lanjut hapus
+                            onPressed: () => Navigator.pop(context, true),
                             child: const Text(
                               "Hapus",
                               style: TextStyle(color: Colors.red),
@@ -362,7 +413,6 @@ class _KegiatanPageState extends State<KegiatanPage> {
                       ),
                     );
 
-                    // Jika user menekan "Hapus", baru eksekusi hapus
                     if (konfirmasi == true) {
                       await DBKegiatan().deleteKegiatan(kegiatan.id!);
                       if (context.mounted) Navigator.pop(context, true);
@@ -372,6 +422,33 @@ class _KegiatanPageState extends State<KegiatanPage> {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTransportOption(IconData icon, String value) {
+    final isSelected = mode == value;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          mode = value;
+          _hitungPerjalanan();
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.blue.shade100 : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? Colors.blueAccent : Colors.grey.shade300,
+          ),
+        ),
+        child: Icon(
+          icon,
+          color: isSelected ? Colors.blueAccent : Colors.grey,
+          size: 28,
         ),
       ),
     );

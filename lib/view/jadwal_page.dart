@@ -1,13 +1,15 @@
 import 'dart:async';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:intl/intl.dart';
 import 'package:ionicons/ionicons.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tzdata;
+import 'package:timezone/timezone.dart' as tz;
 
-class JadwalPage extends StatefulWidget {final VoidCallback? onBackToHome; // <-- tambahkan ini
+class JadwalPage extends StatefulWidget {
+  final VoidCallback? onBackToHome; // <-- tambahkan ini
 
   const JadwalPage({super.key, this.onBackToHome});
 
@@ -26,7 +28,7 @@ class _JadwalPageState extends State<JadwalPage> {
   final List<Map<String, dynamic>> jadwalSholat = [
     {
       "nama": "Subuh",
-      "waktu": "04:45",
+      "waktu": "04:35",
       "pengingat": "10 menit sebelumnya",
       "ikon": Icons.brightness_2_outlined,
       "aktif": true,
@@ -34,7 +36,7 @@ class _JadwalPageState extends State<JadwalPage> {
     },
     {
       "nama": "Dzuhur",
-      "waktu": "12:05",
+      "waktu": "12:00",
       "pengingat": "10 menit sebelumnya",
       "ikon": Icons.wb_sunny_outlined,
       "aktif": true,
@@ -42,7 +44,7 @@ class _JadwalPageState extends State<JadwalPage> {
     },
     {
       "nama": "Ashar",
-      "waktu": "15:10",
+      "waktu": "15:00",
       "pengingat": "10 menit sebelumnya",
       "ikon": Icons.wb_twilight,
       "aktif": true,
@@ -123,8 +125,9 @@ class _JadwalPageState extends State<JadwalPage> {
       );
 
       // kalau sudah lewat, jadwalkan untuk besok
-      final waktuFinal =
-          now.isAfter(waktuHariIni) ? waktuHariIni.add(const Duration(days: 1)) : waktuHariIni;
+      final waktuFinal = now.isAfter(waktuHariIni)
+          ? waktuHariIni.add(const Duration(days: 1))
+          : waktuHariIni;
 
       await _notifikasi.zonedSchedule(
         i,
@@ -176,20 +179,17 @@ class _JadwalPageState extends State<JadwalPage> {
         }
       }
 
-      nextPrayer = jadwalSholat.firstWhere(
-        (data) {
-          final waktu = format.parse(data["waktu"]);
-          final waktuHariIni = DateTime(
-            now.year,
-            now.month,
-            now.day,
-            waktu.hour,
-            waktu.minute,
-          );
-          return now.isBefore(waktuHariIni);
-        },
-        orElse: () => jadwalSholat.last,
-      );
+      nextPrayer = jadwalSholat.firstWhere((data) {
+        final waktu = format.parse(data["waktu"]);
+        final waktuHariIni = DateTime(
+          now.year,
+          now.month,
+          now.day,
+          waktu.hour,
+          waktu.minute,
+        );
+        return now.isBefore(waktuHariIni);
+      }, orElse: () => jadwalSholat.last);
     });
   }
 
@@ -227,7 +227,6 @@ class _JadwalPageState extends State<JadwalPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 🔹 HEADER (desain tetap)
-            
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(24, 60, 24, 28),
@@ -245,41 +244,48 @@ class _JadwalPageState extends State<JadwalPage> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Align(
-  alignment: Alignment.topLeft,
-  child: IconButton(
-    icon: const Icon(Icons.arrow_back, color: Colors.white),
-    onPressed: () {
-      // Jika ada route sebelumnya, pop (misal dibuka lewat Navigator.push)
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      } else {
-        // Kalau tidak bisa pop, ini berarti dibuka via BottomNavigator
-        // panggil callback onBackToHome jika tersedia
-        widget.onBackToHome?.call();
-        // jika callback tidak diberikan, tidak melakukan apa-apa
-      }
-    },
-    tooltip: 'Kembali',
-    iconSize: 26,
-    splashColor: Colors.transparent,
-    highlightColor: Colors.transparent,
-  ),
-),
-
+                    alignment: Alignment.topLeft,
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: () {
+                        // Jika ada route sebelumnya, pop (misal dibuka lewat Navigator.push)
+                        if (Navigator.of(context).canPop()) {
+                          Navigator.of(context).pop();
+                        } else {
+                          // Kalau tidak bisa pop, ini berarti dibuka via BottomNavigator
+                          // panggil callback onBackToHome jika tersedia
+                          widget.onBackToHome?.call();
+                          // jika callback tidak diberikan, tidak melakukan apa-apa
+                        }
+                      },
+                      tooltip: 'Kembali',
+                      iconSize: 26,
+                      splashColor: Colors.transparent,
+                      highlightColor: Colors.transparent,
+                    ),
+                  ),
 
                   const SizedBox(height: 10),
-                  const Icon(Ionicons.moon_outline,
-                      color: Colors.white, size: 60),
+                  const Icon(
+                    Ionicons.moon_outline,
+                    color: Colors.white,
+                    size: 60,
+                  ),
                   const SizedBox(height: 10),
-                  const Text("Jadwal Sholat",
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold)),
+                  const Text(
+                    "Jadwal Sholat",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 5),
                   Text(
-                    DateFormat("EEEE, d MMMM yyyy", "id_ID")
-                        .format(DateTime.now()),
+                    DateFormat(
+                      "EEEE, d MMMM yyyy",
+                      "id_ID",
+                    ).format(DateTime.now()),
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: Colors.white70),
                   ),
@@ -303,27 +309,38 @@ class _JadwalPageState extends State<JadwalPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text("Waktu Sholat Berikutnya",
-                                  style: TextStyle(
-                                      color: Colors.white70, fontSize: 13)),
-                              const SizedBox(height: 6),
-                              Text(currentNext["nama"],
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold)),
-                              Text(
-                                  _hitungSisaWaktu(currentNext["waktu"]),
-                                  style:
-                                      const TextStyle(color: Colors.white70)),
-                            ]),
-                        Text(currentNext["waktu"],
-                            style: const TextStyle(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Waktu Sholat Berikutnya",
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              currentNext["nama"],
+                              style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 26,
-                                fontWeight: FontWeight.bold)),
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              _hitungSisaWaktu(currentNext["waktu"]),
+                              style: const TextStyle(color: Colors.white70),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          currentNext["waktu"],
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -333,8 +350,7 @@ class _JadwalPageState extends State<JadwalPage> {
             const SizedBox(height: 24),
             // 🔸 List Sholat (tidak diubah)
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Column(
                 children: List.generate(jadwalSholat.length, (index) {
                   final data = jadwalSholat[index];
@@ -384,46 +400,59 @@ class _JadwalPageState extends State<JadwalPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2))
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(icon,
-              color: highlight ? Colors.orange : Colors.blue, size: 28),
+          Icon(icon, color: highlight ? Colors.orange : Colors.blue, size: 28),
           const SizedBox(width: 12),
           Expanded(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                Text(title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 16)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(subtitle,
-                    style: const TextStyle(color: Colors.grey)),
+                Text(subtitle, style: const TextStyle(color: Colors.grey)),
                 const SizedBox(height: 6),
                 Text(
-                    done
-                        ? "✔ Sudah dilaksanakan"
-                        : "Belum dilaksanakan",
-                    style: TextStyle(
-                        color: done ? Colors.green : Colors.red,
-                        fontWeight: FontWeight.w500)),
-              ])),
-          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text(time,
+                  done ? "✔ Sudah dilaksanakan" : "Belum dilaksanakan",
+                  style: TextStyle(
+                    color: done ? Colors.green : Colors.red,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                time,
                 style: const TextStyle(
-                    fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 8),
-            Switch(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Switch(
                 value: isOn,
                 onChanged: onChanged,
-                activeThumbColor: Colors.blue)
-          ]),
+                activeThumbColor: Colors.blue,
+              ),
+            ],
+          ),
         ],
       ),
     );

@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:hai_time_app/screen/profile.dart';
 import 'package:hai_time_app/screen/setting.dart' as setting;
@@ -5,13 +8,12 @@ import 'package:hai_time_app/view/cuaca.dart';
 import 'package:hai_time_app/view/jadwal_page.dart';
 import 'package:hai_time_app/view/kegiatan_page.dart';
 import 'package:hai_time_app/view/tambah_kegiatan.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../db/db_kegiatan.dart';
-import '../model/kegiatan.dart';
-import 'dart:async';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../db/db_kegiatan.dart';
 import '../main.dart' as main_app;
-import 'package:audioplayers/audioplayers.dart';
+import '../model/kegiatan.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -141,7 +143,9 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final bool dark = main_app.isDarkMode.value;
-    final Color bgColor = dark ? const Color(0xFF121212) : const Color(0xFFF2F6FC);
+    final Color bgColor = dark
+        ? const Color(0xFF121212)
+        : const Color(0xFFF2F6FC);
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -162,7 +166,9 @@ class _HomePageState extends State<HomePage> {
                     child: const ListTile(
                       leading: Icon(Icons.cloud, color: Colors.orange),
                       title: Text("Cuaca sore mendung"),
-                      subtitle: Text("Pertimbangkan berangkat lebih awal untuk kegiatan sore ini."),
+                      subtitle: Text(
+                        "Pertimbangkan berangkat lebih awal untuk kegiatan sore ini.",
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -197,7 +203,10 @@ class _HomePageState extends State<HomePage> {
       elevation: 0,
       flexibleSpace: LayoutBuilder(
         builder: (context, constraints) {
-          final percent = ((constraints.maxHeight - kToolbarHeight) / (180 - kToolbarHeight)).clamp(0.0, 1.0);
+          final percent =
+              ((constraints.maxHeight - kToolbarHeight) /
+                      (180 - kToolbarHeight))
+                  .clamp(0.0, 1.0);
           return ClipRRect(
             borderRadius: const BorderRadius.only(
               bottomLeft: Radius.circular(30),
@@ -219,7 +228,10 @@ class _HomePageState extends State<HomePage> {
                       top: 12,
                       child: Text(
                         _getGreeting(),
-                        style: const TextStyle(color: Colors.white, fontSize: 15),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                        ),
                       ),
                     ),
                     AnimatedAlign(
@@ -246,13 +258,26 @@ class _HomePageState extends State<HomePage> {
                           IconButton(
                             icon: const Icon(Icons.person, color: Colors.white),
                             onPressed: () {
-                              Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfilePage()));
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ProfilePage(),
+                                ),
+                              );
                             },
                           ),
                           IconButton(
-                            icon: const Icon(Icons.settings, color: Colors.white),
+                            icon: const Icon(
+                              Icons.settings,
+                              color: Colors.white,
+                            ),
                             onPressed: () {
-                              Navigator.push(context, MaterialPageRoute(builder: (_) => const setting.SettingPage()));
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const setting.SettingPage(),
+                                ),
+                              );
                             },
                           ),
                         ],
@@ -284,9 +309,19 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Jakarta, Indonesia", style: TextStyle(color: Colors.white, fontSize: 16)),
+          const Text(
+            "Jakarta, Indonesia",
+            style: TextStyle(color: Colors.white, fontSize: 16),
+          ),
           const SizedBox(height: 4),
-          const Text("28°C  Cerah ☀️", style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+          const Text(
+            "28°C  Cerah ☀️",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 12),
           Row(
             children: const [
@@ -306,10 +341,15 @@ class _HomePageState extends State<HomePage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 foregroundColor: Colors.blue,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => const CuacaPage()));
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CuacaPage()),
+                );
               },
               child: const Text("Detail →"),
             ),
@@ -325,20 +365,41 @@ class _HomePageState extends State<HomePage> {
       title: "Jadwal Sholat Hari Ini",
       trailing: TextButton(
         onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (context) => const JadwalPage()));
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const JadwalPage()),
+          );
         },
         child: const Text("Lihat semua"),
       ),
       child: Column(
         children: [
-          const _PrayerRow(icon: Icons.brightness_2_outlined, name: "Subuh", time: "04:45"),
-          const _PrayerRow(icon: Icons.sunny, name: "Dzuhur", time: "12:05"),
-          const _PrayerRow(icon: Icons.wb_sunny_outlined, name: "Ashar", time: "15:20"),
-          const _PrayerRow(icon: Icons.nightlight_round_outlined, name: "Maghrib", time: "18:10"),
-          const _PrayerRow(icon: Icons.nightlight_round, name: "Isya", time: "19:25"),
+          const _PrayerRow(
+            icon: Icons.brightness_2_outlined,
+            name: "Subuh",
+            time: "04:45",
+          ),
+          const _PrayerRow(icon: Icons.sunny, name: "Dzuhur", time: "12:00"),
+          const _PrayerRow(
+            icon: Icons.wb_sunny_outlined,
+            name: "Ashar",
+            time: "15:20",
+          ),
+          const _PrayerRow(
+            icon: Icons.nightlight_round_outlined,
+            name: "Maghrib",
+            time: "18:10",
+          ),
+          const _PrayerRow(
+            icon: Icons.nightlight_round,
+            name: "Isya",
+            time: "19:25",
+          ),
           const SizedBox(height: 10),
-          Text("Waktu $nextPrayerName $remainingTime",
-              style: const TextStyle(fontWeight: FontWeight.w500)),
+          Text(
+            "Waktu $nextPrayerName $remainingTime",
+            style: const TextStyle(fontWeight: FontWeight.w500),
+          ),
         ],
       ),
     );
@@ -350,23 +411,33 @@ class _HomePageState extends State<HomePage> {
       title: "Kegiatan Anda",
       trailing: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(color: Colors.blue.shade100, borderRadius: BorderRadius.circular(8)),
+        decoration: BoxDecoration(
+          color: Colors.blue.shade100,
+          borderRadius: BorderRadius.circular(8),
+        ),
         child: Text("${_listKegiatan.length} Kegiatan"),
       ),
       child: Column(
         children: _listKegiatan.isEmpty
             ? [
-                const Text("Belum ada kegiatan.\nTekan tombol + untuk menambah.", textAlign: TextAlign.center),
+                const Text(
+                  "Belum ada kegiatan.\nTekan tombol + untuk menambah.",
+                  textAlign: TextAlign.center,
+                ),
               ]
             : _listKegiatan.map((kegiatan) {
                 return ListTile(
                   leading: const Icon(Icons.event, color: Colors.blue),
                   title: Text(kegiatan.judul),
-                  subtitle: Text("${kegiatan.lokasi}\n${kegiatan.tanggal} • ${kegiatan.waktu}"),
+                  subtitle: Text(
+                    "${kegiatan.lokasi}\n${kegiatan.tanggal} • ${kegiatan.waktu}",
+                  ),
                   onTap: () async {
                     final result = await Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => KegiatanPage(kegiatan: kegiatan)),
+                      MaterialPageRoute(
+                        builder: (_) => KegiatanPage(kegiatan: kegiatan),
+                      ),
                     );
                     if (result == true) _loadKegiatan();
                   },
@@ -390,7 +461,11 @@ class _HomePageState extends State<HomePage> {
         color: color,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: Colors.grey.withOpacity(0.15), blurRadius: 8, offset: const Offset(0, 4)),
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Column(
@@ -400,7 +475,10 @@ class _HomePageState extends State<HomePage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
                 if (trailing != null) trailing,
               ],
             ),
@@ -431,11 +509,13 @@ class _PrayerRow extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(children: [
-            Icon(icon, color: Colors.blue),
-            const SizedBox(width: 8),
-            Text(name),
-          ]),
+          Row(
+            children: [
+              Icon(icon, color: Colors.blue),
+              const SizedBox(width: 8),
+              Text(name),
+            ],
+          ),
           Text(time, style: const TextStyle(fontWeight: FontWeight.w600)),
         ],
       ),

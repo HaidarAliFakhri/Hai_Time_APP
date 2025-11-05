@@ -47,10 +47,14 @@ class _HomePageState extends State<HomePage> {
     _loadKegiatan();
     _loadNamaUser();
     _updateNextPrayer();
+    DBKegiatan().onChange.listen((_) {
+    if (mounted) _loadKegiatan();
+  });
 
     // Perbarui setiap 30 detik agar lebih responsif mendeteksi waktu adzan
     Timer.periodic(const Duration(seconds: 30), (_) => _updateNextPrayer());
   }
+  
 
   Future<void> _loadNamaUser() async {
     final prefs = await SharedPreferences.getInstance();
@@ -73,9 +77,15 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadKegiatan() async {
-    final data = await DBKegiatan().getKegiatanList();
-    if (mounted) setState(() => _listKegiatan = data);
+  final data = await DBKegiatan().getKegiatanList();
+  if (mounted) {
+    setState(() {
+      // hanya tampilkan yang belum selesai
+      _listKegiatan = data.where((k) => k.status != 'Selesai').toList();
+    });
   }
+}
+
 
   void _updateNextPrayer() async {
     final now = DateTime.now();

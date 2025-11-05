@@ -1,6 +1,6 @@
+import 'dart:async';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
-
 import '../model/kegiatan.dart';
 
 class DBKegiatan {
@@ -9,6 +9,10 @@ class DBKegiatan {
   DBKegiatan._internal();
 
   static Database? _db;
+  final _controller = StreamController<void>.broadcast(); // ✅ Tambahan
+
+  // Getter stream agar bisa didengarkan dari HomePage
+  Stream<void> get onChange => _controller.stream;
 
   Future<Database> get database async {
     if (_db != null) return _db!;
@@ -22,7 +26,7 @@ class DBKegiatan {
 
     return openDatabase(
       path,
-      version: 2, // 🆙 ubah versi agar update struktur tabel bisa dilakukan
+      version: 2, // 🆙 versi 2 agar update struktur tabel
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE kegiatan (
@@ -37,7 +41,6 @@ class DBKegiatan {
         ''');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
-        // ✅ Jika tabel lama belum punya kolom 'status', tambahkan
         if (oldVersion < 2) {
           await db.execute("ALTER TABLE kegiatan ADD COLUMN status TEXT");
         }
@@ -50,12 +53,13 @@ class DBKegiatan {
     final db = await database;
     final data = kegiatan.toMap();
 
-    // pastikan status selalu ada
     if (!data.containsKey('status') || data['status'] == null) {
       data['status'] = 'Belum Selesai';
     }
 
-    return await db.insert('kegiatan', data);
+    final id = await db.insert('kegiatan', data);
+    _controller.add(null); // 🔥 beri tahu listener bahwa DB berubah
+    return id;
   }
 
   // 🟡 Ambil semua kegiatan
@@ -68,21 +72,25 @@ class DBKegiatan {
   // 🔵 Update kegiatan
   Future<int> updateKegiatan(Kegiatan kegiatan) async {
     final db = await database;
-    return await db.update(
+    final count = await db.update(
       'kegiatan',
       kegiatan.toMap(),
       where: 'id = ?',
       whereArgs: [kegiatan.id],
     );
+    _controller.add(null); // 🔥 notifikasi perubahan
+    return count;
   }
 
   // 🔴 Hapus kegiatan
   Future<int> deleteKegiatan(int id) async {
     final db = await database;
-    return await db.delete('kegiatan', where: 'id = ?', whereArgs: [id]);
+    final count = await db.delete('kegiatan', where: 'id = ?', whereArgs: [id]);
+    _controller.add(null); // 🔥 notifikasi perubahan
+    return count;
   }
 
-  // 🟣 Ambil kegiatan yang sudah selesai (waktu sudah lewat)
+  // 🟣 Ambil kegiatan yang sudah selesai (waktu lewat)
   Future<List<Kegiatan>> getKegiatanSelesai() async {
     final db = await database;
     final result = await db.query('kegiatan');
@@ -98,16 +106,14 @@ class DBKegiatan {
         final bulan = _bulanKeAngka(tanggalParts[1]);
 
         final kegiatanDate = DateTime(
-          int.parse(tanggalParts[2]), // tahun
+          int.parse(tanggalParts[2]),
           bulan,
-          int.parse(tanggalParts[0]), // tanggal
+          int.parse(tanggalParts[0]),
           int.parse(waktuParts[0]),
           int.parse(waktuParts[1]),
         );
 
-        // jika sudah lewat waktu
         if (kegiatanDate.isBefore(now)) {
-          // update status di database
           await db.update(
             'kegiatan',
             {'status': 'Selesai'},
@@ -115,6 +121,7 @@ class DBKegiatan {
             whereArgs: [k.id],
           );
           selesai.add(k.copyWith(status: 'Selesai'));
+          _controller.add(null); // 🔥 update listener juga
         }
       } catch (e) {
         print("⚠️ Gagal parsing tanggal: ${k.tanggal}, error: $e");

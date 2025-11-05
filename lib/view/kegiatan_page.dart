@@ -392,7 +392,7 @@ class _KegiatanPageState extends State<KegiatanPage> {
               ),
 
             const SizedBox(height: 24),
-            // === TOMBOL EDIT & HAPUS ===
+            // === TOMBOL EDIT & HAPUS & tandai selesai===
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
@@ -418,6 +418,7 @@ class _KegiatanPageState extends State<KegiatanPage> {
                     }
                   },
                 ),
+                
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
@@ -459,7 +460,33 @@ class _KegiatanPageState extends State<KegiatanPage> {
                     }
                   },
                 ),
+                
+
+                
+                          
               ],
+            ),
+            Center(
+              child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                    ),
+                    icon: const Icon(Icons.check_circle_outline),
+                    label: const Text("Tandai Selesai"),
+                    onPressed: () async {
+                      await DBKegiatan().updateKegiatan(
+                        kegiatan.copyWith(status: "Selesai"),
+                      );
+              
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("✅ Kegiatan ditandai sebagai selesai")),
+                      );
+              
+                      if (context.mounted) Navigator.pop(context, true);
+                    },
+                  ),
             ),
           ],
         ),

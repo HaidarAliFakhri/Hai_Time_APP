@@ -5,9 +5,9 @@ import 'package:hai_time_app/page/bottom_navigator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// ✅ Tambahkan import berikut agar DB dan model dikenali
+
 import '../db/db_kegiatan.dart';
-import '../model/kegiatan.dart';
+
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -373,17 +373,21 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   const SizedBox(height: 10),
 
-                  FutureBuilder<List<Kegiatan>>(
-                    future: DBKegiatan().getKegiatanSelesai(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                        return const Text("Belum ada aktivitas selesai");
-                      } else {
-                        final kegiatanList = snapshot.data!;
+                  StreamBuilder<void>(
+                  stream: DBKegiatan().onChange,
+                  builder: (context, snapshot) {
+                    return FutureBuilder(
+                      future: DBKegiatan().getKegiatanSelesai(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        final selesai = snapshot.data!;
+                        if (selesai.isEmpty) {
+                          return const Text("Belum ada aktivitas selesai");
+                        }
                         return Column(
-                          children: kegiatanList.map((k) {
+                          children: selesai.map((k) {
                             return _buildActivityCard(
                               k.judul,
                               k.tanggal,
@@ -392,9 +396,10 @@ class _ProfilePageState extends State<ProfilePage> {
                             );
                           }).toList(),
                         );
-                      }
-                    },
-                  ),
+                      },
+                    );
+                  },
+                ),
 
                   const SizedBox(height: 25),
 

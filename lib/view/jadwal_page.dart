@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:intl/intl.dart';
@@ -9,7 +8,7 @@ import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
 class JadwalPage extends StatefulWidget {
-  final VoidCallback? onBackToHome; // <-- tambahkan ini
+  final VoidCallback? onBackToHome;
 
   const JadwalPage({super.key, this.onBackToHome});
 
@@ -19,16 +18,14 @@ class JadwalPage extends StatefulWidget {
 
 class _JadwalPageState extends State<JadwalPage> {
   late Timer _timer;
-  late AudioPlayer _audioPlayer;
   Map<String, dynamic>? nextPrayer;
   final FlutterLocalNotificationsPlugin _notifikasi =
       FlutterLocalNotificationsPlugin();
 
-  // 🔹 Jadwal sholat manual
   final List<Map<String, dynamic>> jadwalSholat = [
     {
       "nama": "Subuh",
-      "waktu": "04:35",
+      "waktu": "04:05",
       "pengingat": "10 menit sebelumnya",
       "ikon": Icons.brightness_2_outlined,
       "aktif": true,
@@ -36,7 +33,7 @@ class _JadwalPageState extends State<JadwalPage> {
     },
     {
       "nama": "Dzuhur",
-      "waktu": "12:00",
+      "waktu": "11:42",
       "pengingat": "10 menit sebelumnya",
       "ikon": Icons.wb_sunny_outlined,
       "aktif": true,
@@ -44,7 +41,7 @@ class _JadwalPageState extends State<JadwalPage> {
     },
     {
       "nama": "Ashar",
-      "waktu": "15:00",
+      "waktu": "14:55",
       "pengingat": "10 menit sebelumnya",
       "ikon": Icons.wb_twilight,
       "aktif": true,
@@ -52,7 +49,7 @@ class _JadwalPageState extends State<JadwalPage> {
     },
     {
       "nama": "Magrib",
-      "waktu": "18:10",
+      "waktu": "17:47",
       "pengingat": "10 menit sebelumnya",
       "ikon": Icons.nightlight_round_outlined,
       "aktif": true,
@@ -60,7 +57,7 @@ class _JadwalPageState extends State<JadwalPage> {
     },
     {
       "nama": "Isya",
-      "waktu": "19:25",
+      "waktu": "18:59",
       "pengingat": "10 menit sebelumnya",
       "ikon": Icons.nightlight_round,
       "aktif": true,
@@ -71,44 +68,31 @@ class _JadwalPageState extends State<JadwalPage> {
   @override
   void initState() {
     super.initState();
-    _audioPlayer = AudioPlayer();
     tzdata.initializeTimeZones();
     _initNotifikasi();
     _updateStatusSholat();
 
-    // update otomatis tiap menit
     _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
       _updateStatusSholat();
     });
 
-    // jadwalkan notifikasi adzan
     _jadwalkanSemuaSholat();
   }
 
   @override
   void dispose() {
-    _audioPlayer.dispose();
     _timer.cancel();
     super.dispose();
   }
 
-  /// 🔊 Putar suara adzan lokal
-  Future<void> _playAdzanSound() async {
-    try {
-      await _audioPlayer.play(AssetSource('audio/adzan.mp3'));
-    } catch (e) {
-      debugPrint("❌ Gagal memutar adzan: $e");
-    }
-  }
-
-  /// Inisialisasi notifikasi
+  /// 🔔 Inisialisasi notifikasi lokal
   Future<void> _initNotifikasi() async {
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     const initSettings = InitializationSettings(android: androidInit);
     await _notifikasi.initialize(initSettings);
   }
 
-  /// Jadwalkan semua notifikasi sholat
+  /// 📅 Jadwalkan semua notifikasi adzan
   Future<void> _jadwalkanSemuaSholat() async {
     final now = DateTime.now();
     final format = DateFormat("HH:mm");
@@ -133,7 +117,7 @@ class _JadwalPageState extends State<JadwalPage> {
         i,
         "Waktu Sholat ${data["nama"]}",
         "Sudah masuk waktu ${data["nama"]}. Ayo sholat dulu 🕌",
-        tz.TZDateTime.from(waktuFinal, tz.local), // ✅ FIX disini
+        tz.TZDateTime.from(waktuFinal, tz.local),
         const NotificationDetails(
           android: AndroidNotificationDetails(
             'adzan_channel',
@@ -141,7 +125,11 @@ class _JadwalPageState extends State<JadwalPage> {
             channelDescription: 'Notifikasi pengingat waktu sholat',
             importance: Importance.max,
             priority: Priority.high,
+            playSound: true,
+            enableVibration: true,
             sound: RawResourceAndroidNotificationSound('adzan'),
+            audioAttributesUsage:
+                AudioAttributesUsage.alarm, // 🔊 penting agar tetap bunyi
           ),
         ),
         androidAllowWhileIdle: true,
@@ -151,11 +139,10 @@ class _JadwalPageState extends State<JadwalPage> {
     }
   }
 
-  /// 🕒 Update status sholat
+  /// 🕒 Update status sholat di UI (tidak ubah suara)
   void _updateStatusSholat() {
     final now = DateTime.now();
     final format = DateFormat("HH:mm");
-    bool adzanPlayed = false;
 
     setState(() {
       for (var data in jadwalSholat) {
@@ -167,16 +154,7 @@ class _JadwalPageState extends State<JadwalPage> {
           waktuSholat.hour,
           waktuSholat.minute,
         );
-
         data["selesai"] = now.isAfter(waktuHariIni);
-
-        if (now.hour == waktuHariIni.hour &&
-            now.minute == waktuHariIni.minute &&
-            !adzanPlayed &&
-            data["aktif"] == true) {
-          _playAdzanSound();
-          adzanPlayed = true;
-        }
       }
 
       nextPrayer = jadwalSholat.firstWhere((data) {
@@ -193,7 +171,7 @@ class _JadwalPageState extends State<JadwalPage> {
     });
   }
 
-  /// 🧮 Hitung sisa waktu menuju sholat berikutnya
+  /// ⏳ Hitung sisa waktu menuju sholat berikutnya
   String _hitungSisaWaktu(String waktu) {
     final now = DateTime.now();
     final format = DateFormat("HH:mm");
@@ -226,7 +204,7 @@ class _JadwalPageState extends State<JadwalPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🔹 HEADER (desain tetap)
+            // 🔹 HEADER
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(24, 60, 24, 28),
@@ -248,14 +226,10 @@ class _JadwalPageState extends State<JadwalPage> {
                     child: IconButton(
                       icon: const Icon(Icons.arrow_back, color: Colors.white),
                       onPressed: () {
-                        // Jika ada route sebelumnya, pop (misal dibuka lewat Navigator.push)
                         if (Navigator.of(context).canPop()) {
                           Navigator.of(context).pop();
                         } else {
-                          // Kalau tidak bisa pop, ini berarti dibuka via BottomNavigator
-                          // panggil callback onBackToHome jika tersedia
                           widget.onBackToHome?.call();
-                          // jika callback tidak diberikan, tidak melakukan apa-apa
                         }
                       },
                       tooltip: 'Kembali',
@@ -264,7 +238,6 @@ class _JadwalPageState extends State<JadwalPage> {
                       highlightColor: Colors.transparent,
                     ),
                   ),
-
                   const SizedBox(height: 10),
                   const Icon(
                     Ionicons.moon_outline,
@@ -290,7 +263,6 @@ class _JadwalPageState extends State<JadwalPage> {
                     style: const TextStyle(color: Colors.white70),
                   ),
                   const SizedBox(height: 20),
-                  // 🔸 Kartu Sholat Berikutnya (tetap sama)
                   Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
@@ -348,7 +320,6 @@ class _JadwalPageState extends State<JadwalPage> {
               ),
             ),
             const SizedBox(height: 24),
-            // 🔸 List Sholat (tidak diubah)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Column(
@@ -382,7 +353,6 @@ class _JadwalPageState extends State<JadwalPage> {
     );
   }
 
-  // 🕌 Widget Kartu Sholat (tidak diubah)
   Widget _buildPrayerCard(
     String title,
     String time,

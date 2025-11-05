@@ -5,6 +5,10 @@ import 'package:hai_time_app/page/bottom_navigator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+// ✅ Tambahkan import berikut agar DB dan model dikenali
+import '../db/db_kegiatan.dart';
+import '../model/kegiatan.dart';
+
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
@@ -324,7 +328,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
                   const SizedBox(height: 25),
 
-                  // 📊 Statistik Aktivitas (scroll horizontal)
+                  // 📊 Statistik Aktivitas
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
@@ -369,26 +373,30 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   const SizedBox(height: 10),
 
-                  _buildActivityCard(
-                    "Nonton Bioskop",
-                    "27 Okt 2025",
-                    "Akan Datang",
-                    false,
-                  ),
-                  _buildActivityCard(
-                    "Meeting Kantor",
-                    "26 Okt 2025",
-                    "Selesai",
-                    true,
-                  ),
-                  _buildActivityCard(
-                    "Olahraga Pagi",
-                    "25 Okt 2025",
-                    "Selesai",
-                    true,
+                  FutureBuilder<List<Kegiatan>>(
+                    future: DBKegiatan().getKegiatanSelesai(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return const Text("Belum ada aktivitas selesai");
+                      } else {
+                        final kegiatanList = snapshot.data!;
+                        return Column(
+                          children: kegiatanList.map((k) {
+                            return _buildActivityCard(
+                              k.judul,
+                              k.tanggal,
+                              "Selesai",
+                              true,
+                            );
+                          }).toList(),
+                        );
+                      }
+                    },
                   ),
 
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 25),
 
                   // ✏️ Tombol Edit Profil
                   SizedBox(

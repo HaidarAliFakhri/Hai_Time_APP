@@ -3,6 +3,8 @@ import 'dart:math' show sin, cos, sqrt, atan2, pi;
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:hai_time_app/db/db_kegiatan.dart';
+import 'package:hai_time_app/view/tambah_kegiatan.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../model/kegiatan.dart';
@@ -390,6 +392,75 @@ class _KegiatanPageState extends State<KegiatanPage> {
               ),
 
             const SizedBox(height: 24),
+            // === TOMBOL EDIT & HAPUS ===
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    elevation: 0,
+                  ),
+                  icon: const Icon(Icons.edit, color: Colors.black),
+                  label: const Text(
+                    "Edit",
+                    style: TextStyle(color: Colors.black),
+                  ),
+                  onPressed: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => TambahKegiatanPage(kegiatan: kegiatan),
+                      ),
+                    );
+                    if (result == true && context.mounted) {
+                      Navigator.pop(context, true);
+                    }
+                  },
+                ),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.deepOrangeAccent),
+                    elevation: 0,
+                  ),
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  label: const Text(
+                    "Hapus",
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  onPressed: () async {
+                    final konfirmasi = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text("Konfirmasi Hapus"),
+                        content: const Text(
+                          "Apakah kamu yakin ingin menghapus kegiatan ini?",
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text("Batal"),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text(
+                              "Hapus",
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (konfirmasi == true) {
+                      await DBKegiatan().deleteKegiatan(kegiatan.id!);
+                      if (context.mounted) Navigator.pop(context, true);
+                    }
+                  },
+                ),
+              ],
+            ),
           ],
         ),
       ),

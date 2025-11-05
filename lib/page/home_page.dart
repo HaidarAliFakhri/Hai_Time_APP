@@ -205,8 +205,9 @@ class _HomePageState extends State<HomePage> {
         builder: (context, constraints) {
           final percent =
               ((constraints.maxHeight - kToolbarHeight) /
-                      (180 - kToolbarHeight))
+                      (100 - kToolbarHeight))
                   .clamp(0.0, 1.0);
+
           return ClipRRect(
             borderRadius: const BorderRadius.only(
               bottomLeft: Radius.circular(30),
@@ -223,33 +224,40 @@ class _HomePageState extends State<HomePage> {
               child: SafeArea(
                 child: Stack(
                   children: [
+                    // 👋 Greeting (hilang halus saat mulai discroll)
                     Positioned(
                       left: 5,
                       top: 12,
-                      child: Text(
-                        _getGreeting(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ),
-                    AnimatedAlign(
-                      alignment: Alignment(0, percent > 0.5 ? 0.5 : 0.0),
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeOut,
-                      child: Opacity(
-                        opacity: percent > 0.1 ? 1 : 0,
+                      child: AnimatedOpacity(
+                        opacity: percent < 0.95 ? 0.0 : 1.0,
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeOut,
                         child: Text(
-                          namaUser,
-                          style: TextStyle(
+                          _getGreeting(),
+                          style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 22 + (4 * percent),
-                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
                           ),
                         ),
                       ),
                     ),
+
+                    // 🧍 Nama user
+                    AnimatedAlign(
+                      alignment: Alignment(0, percent > 0.5 ? 0.5 : 0.0),
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOut,
+                      child: Text(
+                        namaUser,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 22 + (4 * percent),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+
+                    // ⚙️ Tombol profil & setting
                     Positioned(
                       right: 0,
                       top: 0,
@@ -379,21 +387,21 @@ class _HomePageState extends State<HomePage> {
             name: "Subuh",
             time: "04:45",
           ),
-          const _PrayerRow(icon: Icons.sunny, name: "Dzuhur", time: "12:00"),
+          const _PrayerRow(icon: Icons.sunny, name: "Dzuhur", time: "11:36"),
           const _PrayerRow(
             icon: Icons.wb_sunny_outlined,
             name: "Ashar",
-            time: "15:00",
+            time: "14:55",
           ),
           const _PrayerRow(
             icon: Icons.nightlight_round_outlined,
             name: "Maghrib",
-            time: "18:10",
+            time: "17:47",
           ),
           const _PrayerRow(
             icon: Icons.nightlight_round,
             name: "Isya",
-            time: "19:25",
+            time: "18:59",
           ),
           const SizedBox(height: 10),
           Text(

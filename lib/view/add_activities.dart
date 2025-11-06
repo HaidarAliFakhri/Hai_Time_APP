@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:hai_time_app/db/db_kegiatan.dart';
+import 'package:hai_time_app/db/db_activity.dart';
 import 'package:intl/intl.dart';
 
-import '../model/kegiatan.dart';
+import '../model/activity.dart';
 
 class TambahKegiatanPage extends StatefulWidget {
   final Kegiatan? kegiatan;

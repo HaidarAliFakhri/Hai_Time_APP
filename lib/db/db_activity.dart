@@ -1,7 +1,9 @@
 import 'dart:async';
+
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
-import '../model/kegiatan.dart';
+
+import '../model/activity.dart';
 
 class DBKegiatan {
   static final DBKegiatan _instance = DBKegiatan._internal();

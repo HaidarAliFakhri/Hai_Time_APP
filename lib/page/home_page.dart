@@ -4,16 +4,16 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:hai_time_app/screen/profile.dart';
 import 'package:hai_time_app/screen/setting.dart' as setting;
-import 'package:hai_time_app/view/cuaca.dart';
-import 'package:hai_time_app/view/jadwal_page.dart';
-import 'package:hai_time_app/view/kegiatan_page.dart';
-import 'package:hai_time_app/view/tambah_kegiatan.dart';
+import 'package:hai_time_app/view/activity_page.dart';
+import 'package:hai_time_app/view/add_activities.dart';
+import 'package:hai_time_app/view/prayer_schedule_page.dart';
+import 'package:hai_time_app/view/weather.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../db/db_kegiatan.dart';
+import '../db/db_activity.dart';
 import '../main.dart' as main_app;
-import '../model/kegiatan.dart';
+import '../model/activity.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});

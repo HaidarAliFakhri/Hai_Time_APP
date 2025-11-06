@@ -3,11 +3,11 @@ import 'dart:math' show sin, cos, sqrt, atan2, pi;
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:hai_time_app/db/db_kegiatan.dart';
-import 'package:hai_time_app/view/tambah_kegiatan.dart';
+import 'package:hai_time_app/db/db_activity.dart';
+import 'package:hai_time_app/view/add_activities.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../model/kegiatan.dart';
+import '../model/activity.dart';
 
 class KegiatanPage extends StatefulWidget {
   final Kegiatan kegiatan;
@@ -418,7 +418,7 @@ class _KegiatanPageState extends State<KegiatanPage> {
                     }
                   },
                 ),
-                
+
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
@@ -460,33 +460,31 @@ class _KegiatanPageState extends State<KegiatanPage> {
                     }
                   },
                 ),
-                
-
-                
-                          
               ],
             ),
             Center(
               child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                ),
+                icon: const Icon(Icons.check_circle_outline),
+                label: const Text("Tandai Selesai"),
+                onPressed: () async {
+                  await DBKegiatan().updateKegiatan(
+                    kegiatan.copyWith(status: "Selesai"),
+                  );
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("✅ Kegiatan ditandai sebagai selesai"),
                     ),
-                    icon: const Icon(Icons.check_circle_outline),
-                    label: const Text("Tandai Selesai"),
-                    onPressed: () async {
-                      await DBKegiatan().updateKegiatan(
-                        kegiatan.copyWith(status: "Selesai"),
-                      );
-              
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("✅ Kegiatan ditandai sebagai selesai")),
-                      );
-              
-                      if (context.mounted) Navigator.pop(context, true);
-                    },
-                  ),
+                  );
+
+                  if (context.mounted) Navigator.pop(context, true);
+                },
+              ),
             ),
           ],
         ),

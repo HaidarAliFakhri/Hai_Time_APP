@@ -5,9 +5,7 @@ import 'package:hai_time_app/page/bottom_navigator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-
-import '../db/db_kegiatan.dart';
-
+import '../db/db_activity.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -374,32 +372,34 @@ class _ProfilePageState extends State<ProfilePage> {
                   const SizedBox(height: 10),
 
                   StreamBuilder<void>(
-                  stream: DBKegiatan().onChange,
-                  builder: (context, snapshot) {
-                    return FutureBuilder(
-                      future: DBKegiatan().getKegiatanSelesai(),
-                      builder: (context, snapshot) {
-                        if (!snapshot.hasData) {
-                          return const Center(child: CircularProgressIndicator());
-                        }
-                        final selesai = snapshot.data!;
-                        if (selesai.isEmpty) {
-                          return const Text("Belum ada aktivitas selesai");
-                        }
-                        return Column(
-                          children: selesai.map((k) {
-                            return _buildActivityCard(
-                              k.judul,
-                              k.tanggal,
-                              "Selesai",
-                              true,
+                    stream: DBKegiatan().onChange,
+                    builder: (context, snapshot) {
+                      return FutureBuilder(
+                        future: DBKegiatan().getKegiatanSelesai(),
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) {
+                            return const Center(
+                              child: CircularProgressIndicator(),
                             );
-                          }).toList(),
-                        );
-                      },
-                    );
-                  },
-                ),
+                          }
+                          final selesai = snapshot.data!;
+                          if (selesai.isEmpty) {
+                            return const Text("Belum ada aktivitas selesai");
+                          }
+                          return Column(
+                            children: selesai.map((k) {
+                              return _buildActivityCard(
+                                k.judul,
+                                k.tanggal,
+                                "Selesai",
+                                true,
+                              );
+                            }).toList(),
+                          );
+                        },
+                      );
+                    },
+                  ),
 
                   const SizedBox(height: 25),
 

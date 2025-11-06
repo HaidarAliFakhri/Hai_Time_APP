@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hai_time_app/page/home_page.dart';
-import 'package:hai_time_app/view/cuaca.dart';
-import 'package:hai_time_app/view/jadwal_page.dart';
+import 'package:hai_time_app/view/prayer_schedule_page.dart';
+import 'package:hai_time_app/view/weather.dart';
 
 class BottomNavigator extends StatefulWidget {
   const BottomNavigator({super.key});

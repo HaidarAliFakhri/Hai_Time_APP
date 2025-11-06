@@ -1,11 +1,9 @@
-import 'package:flutter/material.dart';
-import 'package:hai_time_app/screen/splash_screen.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/latest.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:hai_time_app/screen/splash_screen.dart';
 import 'package:intl/date_symbol_data_local.dart';
-
+import 'package:timezone/data/latest.dart' as tz;
 
 // 🔹 Variabel global untuk kontrol tema
 ValueNotifier<bool> isDarkMode = ValueNotifier(false);
@@ -18,7 +16,6 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('id_ID', null);
 
-
   // 🔹 Inisialisasi timezone
   tz.initializeTimeZones();
 
@@ -28,8 +25,9 @@ void main() async {
   // 🔹 Inisialisasi notifikasi lokal
   const AndroidInitializationSettings initSettingsAndroid =
       AndroidInitializationSettings('@mipmap/ic_launcher');
-  const InitializationSettings initSettings =
-      InitializationSettings(android: initSettingsAndroid);
+  const InitializationSettings initSettings = InitializationSettings(
+    android: initSettingsAndroid,
+  );
   await flutterLocalNotificationsPlugin.initialize(initSettings);
 
   runApp(const MyApp());

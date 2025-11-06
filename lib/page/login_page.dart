@@ -171,7 +171,30 @@ class _LoginPageState extends State<LoginPage> {
                     ),
 
                     const SizedBox(height: 28),
-
+              
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const LupaPassword(),
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            "Forget Password",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 28),
                     // Tombol Login
                     SizedBox(
                       width: double.infinity,
@@ -225,16 +248,16 @@ class _LoginPageState extends State<LoginPage> {
                     const SizedBox(height: 16),
 
                     // Tombol Sosial Media
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        _socialButton("assets/images/icon/google.jpg"),
-                        const SizedBox(width: 20),
-                        _socialButton("assets/images/icon/apple.jpg"),
-                        const SizedBox(width: 20),
-                        _socialButton("assets/images/icon/twitter.jpg"),
-                      ],
-                    ),
+                    // Row(
+                    //   mainAxisAlignment: MainAxisAlignment.center,
+                    //   children: [
+                    //     _socialButton("assets/images/icon/google.jpg"),
+                    //     const SizedBox(width: 20),
+                    //     _socialButton("assets/images/icon/apple.jpg"),
+                    //     const SizedBox(width: 20),
+                    //     _socialButton("assets/images/icon/twitter.jpg"),
+                    //   ],
+                    // ),
 
                     const SizedBox(height: 20),
 
@@ -277,20 +300,20 @@ class _LoginPageState extends State<LoginPage> {
 }
 
 // Tombol sosial media
-Widget _socialButton(String assetPath) {
-  return Container(
-    padding: const EdgeInsets.all(10),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.1),
-          blurRadius: 5,
-          offset: const Offset(0, 2),
-        ),
-      ],
-    ),
-    child: Image.asset(assetPath, width: 30, height: 30),
-  );
-}
+// Widget _socialButton(String assetPath) {
+//   return Container(
+//     padding: const EdgeInsets.all(10),
+//     decoration: BoxDecoration(
+//       color: Colors.white,
+//       borderRadius: BorderRadius.circular(12),
+//       boxShadow: [
+//         BoxShadow(
+//           color: Colors.black.withOpacity(0.1),
+//           blurRadius: 5,
+//           offset: const Offset(0, 2),
+//         ),
+//       ],
+//     ),
+//     child: Image.asset(assetPath, width: 30, height: 30),
+//   );
+// }

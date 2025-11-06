@@ -155,12 +155,12 @@ class _SettingPageState extends State<SettingPage> {
 
   @override
   Widget build(BuildContext context) {
-    final bool dark = isDarkMode.value;
-    final Color textColor = dark ? Colors.white : Colors.black87;
-    final Color cardColor = dark ? const Color(0xFF1E1E1E) : Colors.white;
-    final Color bgColor = dark
-        ? const Color(0xFF121212)
-        : const Color(0xFFF2F6FC);
+    // final bool dark = isDarkMode.value;
+    // final Color textColor = dark ? Colors.white : Colors.black87;
+    // final Color cardColor = dark ? const Color(0xFF1E1E1E) : Colors.white;
+    // final Color bgColor = dark
+    //     ? const Color(0xFF121212)
+    //     : const Color(0xFFF2F6FC);
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -190,34 +190,34 @@ class _SettingPageState extends State<SettingPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionTitle("Tampilan", textColor),
-            Card(
-              color: cardColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: ValueListenableBuilder(
-                valueListenable: isDarkMode,
-                builder: (context, value, _) {
-                  return SwitchListTile(
-                    title: Text(
-                      "Mode Gelap",
-                      style: TextStyle(color: textColor),
-                    ),
-                    subtitle: Text(
-                      "Aktifkan tema gelap",
-                      style: TextStyle(color: textColor.withOpacity(0.7)),
-                    ),
-                    value: value,
-                    onChanged: (val) {
-                      isDarkMode.value = val;
-                      setState(() {});
-                    },
-                    secondary: const Icon(Icons.dark_mode, color: Colors.blue),
-                  );
-                },
-              ),
-            ),
+            // _buildSectionTitle("Tampilan", textColor),
+            // Card(
+            //   color: cardColor,
+            //   shape: RoundedRectangleBorder(
+            //     borderRadius: BorderRadius.circular(16),
+            //   ),
+            //   child: ValueListenableBuilder(
+            //     valueListenable: isDarkMode,
+            //     builder: (context, value, _) {
+            //       return SwitchListTile(
+            //         title: Text(
+            //           "Mode Gelap",
+            //           style: TextStyle(color: textColor),
+            //         ),
+            //         subtitle: Text(
+            //           "Aktifkan tema gelap",
+            //           style: TextStyle(color: textColor.withOpacity(0.7)),
+            //         ),
+            //         value: value,
+            //         onChanged: (val) {
+            //           isDarkMode.value = val;
+            //           setState(() {});
+            //         },
+            //         secondary: const Icon(Icons.dark_mode, color: Colors.blue),
+            //       );
+            //     },
+            //   ),
+            // ),
 
             const SizedBox(height: 16),
             _buildSectionTitle("Lokasi & Waktu", textColor),

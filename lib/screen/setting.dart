@@ -155,15 +155,15 @@ class _SettingPageState extends State<SettingPage> {
 
   @override
   Widget build(BuildContext context) {
-    // final bool dark = isDarkMode.value;
-    // final Color textColor = dark ? Colors.white : Colors.black87;
-    // final Color cardColor = dark ? const Color(0xFF1E1E1E) : Colors.white;
-    // final Color bgColor = dark
-    //     ? const Color(0xFF121212)
-    //     : const Color(0xFFF2F6FC);
+    final bool dark = isDarkMode.value;
+    final Color textColor = dark ? Colors.white : Colors.black87;
+    final Color cardColor = dark ? const Color(0xFF1E1E1E) : Colors.white;
+    final Color bgColor = dark
+        ? const Color(0xFF121212)
+        : const Color(0xFFF2F6FC);
 
     return Scaffold(
-      backgroundColor: bgColor,
+      // backgroundColor: bgColor,
       appBar: AppBar(
         title: const Text("Pengaturan", style: TextStyle(color: Colors.white)),
         leading: IconButton(
@@ -190,7 +190,8 @@ class _SettingPageState extends State<SettingPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // _buildSectionTitle("Tampilan", textColor),
+            _buildSectionTitle("Tampilan", textColor),
+
             // Card(
             //   color: cardColor,
             //   shape: RoundedRectangleBorder(
@@ -218,7 +219,6 @@ class _SettingPageState extends State<SettingPage> {
             //     },
             //   ),
             // ),
-
             const SizedBox(height: 16),
             _buildSectionTitle("Lokasi & Waktu", textColor),
 

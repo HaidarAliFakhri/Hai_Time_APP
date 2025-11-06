@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hai_time_app/page/bottom_navigator.dart';
 import 'package:hai_time_app/page/form_register.dart';
+import 'package:hai_time_app/page/home_page.dart';
 import 'package:hai_time_app/preferences/preferences_handler.dart';
 import 'package:hai_time_app/view/dashborad_admin.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -171,7 +172,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
 
                     const SizedBox(height: 28),
-              
+
                     Row(
                       mainAxisAlignment: MainAxisAlignment.start,
                       children: [
@@ -180,7 +181,7 @@ class _LoginPageState extends State<LoginPage> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const LupaPassword(),
+                                builder: (context) => const HomePage(),
                               ),
                             );
                           },
@@ -258,7 +259,6 @@ class _LoginPageState extends State<LoginPage> {
                     //     _socialButton("assets/images/icon/twitter.jpg"),
                     //   ],
                     // ),
-
                     const SizedBox(height: 20),
 
                     // Register

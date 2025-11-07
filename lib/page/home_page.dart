@@ -12,7 +12,6 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../db/db_activity.dart';
-import '../main.dart' as main_app;
 import '../model/activity.dart';
 
 class HomePage extends StatefulWidget {
@@ -35,10 +34,10 @@ class _HomePageState extends State<HomePage> {
   // Jadwal sholat sementara (bisa kamu ubah sesuai data API nanti)
   final Map<String, String> prayerTimes = {
     "Subuh": "04:45",
-    "Dzuhur": "12:05",
-    "Ashar": "15:20",
-    "Maghrib": "18:10",
-    "Isya": "19:25",
+    "Dzuhur": "11:45",
+    "Ashar": "14:55",
+    "Maghrib": "17:47",
+    "Isya": "18:59",
   };
 
   @override
@@ -48,13 +47,12 @@ class _HomePageState extends State<HomePage> {
     _loadNamaUser();
     _updateNextPrayer();
     DBKegiatan().onChange.listen((_) {
-    if (mounted) _loadKegiatan();
-  });
+      if (mounted) _loadKegiatan();
+    });
 
     // Perbarui setiap 30 detik agar lebih responsif mendeteksi waktu adzan
     Timer.periodic(const Duration(seconds: 30), (_) => _updateNextPrayer());
   }
-  
 
   Future<void> _loadNamaUser() async {
     final prefs = await SharedPreferences.getInstance();
@@ -77,15 +75,14 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadKegiatan() async {
-  final data = await DBKegiatan().getKegiatanList();
-  if (mounted) {
-    setState(() {
-      // hanya tampilkan yang belum selesai
-      _listKegiatan = data.where((k) => k.status != 'Selesai').toList();
-    });
+    final data = await DBKegiatan().getKegiatanList();
+    if (mounted) {
+      setState(() {
+        // hanya tampilkan yang belum selesai
+        _listKegiatan = data.where((k) => k.status != 'Selesai').toList();
+      });
+    }
   }
-}
-
 
   void _updateNextPrayer() async {
     final now = DateTime.now();
@@ -152,13 +149,13 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final bool dark = main_app.isDarkMode.value;
-    final Color bgColor = dark
-        ? const Color(0xFF121212)
-        : const Color(0xFFF2F6FC);
+    // final bool dark = main_app.isDarkMode.value;
+    // final Color bgColor = dark
+    //     ? const Color(0xFF121212)
+    //     : const Color(0xFFF2F6FC);
 
     return Scaffold(
-      backgroundColor: bgColor,
+      // backgroundColor: bgColor,
       body: CustomScrollView(
         slivers: [
           _buildAppBar(),
@@ -397,7 +394,7 @@ class _HomePageState extends State<HomePage> {
             name: "Subuh",
             time: "04:45",
           ),
-          const _PrayerRow(icon: Icons.sunny, name: "Dzuhur", time: "11:36"),
+          const _PrayerRow(icon: Icons.sunny, name: "Dzuhur", time: "11:42"),
           const _PrayerRow(
             icon: Icons.wb_sunny_outlined,
             name: "Ashar",

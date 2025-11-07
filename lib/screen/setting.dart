@@ -158,9 +158,9 @@ class _SettingPageState extends State<SettingPage> {
     final bool dark = isDarkMode.value;
     final Color textColor = dark ? Colors.white : Colors.black87;
     final Color cardColor = dark ? const Color(0xFF1E1E1E) : Colors.white;
-    final Color bgColor = dark
-        ? const Color(0xFF121212)
-        : const Color(0xFFF2F6FC);
+    //final Color bgColor = dark
+    //? const Color(0xFF121212);
+    // : const Color(0xFFF2F6FC);
 
     return Scaffold(
       // backgroundColor: bgColor,
@@ -190,7 +190,7 @@ class _SettingPageState extends State<SettingPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionTitle("Tampilan", textColor),
+            // _buildSectionTitle("Tampilan", textColor),
 
             // Card(
             //   color: cardColor,

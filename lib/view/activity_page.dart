@@ -159,8 +159,7 @@ class _KegiatanPageState extends State<KegiatanPage> {
     const cuaca = "Cerah";
     const suhu = "30°C";
     final jamCuaca = kegiatan.waktu;
-    const saran =
-        "Berangkat lebih awal agar tidak terjebak macet. Pastikan kondisi kendaraan prima.";
+    // const saran ="Berangkat lebih awal agar tidak terjebak macet. Pastikan kondisi kendaraan prima.";
 
     IconData ikonCuaca = Icons.wb_sunny;
     Color warnaCuaca = Colors.orangeAccent;

@@ -31,7 +31,7 @@ class _HomePageState extends State<HomePage> {
   String remainingTime = "";
   bool _isAdzanPlaying = false;
 
-  // Jadwal sholat sementara (bisa kamu ubah sesuai data API nanti)
+  // Jadwal sholat sementara (bisa  ubah sesuai data API nanti)
   final Map<String, String> prayerTimes = {
     "Subuh": "04:45",
     "Dzuhur": "11:45",
@@ -58,7 +58,15 @@ class _HomePageState extends State<HomePage> {
     final prefs = await SharedPreferences.getInstance();
     setState(() => namaUser = prefs.getString('registered_name') ?? "User");
   }
-
+    Future<void> _loadKegiatan() async {
+    final data = await DBKegiatan().getKegiatanList();
+    if (mounted) {
+      setState(() {
+        // hanya tampilkan yang belum selesai
+        _listKegiatan = data.where((k) => k.status != 'Selesai').toList();
+      });
+    }
+  }
   Future<void> _playAdzanSound() async {
     if (_isAdzanPlaying) return; // biar gak dobel
     try {
@@ -74,24 +82,18 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> _loadKegiatan() async {
-    final data = await DBKegiatan().getKegiatanList();
-    if (mounted) {
-      setState(() {
-        // hanya tampilkan yang belum selesai
-        _listKegiatan = data.where((k) => k.status != 'Selesai').toList();
-      });
-    }
-  }
+  
 
   void _updateNextPrayer() async {
     final now = DateTime.now();
     DateFormat format = DateFormat("HH:mm");
     DateTime? nextTime;
     String? nextName;
+    final prefs = await SharedPreferences.getInstance();
 
+    bool aktif = prefs.getBool('aktif_$nextPrayerName') ?? true;
     bool isPrayerNow = false;
-
+    
     for (var entry in prayerTimes.entries) {
       final prayerDate = format.parse(entry.value);
       final prayerDateTime = DateTime(
@@ -111,6 +113,9 @@ class _HomePageState extends State<HomePage> {
         nextName = entry.key;
         break;
       }
+      if (isPrayerNow && aktif) {
+  await _playAdzanSound();
+}
     }
 
     // Kalau semua sudah lewat, set ke Subuh besok

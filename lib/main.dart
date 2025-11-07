@@ -13,6 +13,7 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
 void main() async {
+  
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('id_ID', null);
 
@@ -29,7 +30,7 @@ void main() async {
     android: initSettingsAndroid,
   );
   await flutterLocalNotificationsPlugin.initialize(initSettings);
-
+  
   runApp(const MyApp());
 }
 

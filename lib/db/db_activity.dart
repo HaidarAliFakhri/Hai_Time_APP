@@ -12,7 +12,7 @@ class DBKegiatan {
 
   static Database? _db;
   final _controller = StreamController<void>.broadcast(); // ✅ Tambahan
-
+  void notifyChange() => _controller.add(null);
   // Getter stream agar bisa didengarkan dari HomePage
   Stream<void> get onChange => _controller.stream;
 
@@ -49,6 +49,40 @@ class DBKegiatan {
       },
     );
   }
+Future<Map<String, int>> getStatistik() async {
+  final db = await database;
+  final now = DateTime.now();
+
+  // Ambil semua data
+  final result = await db.query('kegiatan');
+  int total = result.length;
+  int selesai = 0;
+  int mingguIni = 0;
+
+  for (var map in result) {
+    final k = Kegiatan.fromMap(map);
+    if (k.status == 'Selesai') selesai++;
+
+    try {
+      final partsTanggal = k.tanggal.split('/');
+      if (partsTanggal.length == 3) {
+        final kegiatanDate = DateTime(
+          int.parse(partsTanggal[2]),
+          int.parse(partsTanggal[1]),
+          int.parse(partsTanggal[0]),
+        );
+        final diff = now.difference(kegiatanDate).inDays;
+        if (diff >= 0 && diff <= 7) mingguIni++;
+      }
+    } catch (_) {}
+  }
+
+  return {
+    'total': total,
+    'selesai': selesai,
+    'mingguIni': mingguIni,
+  };
+}
 
   // 🟢 Tambah kegiatan baru
   Future<int> insertKegiatan(Kegiatan kegiatan) async {
@@ -60,6 +94,7 @@ class DBKegiatan {
     }
 
     final id = await db.insert('kegiatan', data);
+    notifyChange();
     _controller.add(null); // 🔥 beri tahu listener bahwa DB berubah
     return id;
   }
@@ -74,17 +109,20 @@ void notifyListeners() {
   Future<List<Kegiatan>> getKegiatanList() async {
     final db = await database;
     final result = await db.query('kegiatan', orderBy: 'id DESC');
+    notifyChange();
     return result.map((e) => Kegiatan.fromMap(e)).toList();
   }
 
   // 🔵 Update kegiatan
   Future<int> updateKegiatan(Kegiatan kegiatan) async {
     final db = await database;
+    notifyChange();
     final count = await db.update(
       'kegiatan',
       kegiatan.toMap(),
       where: 'id = ?',
       whereArgs: [kegiatan.id],
+      
     );
     _controller.add(null); // 🔥 notifikasi perubahan
     return count;
@@ -94,7 +132,8 @@ void notifyListeners() {
   Future<int> deleteKegiatan(int id) async {
     final db = await database;
     final count = await db.delete('kegiatan', where: 'id = ?', whereArgs: [id]);
-    _controller.add(null); // 🔥 notifikasi perubahan
+    _controller.add(null);
+    notifyChange(); // 🔥 notifikasi perubahan
     return count;
   }
   // ✅ Periksa semua kegiatan & tandai selesai jika waktunya lewat
@@ -102,7 +141,7 @@ Future<void> periksaKegiatanOtomatis() async {
   final db = await database;
   final result = await db.query('kegiatan');
   final now = DateTime.now();
-
+  notifyChange();
   for (var map in result) {
     final k = Kegiatan.fromMap(map);
 
@@ -159,7 +198,7 @@ Future<void> periksaKegiatanOtomatis() async {
 Future<List<Kegiatan>> getKegiatanSelesai() async {
   final db = await database;
   final now = DateTime.now();
-
+  notifyChange();
   // Ambil hanya kegiatan yang belum selesai
   final result = await db.query(
     'kegiatan',

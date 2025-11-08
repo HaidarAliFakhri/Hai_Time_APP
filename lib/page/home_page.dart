@@ -44,6 +44,8 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _loadKegiatan();
+    _cekDanUpdateKegiatan();
+    _periksaKegiatanSelesai();
     _loadNamaUser();
     _updateNextPrayer();
     DBKegiatan().onChange.listen((_) {
@@ -53,6 +55,14 @@ class _HomePageState extends State<HomePage> {
     // Perbarui setiap 30 detik agar lebih responsif mendeteksi waktu adzan
     Timer.periodic(const Duration(seconds: 30), (_) => _updateNextPrayer());
   }
+  Future<void> _periksaKegiatanSelesai() async {
+  await DBKegiatan().periksaKegiatanOtomatis();
+  _loadKegiatan();
+}
+  Future<void> _cekDanUpdateKegiatan() async {
+  await DBKegiatan().periksaKegiatanOtomatis();
+  await _loadKegiatan();
+}
 
   Future<void> _loadNamaUser() async {
     final prefs = await SharedPreferences.getInstance();

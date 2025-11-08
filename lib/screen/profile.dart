@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:hai_time_app/model/activity.dart';
 import 'package:hai_time_app/page/bottom_navigator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,6 +25,7 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   void initState() {
     super.initState();
+    DBKegiatan().periksaKegiatanOtomatis();
     _loadUserData();
   }
 
@@ -240,7 +242,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                         width: 110,
                                         height: 110,
                                         fit: BoxFit.cover,
-                                        filterQuality: FilterQuality.high,
+                                        filterQuality: FilterQuality.low,
                                       )
                                     : Container(
                                         width: 110,
@@ -388,50 +390,123 @@ class _ProfilePageState extends State<ProfilePage> {
                   const SizedBox(height: 25),
 
                   // 📅 Aktivitas Terakhir
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      "Aktivitas Terakhir",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[800],
-                        fontSize: 16,
+Align(
+  alignment: Alignment.centerLeft,
+  child: Text(
+    "Aktivitas Terakhir",
+    style: TextStyle(
+      fontWeight: FontWeight.bold,
+      color: Colors.grey[800],
+      fontSize: 16,
+    ),
+  ),
+),
+const SizedBox(height: 10),
+
+StreamBuilder<void>(
+  stream: DBKegiatan().onChange,
+  builder: (context, snapshot) {
+    return FutureBuilder<List<Kegiatan>>(
+      future: DBKegiatan().getKegiatanSelesai(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final selesai = snapshot.data!;
+        if (selesai.isEmpty) {
+          return const Text("Belum ada aktivitas selesai");
+        }
+
+        return Column(
+          children: selesai.map((k) {
+            return Dismissible(
+              key: Key('activity_${k.id}'),
+              // key: Key(k.id.toString()), // unik untuk setiap kegiatan
+              direction: DismissDirection.endToStart, // geser ke kiri untuk hapus
+              background: Container(
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                decoration: BoxDecoration(
+                  color: Colors.redAccent,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.delete, color: Colors.white),
+              ),
+              confirmDismiss: (direction) async {
+                // Konfirmasi sebelum hapus
+                return await showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text("Hapus Aktivitas"),
+                    content: Text("Yakin ingin menghapus '${k.judul}' dari riwayat?"),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(false),
+                        child: const Text("Batal"),
                       ),
-                    ),
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(true),
+                        child: const Text("Hapus", style: TextStyle(color: Colors.red)),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 10),
+                );
+              },
+              onDismissed: (direction) async {
+  final deletedKegiatan = k;
 
-                  StreamBuilder<void>(
-                    stream: DBKegiatan().onChange,
-                    builder: (context, snapshot) {
-                      return FutureBuilder(
-                        future: DBKegiatan().getKegiatanSelesai(),
-                        builder: (context, snapshot) {
-                          if (!snapshot.hasData) {
-                            return const Center(
-                              child: CircularProgressIndicator(),
-                            );
-                          }
-                          final selesai = snapshot.data!;
-                          if (selesai.isEmpty) {
-                            return const Text("Belum ada aktivitas selesai");
-                          }
-                          return Column(
-                            children: selesai.map((k) {
-                              return _buildActivityCard(
-                                k.judul,
-                                k.tanggal,
-                                "Selesai",
-                                true,
-                              );
-                            }).toList(),
-                          );
-                        },
-                      );
-                    },
-                  ),
+  // Hapus dari UI dulu (biar Dismissible beneran hilang)
+  setState(() {
+    // Tidak ada data lokal? tetap panggil notify agar FutureBuilder refresh
+    DBKegiatan().notifyListeners();
+  });
 
-                  const SizedBox(height: 25),
+  // Jalankan setelah frame berikutnya
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    await DBKegiatan().deleteKegiatan(k.id!);
+    DBKegiatan().notifyListeners();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("‘${k.judul}’ telah dihapus"),
+        action: SnackBarAction(
+          label: "Urungkan",
+          textColor: Colors.yellowAccent,
+          onPressed: () async {
+            await DBKegiatan().insertKegiatan(deletedKegiatan);
+            DBKegiatan().notifyListeners();
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("‘${k.judul}’ dikembalikan")),
+            );
+          },
+        ),
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  });
+},
+
+
+
+
+              child: _buildActivityCard(
+                k.judul,
+                k.tanggal,
+                "Selesai",
+                true,
+              ),
+            );
+          }).toList(),
+        );
+      },
+    );
+  },
+),
+
+const SizedBox(height: 25),
+
 
                   // ✏️ Tombol Edit Profil 
                   SizedBox(

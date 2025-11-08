@@ -64,6 +64,12 @@ class DBKegiatan {
     return id;
   }
 
+
+  // Tambahkan di dalam class DBKegiatan
+void notifyListeners() {
+  _controller.add(null);
+}
+
   // 🟡 Ambil semua kegiatan
   Future<List<Kegiatan>> getKegiatanList() async {
     final db = await database;
@@ -91,47 +97,124 @@ class DBKegiatan {
     _controller.add(null); // 🔥 notifikasi perubahan
     return count;
   }
+  // ✅ Periksa semua kegiatan & tandai selesai jika waktunya lewat
+Future<void> periksaKegiatanOtomatis() async {
+  final db = await database;
+  final result = await db.query('kegiatan');
+  final now = DateTime.now();
+
+  for (var map in result) {
+    final k = Kegiatan.fromMap(map);
+
+    try {
+  // Cek format tanggal
+  final isFormatDenganGarisMiring = k.tanggal.contains("/");
+
+  final tanggalParts = isFormatDenganGarisMiring
+      ? k.tanggal.split("/") // Format: 08/11/2025
+      : k.tanggal.split(" "); // Format: 08 November 2025
+
+  final waktuParts = k.waktu.split(":");
+
+  // Jika pakai format 08/11/2025
+  int tahun;
+  int bulan;
+  int hari;
+
+  if (isFormatDenganGarisMiring) {
+    hari = int.parse(tanggalParts[0]);
+    bulan = int.parse(tanggalParts[1]);
+    tahun = int.parse(tanggalParts[2]);
+  } else {
+    hari = int.parse(tanggalParts[0]);
+    bulan = _bulanKeAngka(tanggalParts[1]);
+    tahun = int.parse(tanggalParts[2]);
+  }
+
+  final kegiatanDate = DateTime(
+    tahun,
+    bulan,
+    hari,
+    int.parse(waktuParts[0]),
+    int.parse(waktuParts[1]),
+  );
+
+  if (kegiatanDate.isBefore(now) && k.status != 'Selesai') {
+    await db.update(
+      'kegiatan',
+      {'status': 'Selesai'},
+      where: 'id = ?',
+      whereArgs: [k.id],
+    );
+    _controller.add(null); // 🔥 perbarui listener agar UI refresh otomatis
+  }
+} catch (e) {
+  print("⚠️ Gagal parsing tanggal: ${k.tanggal}, error: $e");
+}
+
+  }
+}
 
   // 🟣 Ambil kegiatan yang sudah selesai (waktu lewat)
-  Future<List<Kegiatan>> getKegiatanSelesai() async {
-    final db = await database;
-    final result = await db.query('kegiatan');
-    final now = DateTime.now();
-    final List<Kegiatan> selesai = [];
+Future<List<Kegiatan>> getKegiatanSelesai() async {
+  final db = await database;
+  final now = DateTime.now();
 
-    for (var map in result) {
-      final k = Kegiatan.fromMap(map);
+  // Ambil hanya kegiatan yang belum selesai
+  final result = await db.query(
+    'kegiatan',
+    where: 'status != ?',
+    whereArgs: ['Selesai'],
+  );
 
-      try {
-        final tanggalParts = k.tanggal.split(" ");
-        final waktuParts = k.waktu.split(":");
-        final bulan = _bulanKeAngka(tanggalParts[1]);
+  final List<Kegiatan> selesai = [];
 
-        final kegiatanDate = DateTime(
-          int.parse(tanggalParts[2]),
-          bulan,
-          int.parse(tanggalParts[0]),
-          int.parse(waktuParts[0]),
-          int.parse(waktuParts[1]),
+  for (var map in result) {
+    final k = Kegiatan.fromMap(map);
+
+    try {
+      final tanggalParts = k.tanggal.split(" ");
+      final waktuParts = k.waktu.split(":");
+      final bulan = _bulanKeAngka(tanggalParts[1]);
+
+      final kegiatanDate = DateTime(
+        int.parse(tanggalParts[2]),
+        bulan,
+        int.parse(tanggalParts[0]),
+        int.parse(waktuParts[0]),
+        int.parse(waktuParts[1]),
+      );
+
+      if (kegiatanDate.isBefore(now)) {
+        // update status hanya jika belum selesai
+        await db.update(
+          'kegiatan',
+          {'status': 'Selesai'},
+          where: 'id = ?',
+          whereArgs: [k.id],
         );
 
-        if (kegiatanDate.isBefore(now)) {
-          await db.update(
-            'kegiatan',
-            {'status': 'Selesai'},
-            where: 'id = ?',
-            whereArgs: [k.id],
-          );
-          selesai.add(k.copyWith(status: 'Selesai'));
-          _controller.add(null); // 🔥 update listener juga
-        }
-      } catch (e) {
-        print("⚠️ Gagal parsing tanggal: ${k.tanggal}, error: $e");
+        selesai.add(k.copyWith(status: 'Selesai'));
       }
+    } catch (e) {
+      print("⚠️ Gagal parsing tanggal: ${k.tanggal}, error: $e");
     }
-
-    return selesai;
   }
+
+  if (selesai.isNotEmpty) {
+    _controller.add(null); // 🔥 trigger listener hanya sekali
+  }
+
+  // Kembalikan daftar kegiatan yang sudah selesai
+  final updated = await db.query(
+    'kegiatan',
+    where: 'status = ?',
+    whereArgs: ['Selesai'],
+    orderBy: 'tanggal DESC',
+  );
+
+  return updated.map((e) => Kegiatan.fromMap(e)).toList();
+}
 
   // 🔤 Helper konversi nama bulan ke angka
   int _bulanKeAngka(String bulan) {

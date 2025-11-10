@@ -1,4 +1,4 @@
-package com.example.hai_time_app
+package com.ppkd.haitime
 
 import io.flutter.embedding.android.FlutterActivity
 

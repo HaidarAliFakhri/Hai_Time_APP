@@ -28,10 +28,14 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  android_alarm_manager_plus: ^4.0.4
+  audioplayers: ^6.0.0
   circle_bottom_navigation: ^2.0.0
   cupertino_icons: ^1.0.8
   flutter:
     sdk: flutter
+  flutter_launcher_icons: ^0.14.4
+  flutter_local_notifications: ^17.2.0
   geocoding: ^4.0.0
   geolocator: ^14.0.2
   google_fonts: ^6.3.2
@@ -44,17 +48,18 @@ dependencies:
   path_provider: ^2.1.5
   shared_preferences: ^2.5.3
   sqflite: ^2.4.2
-  url_launcher: ^6.3.2
-  audioplayers: ^6.0.0
-  flutter_local_notifications: ^17.2.0
   timezone: ^0.9.3
-  android_alarm_manager_plus: ^4.0.4
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_lints: ^5.0.0
   flutter_test:
     sdk: flutter
-
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/logo/logo_app.png"
+  min_sdk_android: 21
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 # The following section is specific to Flutter packages.

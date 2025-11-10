@@ -11,9 +11,10 @@ class DBKegiatan {
   DBKegiatan._internal();
 
   static Database? _db;
-  final _controller = StreamController<void>.broadcast(); // ✅ Tambahan
-  void notifyChange() => _controller.add(null);
-  // Getter stream agar bisa didengarkan dari HomePage
+  final _controller = StreamController<void>.broadcast();
+
+  // --- STREAM NOTIFIER ---
+  void notifyListeners() => _controller.add(null);
   Stream<void> get onChange => _controller.stream;
 
   Future<Database> get database async {
@@ -28,7 +29,7 @@ class DBKegiatan {
 
     return openDatabase(
       path,
-      version: 2, // 🆙 versi 2 agar update struktur tabel
+      version: 2,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE kegiatan (
@@ -49,213 +50,177 @@ class DBKegiatan {
       },
     );
   }
-Future<Map<String, int>> getStatistik() async {
-  final db = await database;
-  final now = DateTime.now();
 
-  // Ambil semua data
-  final result = await db.query('kegiatan');
-  int total = result.length;
-  int selesai = 0;
-  int mingguIni = 0;
+  // 📊 Statistik kegiatan
+  Future<Map<String, int>> getStatistik() async {
+    final db = await database;
+    final now = DateTime.now();
 
-  for (var map in result) {
-    final k = Kegiatan.fromMap(map);
-    if (k.status == 'Selesai') selesai++;
+    final result = await db.query('kegiatan');
+    int total = result.length;
+    int selesai = 0;
+    int mingguIni = 0;
 
-    try {
-      final partsTanggal = k.tanggal.split('/');
-      if (partsTanggal.length == 3) {
-        final kegiatanDate = DateTime(
-          int.parse(partsTanggal[2]),
-          int.parse(partsTanggal[1]),
-          int.parse(partsTanggal[0]),
-        );
-        final diff = now.difference(kegiatanDate).inDays;
-        if (diff >= 0 && diff <= 7) mingguIni++;
-      }
-    } catch (_) {}
+    for (var map in result) {
+      final k = Kegiatan.fromMap(map);
+      if (k.status == 'Selesai') selesai++;
+
+      try {
+        final partsTanggal = k.tanggal.split('/');
+        if (partsTanggal.length == 3) {
+          final kegiatanDate = DateTime(
+            int.parse(partsTanggal[2]),
+            int.parse(partsTanggal[1]),
+            int.parse(partsTanggal[0]),
+          );
+          final diff = now.difference(kegiatanDate).inDays;
+          if (diff >= 0 && diff <= 7) mingguIni++;
+        }
+      } catch (_) {}
+    }
+
+    return {'total': total, 'selesai': selesai, 'mingguIni': mingguIni};
   }
 
-  return {
-    'total': total,
-    'selesai': selesai,
-    'mingguIni': mingguIni,
-  };
-}
-
-  // 🟢 Tambah kegiatan baru
+  // ➕ Tambah kegiatan baru
   Future<int> insertKegiatan(Kegiatan kegiatan) async {
     final db = await database;
     final data = kegiatan.toMap();
 
-    if (!data.containsKey('status') || data['status'] == null) {
-      data['status'] = 'Belum Selesai';
-    }
+    data['status'] ??= 'Belum Selesai';
 
     final id = await db.insert('kegiatan', data);
-    notifyChange();
-    _controller.add(null); // 🔥 beri tahu listener bahwa DB berubah
+    notifyListeners();
     return id;
   }
 
-
-  // Tambahkan di dalam class DBKegiatan
-void notifyListeners() {
-  _controller.add(null);
-}
-
-  // 🟡 Ambil semua kegiatan
+  // 📋 Ambil semua kegiatan
   Future<List<Kegiatan>> getKegiatanList() async {
     final db = await database;
     final result = await db.query('kegiatan', orderBy: 'id DESC');
-    notifyChange();
     return result.map((e) => Kegiatan.fromMap(e)).toList();
   }
 
-  // 🔵 Update kegiatan
+  // ✏️ Update kegiatan
   Future<int> updateKegiatan(Kegiatan kegiatan) async {
     final db = await database;
-    notifyChange();
     final count = await db.update(
       'kegiatan',
       kegiatan.toMap(),
       where: 'id = ?',
       whereArgs: [kegiatan.id],
-      
     );
-    _controller.add(null); // 🔥 notifikasi perubahan
+    notifyListeners();
     return count;
   }
 
-  // 🔴 Hapus kegiatan
+  // 🗑️ Hapus kegiatan
   Future<int> deleteKegiatan(int id) async {
     final db = await database;
     final count = await db.delete('kegiatan', where: 'id = ?', whereArgs: [id]);
-    _controller.add(null);
-    notifyChange(); // 🔥 notifikasi perubahan
+    notifyListeners();
     return count;
   }
-  // ✅ Periksa semua kegiatan & tandai selesai jika waktunya lewat
-Future<void> periksaKegiatanOtomatis() async {
-  final db = await database;
-  final result = await db.query('kegiatan');
-  final now = DateTime.now();
-  notifyChange();
-  for (var map in result) {
-    final k = Kegiatan.fromMap(map);
 
-    try {
-  // Cek format tanggal
-  final isFormatDenganGarisMiring = k.tanggal.contains("/");
+  // 🔍 Periksa otomatis kegiatan yang sudah lewat
+  Future<void> periksaKegiatanOtomatis() async {
+    final db = await database;
+    final result = await db.query('kegiatan');
+    final now = DateTime.now();
 
-  final tanggalParts = isFormatDenganGarisMiring
-      ? k.tanggal.split("/") // Format: 08/11/2025
-      : k.tanggal.split(" "); // Format: 08 November 2025
+    for (var map in result) {
+      final k = Kegiatan.fromMap(map);
 
-  final waktuParts = k.waktu.split(":");
+      try {
+        final isFormatDenganGarisMiring = k.tanggal.contains("/");
+        final tanggalParts = isFormatDenganGarisMiring
+            ? k.tanggal.split("/")
+            : k.tanggal.split(" ");
+        final waktuParts = k.waktu.split(":");
 
-  // Jika pakai format 08/11/2025
-  int tahun;
-  int bulan;
-  int hari;
+        int tahun, bulan, hari;
+        if (isFormatDenganGarisMiring) {
+          hari = int.parse(tanggalParts[0]);
+          bulan = int.parse(tanggalParts[1]);
+          tahun = int.parse(tanggalParts[2]);
+        } else {
+          hari = int.parse(tanggalParts[0]);
+          bulan = _bulanKeAngka(tanggalParts[1]);
+          tahun = int.parse(tanggalParts[2]);
+        }
 
-  if (isFormatDenganGarisMiring) {
-    hari = int.parse(tanggalParts[0]);
-    bulan = int.parse(tanggalParts[1]);
-    tahun = int.parse(tanggalParts[2]);
-  } else {
-    hari = int.parse(tanggalParts[0]);
-    bulan = _bulanKeAngka(tanggalParts[1]);
-    tahun = int.parse(tanggalParts[2]);
-  }
-
-  final kegiatanDate = DateTime(
-    tahun,
-    bulan,
-    hari,
-    int.parse(waktuParts[0]),
-    int.parse(waktuParts[1]),
-  );
-
-  if (kegiatanDate.isBefore(now) && k.status != 'Selesai') {
-    await db.update(
-      'kegiatan',
-      {'status': 'Selesai'},
-      where: 'id = ?',
-      whereArgs: [k.id],
-    );
-    _controller.add(null); // 🔥 perbarui listener agar UI refresh otomatis
-  }
-} catch (e) {
-  print("⚠️ Gagal parsing tanggal: ${k.tanggal}, error: $e");
-}
-
-  }
-}
-
-  // 🟣 Ambil kegiatan yang sudah selesai (waktu lewat)
-Future<List<Kegiatan>> getKegiatanSelesai() async {
-  final db = await database;
-  final now = DateTime.now();
-  notifyChange();
-  // Ambil hanya kegiatan yang belum selesai
-  final result = await db.query(
-    'kegiatan',
-    where: 'status != ?',
-    whereArgs: ['Selesai'],
-  );
-
-  final List<Kegiatan> selesai = [];
-
-  for (var map in result) {
-    final k = Kegiatan.fromMap(map);
-
-    try {
-      final tanggalParts = k.tanggal.split(" ");
-      final waktuParts = k.waktu.split(":");
-      final bulan = _bulanKeAngka(tanggalParts[1]);
-
-      final kegiatanDate = DateTime(
-        int.parse(tanggalParts[2]),
-        bulan,
-        int.parse(tanggalParts[0]),
-        int.parse(waktuParts[0]),
-        int.parse(waktuParts[1]),
-      );
-
-      if (kegiatanDate.isBefore(now)) {
-        // update status hanya jika belum selesai
-        await db.update(
-          'kegiatan',
-          {'status': 'Selesai'},
-          where: 'id = ?',
-          whereArgs: [k.id],
+        final kegiatanDate = DateTime(
+          tahun,
+          bulan,
+          hari,
+          int.parse(waktuParts[0]),
+          int.parse(waktuParts[1]),
         );
 
-        selesai.add(k.copyWith(status: 'Selesai'));
+        if (kegiatanDate.isBefore(now) && k.status != 'Selesai') {
+          await db.update(
+            'kegiatan',
+            {'status': 'Selesai'},
+            where: 'id = ?',
+            whereArgs: [k.id],
+          );
+        }
+      } catch (e) {
+        print("⚠️ Gagal parsing tanggal: ${k.tanggal}, error: $e");
       }
-    } catch (e) {
-      print("⚠️ Gagal parsing tanggal: ${k.tanggal}, error: $e");
     }
+
+    notifyListeners();
   }
 
-  if (selesai.isNotEmpty) {
-    _controller.add(null); // 🔥 trigger listener hanya sekali
+  // 🔵 Ambil kegiatan selesai
+  Future<List<Kegiatan>> getKegiatanSelesai() async {
+    final db = await database;
+    final now = DateTime.now();
+
+    final result = await db.query(
+      'kegiatan',
+      where: 'status != ?',
+      whereArgs: ['Selesai'],
+    );
+
+    for (var map in result) {
+      final k = Kegiatan.fromMap(map);
+      try {
+        final tanggalParts = k.tanggal.split(" ");
+        final waktuParts = k.waktu.split(":");
+        final bulan = _bulanKeAngka(tanggalParts[1]);
+        final kegiatanDate = DateTime(
+          int.parse(tanggalParts[2]),
+          bulan,
+          int.parse(tanggalParts[0]),
+          int.parse(waktuParts[0]),
+          int.parse(waktuParts[1]),
+        );
+        if (kegiatanDate.isBefore(now)) {
+          await db.update(
+            'kegiatan',
+            {'status': 'Selesai'},
+            where: 'id = ?',
+            whereArgs: [k.id],
+          );
+        }
+      } catch (e) {
+        print("⚠️ Error parsing tanggal: ${k.tanggal}, $e");
+      }
+    }
+
+    final updated = await db.query(
+      'kegiatan',
+      where: 'status = ?',
+      whereArgs: ['Selesai'],
+      orderBy: 'tanggal DESC',
+    );
+
+    return updated.map((e) => Kegiatan.fromMap(e)).toList();
   }
 
-  // Kembalikan daftar kegiatan yang sudah selesai
-  final updated = await db.query(
-    'kegiatan',
-    where: 'status = ?',
-    whereArgs: ['Selesai'],
-    orderBy: 'tanggal DESC',
-  );
-
-  return updated.map((e) => Kegiatan.fromMap(e)).toList();
-}
-
-  // 🔤 Helper konversi nama bulan ke angka
+  // 🔤 Helper
   int _bulanKeAngka(String bulan) {
     switch (bulan.toLowerCase()) {
       case "jan":

@@ -1,17 +1,24 @@
+import java.util.Properties
+
+val keystoreProperties = Properties().apply {
+    val f = rootProject.file("key.properties")
+    if (f.exists()) load(f.inputStream())
+}
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    // Flutter Gradle plugin harus di bawah plugin Android & Kotlin
     id("dev.flutter.flutter-gradle-plugin")
 }
 
 android {
-    namespace = "com.example.hai_time_app"
+    namespace = "com.ppkd.haitime"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     defaultConfig {
-        applicationId = "com.example.hai_time_app"
+        applicationId = "com.ppkd.haitime"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -29,26 +36,38 @@ android {
         jvmTarget = "11"
     }
 
+    // ✅ Konfigurasi tanda tangan (release)
+    signingConfigs {
+        if (keystoreProperties.isNotEmpty()) {
+            create("release") {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+            }
+        }
+    }
+
+    // ✅ Build types: release dan debug
     buildTypes {
-    release {
-        signingConfig = signingConfigs.getByName("debug")
+        getByName("release") {
+            if (signingConfigs.names.contains("release")) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+            isMinifyEnabled = false
+            isShrinkResources = false
+        }
 
-        // ✅ Tambahkan dua baris ini:
-        isMinifyEnabled = false
-        isShrinkResources = false
+        getByName("debug") {
+            isMinifyEnabled = false
+            isShrinkResources = false
+        }
     }
-    debug {
-        isMinifyEnabled = false
-        isShrinkResources = false
-    }
-}
 
-
-    // ✅ Optional: biar build stabil di semua versi Gradle
-    packagingOptions {
+    // ✅ Packaging options
+    packaging {
         resources {
-            excludes.add("/META-INF/{AL2.0,LGPL2.1}")
-
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
 }
@@ -58,7 +77,7 @@ flutter {
 }
 
 dependencies {
-    // ✅ Desugaring library wajib (biar support API modern di versi Android lama)
+    // ✅ Desugaring library
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 
     // ✅ Kotlin stdlib
@@ -67,6 +86,6 @@ dependencies {
     // ✅ AndroidX Core
     implementation("androidx.core:core-ktx:1.12.0")
 
-    // 🔔 Tambahkan ini kalau pakai notifikasi & alarm
+    // 🔔 Jika pakai notifikasi / alarm / background task
     implementation("androidx.work:work-runtime-ktx:2.9.0")
 }

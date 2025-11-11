@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:hai_time_app/page/bottom_navigator.dart';
 import 'package:hai_time_app/page/login_page.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // 🔹 Notifier global untuk tema gelap
 ValueNotifier<bool> isDarkMode = ValueNotifier(false);
@@ -21,8 +21,8 @@ class _SettingPageState extends State<SettingPage> {
   String selectedLanguage = "Bahasa Indonesia";
   bool isAutoLocation = true;
   bool isPushNotif = true;
-final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-    FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
   String _currentLocation = "Jakarta, Indonesia";
   String _timezone = "";
 
@@ -30,66 +30,71 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
   void initState() {
     _loadLanguagePreference();
     super.initState();
-  _initNotifications();
-  _loadPreferences();
-  _getTimeZone();
-  if (isAutoLocation) {
-    _getCurrentLocation();
+    _initNotifications();
+    _loadPreferences();
+    _getTimeZone();
+    if (isAutoLocation) {
+      _getCurrentLocation();
     }
   }
+
   Future<void> _saveLanguagePreference(String language) async {
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.setString('selectedLanguage', language);
-}
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('selectedLanguage', language);
+  }
 
-Future<void> _loadLanguagePreference() async {
-  final prefs = await SharedPreferences.getInstance();
-  setState(() {
-    selectedLanguage = prefs.getString('selectedLanguage') ?? "Bahasa Indonesia";
-  });
-}
+  Future<void> _loadLanguagePreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      selectedLanguage =
+          prefs.getString('selectedLanguage') ?? "Bahasa Indonesia";
+    });
+  }
 
-    Future<void> _showTestNotification() async {
-  const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-    'adzan_channel',
-    'Notifikasi Adzan',
-    channelDescription: 'Pengingat waktu sholat',
-    importance: Importance.max,
-    priority: Priority.high,
-    playSound: true,
-  );
+  Future<void> _showTestNotification() async {
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+          'adzan_channel',
+          'Notifikasi Adzan',
+          channelDescription: 'Pengingat waktu sholat',
+          importance: Importance.max,
+          priority: Priority.high,
+          playSound: true,
+        );
 
-  const NotificationDetails notifDetails =
-      NotificationDetails(android: androidDetails);
+    const NotificationDetails notifDetails = NotificationDetails(
+      android: androidDetails,
+    );
 
-  await flutterLocalNotificationsPlugin.show(
-    0,
-    'HaiTime',
-    'Contoh notifikasi aktif!',
-    notifDetails,
-  );
-}
+    await flutterLocalNotificationsPlugin.show(
+      0,
+      'HaiTime',
+      'Contoh notifikasi aktif!',
+      notifDetails,
+    );
+  }
 
   Future<void> _initNotifications() async {
-  const AndroidInitializationSettings androidInit =
-      AndroidInitializationSettings('@mipmap/ic_launcher');
-  const InitializationSettings initSettings =
-      InitializationSettings(android: androidInit);
+    const AndroidInitializationSettings androidInit =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const InitializationSettings initSettings = InitializationSettings(
+      android: androidInit,
+    );
 
-  await flutterLocalNotificationsPlugin.initialize(initSettings);
-}
+    await flutterLocalNotificationsPlugin.initialize(initSettings);
+  }
 
-Future<void> _loadPreferences() async {
-  final prefs = await SharedPreferences.getInstance();
-  setState(() {
-    isPushNotif = prefs.getBool('isPushNotif') ?? true;
-  });
-}
+  Future<void> _loadPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      isPushNotif = prefs.getBool('isPushNotif') ?? true;
+    });
+  }
 
-Future<void> _savePreferences(bool value) async {
-  final prefs = await SharedPreferences.getInstance();
-  prefs.setBool('isPushNotif', value);
-}
+  Future<void> _savePreferences(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setBool('isPushNotif', value);
+  }
 
   // 🔹 Fungsi ambil lokasi otomatis
   Future<void> _getCurrentLocation() async {
@@ -182,62 +187,63 @@ Future<void> _savePreferences(bool value) async {
     final hours = offset.inHours.abs().toString().padLeft(2, '0');
     _timezone = "GMT$sign$hours";
   }
-    void _showLanguageBottomSheet() {
-  showModalBottomSheet(
-    context: context,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (context) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Center(
-              child: Text(
-                "Pilih Bahasa Aplikasi",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+
+  void _showLanguageBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Center(
+                child: Text(
+                  "Pilih Bahasa Aplikasi",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            ListTile(
-              leading: const Icon(Icons.language, color: Colors.blue),
-              title: const Text("Bahasa Indonesia"),
-              trailing: selectedLanguage == "Bahasa Indonesia"
-                  ? const Icon(Icons.check, color: Colors.green)
-                  : null,
-              onTap: () {
-                setState(() => selectedLanguage = "Bahasa Indonesia");
-                _saveLanguagePreference("Bahasa Indonesia");
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Bahasa diatur ke Indonesia")),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.language, color: Colors.blue),
-              title: const Text("English"),
-              trailing: selectedLanguage == "English"
-                  ? const Icon(Icons.check, color: Colors.green)
-                  : null,
-              onTap: () {
-                setState(() => selectedLanguage = "English");
-                _saveLanguagePreference("English");
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Language set to English")),
-                );
-              },
-            ),
-          ],
-        ),
-      );
-    },
-  );
-}
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.language, color: Colors.blue),
+                title: const Text("Bahasa Indonesia"),
+                trailing: selectedLanguage == "Bahasa Indonesia"
+                    ? const Icon(Icons.check, color: Colors.green)
+                    : null,
+                onTap: () {
+                  setState(() => selectedLanguage = "Bahasa Indonesia");
+                  _saveLanguagePreference("Bahasa Indonesia");
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Bahasa diatur ke Indonesia")),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.language, color: Colors.blue),
+                title: const Text("English"),
+                trailing: selectedLanguage == "English"
+                    ? const Icon(Icons.check, color: Colors.green)
+                    : null,
+                onTap: () {
+                  setState(() => selectedLanguage = "English");
+                  _saveLanguagePreference("English");
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Language set to English")),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   // 🔹 Dialog Peringatan Lokasi
   void _showLocationDialog({
@@ -365,47 +371,46 @@ Future<void> _savePreferences(bool value) async {
             const SizedBox(height: 16),
             _buildSectionTitle("Notifikasi", textColor),
             _buildSwitchTile(
-  Icons.notifications,
-  "Notifikasi Push",
-  "Pengingat kegiatan & sholat",
-  isPushNotif,
-  (v) async {
-    setState(() => isPushNotif = v);
-    await _savePreferences(v);
+              Icons.notifications,
+              "Notifikasi Push",
+              "Pengingat kegiatan & sholat",
+              isPushNotif,
+              (v) async {
+                setState(() => isPushNotif = v);
+                await _savePreferences(v);
 
-    if (v) {
-      // Aktifkan (bisa langsung uji coba)
-      await _showTestNotification();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Notifikasi diaktifkan")),
-      );
-    } else {
-      // Nonaktifkan
-      await flutterLocalNotificationsPlugin.cancelAll();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Notifikasi dimatikan")),
-      );
-    }
-  },
-  cardColor,
-  textColor,
-),
+                if (v) {
+                  // Aktifkan (bisa langsung uji coba)
+                  await _showTestNotification();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Notifikasi diaktifkan")),
+                  );
+                } else {
+                  // Nonaktifkan
+                  await flutterLocalNotificationsPlugin.cancelAll();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Notifikasi dimatikan")),
+                  );
+                }
+              },
+              cardColor,
+              textColor,
+            ),
 
             const SizedBox(height: 16),
             _buildSectionTitle("Bahasa", textColor),
             _buildNavTile(
-  Icons.language,
-  "Bahasa Aplikasi",
-  selectedLanguage, // 🔹 Tampilkan bahasa yang dipilih
-  cardColor,
-  textColor,
-  onTap: _showLanguageBottomSheet, // 🔹 Tambahkan aksi klik
-),
-
+              Icons.language,
+              "Bahasa Aplikasi",
+              selectedLanguage, // 🔹 Tampilkan bahasa yang dipilih
+              cardColor,
+              textColor,
+              onTap: _showLanguageBottomSheet, // 🔹 Tambahkan aksi klik
+            ),
 
             const SizedBox(height: 16),
             _buildSectionTitle("Tentang", textColor),
-            _buildInfoTile("Versi Aplikasi", "1.0.0", cardColor, textColor),
+            _buildInfoTile("Versi Aplikasi", "1.0.3", cardColor, textColor),
             _buildNavTile(
               Icons.article,
               "Syarat & Ketentuan",
@@ -512,14 +517,13 @@ Future<void> _savePreferences(bool value) async {
   }
 
   Widget _buildNavTile(
-  IconData icon,
-  String title,
-  String? subtitle,
-  Color cardColor,
-  Color textColor, {
-  VoidCallback? onTap, // ✅ jadikan named argument opsional
-})
- {
+    IconData icon,
+    String title,
+    String? subtitle,
+    Color cardColor,
+    Color textColor, {
+    VoidCallback? onTap, // ✅ jadikan named argument opsional
+  }) {
     return Card(
       color: cardColor,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

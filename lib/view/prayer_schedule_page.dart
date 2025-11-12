@@ -111,22 +111,22 @@ class _JadwalPageState extends State<JadwalPage> {
     },
   );
     // ✅ Tambahkan konfigurasi channel manual agar aman di Android <8
-  const androidDetails = AndroidNotificationDetails(
-    'adzan_channel',
-    'Adzan Reminder',
-    channelDescription: 'Notifikasi pengingat waktu sholat',
-    importance: Importance.max,
-    priority: Priority.high,
-    playSound: true,
-    enableVibration: true,
-  );
+  // const androidDetails = AndroidNotificationDetails(
+  //   'adzan_channel',
+  //   'Adzan Reminder',
+  //   channelDescription: 'Notifikasi pengingat waktu sholat',
+  //   importance: Importance.max,
+  //   priority: Priority.high,
+  //   playSound: true,
+  //   enableVibration: true,
+  // );
   // 🔔 Tes notifikasi untuk memastikan izin dan channel aktif
-  await _notifikasi.show(
-    999,
-    'Notifikasi Siap ✅',
-    'Sistem pengingat adzan aktif.',
-    const NotificationDetails(android: androidDetails),
-  );
+  // await _notifikasi.show(
+  //   999,
+  //   'Notifikasi Siap ✅',
+  //   'Sistem pengingat adzan aktif.',
+  //   const NotificationDetails(android: androidDetails),
+  // );
 
 }
     Future<void> _mintaIzinNotifikasi() async {

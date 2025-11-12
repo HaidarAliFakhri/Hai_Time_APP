@@ -6,6 +6,7 @@ import 'package:hai_time_app/model/activity.dart';
 import 'package:hai_time_app/page/bottom_navigator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:geocoding/geocoding.dart';
 
 import '../db/db_activity.dart';
 
@@ -80,38 +81,70 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _getCurrentLocation() async {
-    bool serviceEnabled;
-    LocationPermission permission;
+  bool serviceEnabled;
+  LocationPermission permission;
 
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      setState(() => lokasi = "Layanan lokasi tidak aktif");
-      return;
-    }
+  serviceEnabled = await Geolocator.isLocationServiceEnabled();
+  if (!serviceEnabled) {
+    setState(() => lokasi = "Layanan lokasi tidak aktif");
+    return;
+  }
 
-    permission = await Geolocator.checkPermission();
+  permission = await Geolocator.checkPermission();
+  if (permission == LocationPermission.denied) {
+    permission = await Geolocator.requestPermission();
     if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        setState(() => lokasi = "Izin lokasi ditolak");
-        return;
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      setState(() => lokasi = "Izin lokasi ditolak permanen");
+      setState(() => lokasi = "Izin lokasi ditolak");
       return;
     }
+  }
 
+  if (permission == LocationPermission.deniedForever) {
+    setState(() => lokasi = "Izin lokasi ditolak permanen");
+    return;
+  }
+
+  try {
     final position = await Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
     );
 
+    // 🔹 Ubah koordinat jadi nama kota, kecamatan, dst.
+    List<Placemark> placemarks = await placemarkFromCoordinates(
+      position.latitude,
+      position.longitude,
+    );
+
+    if (placemarks.isNotEmpty) {
+      final place = placemarks.first;
+      final namaLokasi = [
+        if (place.subLocality != null && place.subLocality!.isNotEmpty)
+          place.subLocality,
+        if (place.locality != null && place.locality!.isNotEmpty)
+          place.locality,
+        if (place.administrativeArea != null &&
+            place.administrativeArea!.isNotEmpty)
+          place.administrativeArea,
+      ].join(', ');
+
+      setState(() {
+        lokasi = namaLokasi.isNotEmpty
+            ? namaLokasi
+            : "Lokasi terdeteksi (${position.latitude.toStringAsFixed(2)}, ${position.longitude.toStringAsFixed(2)})";
+      });
+    } else {
+      setState(() {
+        lokasi =
+            "Tidak dapat menentukan alamat (${position.latitude.toStringAsFixed(2)}, ${position.longitude.toStringAsFixed(2)})";
+      });
+    }
+  } catch (e) {
     setState(() {
-      lokasi =
-          "Lat: ${position.latitude.toStringAsFixed(3)}, Lon: ${position.longitude.toStringAsFixed(3)}";
+      lokasi = "Gagal mendeteksi lokasi";
     });
   }
+}
+
 
   void _showEditBottomSheet(BuildContext context) {
     final nameController = TextEditingController(text: nama);
@@ -249,116 +282,160 @@ class _ProfilePageState extends State<ProfilePage> {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 280,
-            backgroundColor: Colors.transparent,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const BottomNavigator()),
-                );
-              },
-            ),
-            flexibleSpace: ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                bottom: Radius.circular(40),
-              ),
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF4CAEFE), Color(0xFF007BFF)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: FlexibleSpaceBar(
-                  centerTitle: true,
-                  titlePadding: const EdgeInsets.only(bottom: 16),
-                  title: Text(
-                    nama,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                  background: SafeArea(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            AnimatedContainer(
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeOut,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 5),
-                                  ),
-                                ],
-                              ),
-                              child: ClipOval(
-                                child: _imageFile != null
-                                    ? Image.file(
-                                        _imageFile!,
-                                        width: 110,
-                                        height: 110,
-                                        fit: BoxFit.cover,
-                                      )
-                                    : Container(
-                                        width: 110,
-                                        height: 110,
-                                        color: Colors.white,
-                                        child: const Icon(
-                                          Icons.person,
-                                          size: 60,
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                              ),
-                            ),
-                            Positioned(
-                              bottom: 0,
-                              right: 4,
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                width: 34,
-                                height: 34,
-                                decoration: BoxDecoration(
-                                  color: Colors.blueAccent,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 2,
-                                  ),
-                                ),
-                                child: IconButton(
-                                  padding: EdgeInsets.zero,
-                                  icon: const Icon(
-                                    Icons.edit,
-                                    color: Colors.white,
-                                    size: 18,
-                                  ),
-                                  onPressed: _gantiFotoProfil,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+  pinned: true,
+  expandedHeight: 280,
+  backgroundColor: Colors.transparent,
+  centerTitle: true, // <-- ini yang bikin teks di tengah
+  leading: IconButton(
+    icon: const Icon(Icons.arrow_back, color: Colors.white),
+    onPressed: () {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const BottomNavigator()),
+      );
+    },
+  ),
+  title: Text(
+    nama,
+    overflow: TextOverflow.ellipsis,
+    textAlign: TextAlign.center,
+    style: const TextStyle(
+      color: Colors.white,
+      fontWeight: FontWeight.bold,
+    ),
+  ),
+
+  flexibleSpace: LayoutBuilder(
+    builder: (context, constraints) {
+      final expandedHeight = 280.0;
+      final minHeight = kToolbarHeight;
+      final current = constraints.maxHeight.clamp(minHeight, expandedHeight);
+      final t = (current - minHeight) / (expandedHeight - minHeight);
+      final avatarOpacity = t.clamp(0.0, 1.0);
+      final avatarFast = avatarOpacity * avatarOpacity * avatarOpacity;
+      final avatarScale = 0.6 + (0.4 * avatarFast);
+
+      return ClipRRect(
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(40)),
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF4CAEFE), Color(0xFF007BFF)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
           ),
+          child: SafeArea(
+            bottom: false,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // Avatar (menghilang cepat)
+                Align(
+                  alignment: const Alignment(-0.0, 0.15),
+                  child: Opacity(
+                    opacity: avatarFast, // <--- sudah ada opacity
+                    child: Transform.scale(
+                      scale: avatarScale,
+                      alignment: Alignment.center,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.12 * avatarFast),
+                                  blurRadius: 10 * avatarFast,
+                                  offset: Offset(0, 4 * avatarFast),
+                                )
+                              ],
+                            ),
+                            child: ClipOval(
+                              child: _imageFile != null
+                                  ? Image.file(
+                                      _imageFile!,
+                                      width: 110,
+                                      height: 110,
+                                      fit: BoxFit.cover,
+                                      filterQuality: FilterQuality.high,
+                                    )
+                                  : Container(
+                                      width: 110,
+                                      height: 110,
+                                      color: Colors.white,
+                                      child: const Icon(
+                                        Icons.person,
+                                        size: 60,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Tombol edit yang ikut menghilang bersama avatar
+                Align(
+                  alignment: const Alignment(0.38, 0.45),
+                  child: Opacity(
+                    opacity: avatarFast, // <--- sudah ada opacity
+                    child: Transform.scale(
+                      scale: avatarScale,
+                      alignment: Alignment.center,
+                      child: Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: Colors.blueAccent,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          icon: const Icon(Icons.edit, color: Colors.white, size: 18),
+                          onPressed: _gantiFotoProfil,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Nama kecil di area expanded (hanya dekorasi)
+                Align(
+                  alignment: const Alignment(0, 0.7),
+                  child: Opacity(
+                    opacity: t.clamp(0.0, 1.0), // <--- sudah ada opacity
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                      child: Text(
+                        email,
+                        textAlign: TextAlign.center,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  ),
+),
+
+
+
 
           // Bagian isi bawah
           SliverToBoxAdapter(

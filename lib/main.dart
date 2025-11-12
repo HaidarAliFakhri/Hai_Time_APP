@@ -1,8 +1,11 @@
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hai_time_app/screen/splash_screen.dart';
+import 'package:hai_time_app/utils/app_localizations.dart'; // pastikan file ini dibuat sesuai penjelasan sebelumnya
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz;
 
 // 🔹 Variabel global untuk kontrol tema
@@ -13,14 +16,10 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
 void main() async {
-  
   WidgetsFlutterBinding.ensureInitialized();
+
   await initializeDateFormatting('id_ID', null);
-
-  // 🔹 Inisialisasi timezone
   tz.initializeTimeZones();
-
-  // 🔹 Inisialisasi Alarm Manager
   await AndroidAlarmManager.initialize();
 
   // 🔹 Inisialisasi notifikasi lokal
@@ -30,12 +29,40 @@ void main() async {
     android: initSettingsAndroid,
   );
   await flutterLocalNotificationsPlugin.initialize(initSettings);
-  
-  runApp(const MyApp());
+
+  // 🔹 Ambil bahasa tersimpan
+  final prefs = await SharedPreferences.getInstance();
+  String? languageCode = prefs.getString('selectedLanguage');
+
+  runApp(MyApp(languageCode: languageCode));
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class MyApp extends StatefulWidget {
+  final String? languageCode;
+  const MyApp({super.key, this.languageCode});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  Locale _locale = const Locale('id');
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.languageCode == 'English') {
+      _locale = const Locale('en');
+    } else {
+      _locale = const Locale('id');
+    }
+  }
+
+  void setLocale(Locale locale) {
+    setState(() {
+      _locale = locale;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -45,21 +72,32 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'HaiTime',
-          themeMode: dark ? ThemeMode.dark : ThemeMode.light,
 
+          // 🔹 Bahasa aktif aplikasi
+          locale: _locale,
+          supportedLocales: const [Locale('en'), Locale('id')],
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+
+          // 🔹 Tema
+          themeMode: dark ? ThemeMode.dark : ThemeMode.light,
           theme: ThemeData(
             brightness: Brightness.light,
             scaffoldBackgroundColor: const Color(0xFFF2F6FC),
             primarySwatch: Colors.blue,
           ),
-
           darkTheme: ThemeData(
             brightness: Brightness.dark,
             scaffoldBackgroundColor: const Color(0xFF121212),
             primarySwatch: Colors.blueGrey,
           ),
 
-          home: const SplashScreenHaiTime(),
+          // 🔹 Halaman awal
+          home: SplashScreenHaiTime(),
         );
       },
     );

@@ -11,8 +11,8 @@ import 'package:url_launcher/url_launcher.dart';
 ValueNotifier<bool> isDarkMode = ValueNotifier(false);
 
 class SettingPage extends StatefulWidget {
-  const SettingPage({super.key});
-
+  final Function(Locale) onLanguageChanged;
+  const SettingPage({super.key, required this.onLanguageChanged});
   @override
   State<SettingPage> createState() => _SettingPageState();
 }
@@ -201,10 +201,13 @@ class _SettingPageState extends State<SettingPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Center(
+              Center(
                 child: Text(
-                  "Pilih Bahasa Aplikasi",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  AppLocalizations.of(context).translate('choose_language'),
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -217,9 +220,16 @@ class _SettingPageState extends State<SettingPage> {
                 onTap: () {
                   setState(() => selectedLanguage = "Bahasa Indonesia");
                   _saveLanguagePreference("Bahasa Indonesia");
+                  widget.onLanguageChanged(const Locale('id'));
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Bahasa diatur ke Indonesia")),
+                    SnackBar(
+                      content: Text(
+                        AppLocalizations.of(
+                          context,
+                        ).translate('language_set_to_indonesia'),
+                      ),
+                    ),
                   );
                 },
               ),
@@ -232,9 +242,16 @@ class _SettingPageState extends State<SettingPage> {
                 onTap: () {
                   setState(() => selectedLanguage = "English");
                   _saveLanguagePreference("English");
+                  widget.onLanguageChanged(const Locale('en'));
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Language set to English")),
+                    SnackBar(
+                      content: Text(
+                        AppLocalizations.of(
+                          context,
+                        ).translate('language_set_to_english'),
+                      ),
+                    ),
                   );
                 },
               ),

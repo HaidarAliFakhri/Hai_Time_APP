@@ -76,7 +76,7 @@ class _MyAppState extends State<MyApp> {
 
           // 🔹 Bahasa aktif aplikasi
           locale: _locale,
-          supportedLocales: const [Locale('en'), Locale('id')],
+          supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: [
             AppLocalizations.delegate,
             GlobalMaterialLocalizations.delegate,

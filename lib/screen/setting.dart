@@ -205,7 +205,8 @@ class _SettingPageState extends State<SettingPage> {
             children: [
               Center(
                 child: Text(
-                  AppLocalizations.of(context)!.choose_language,
+                  AppLocalizations.of(context)!.choose_language
+,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,

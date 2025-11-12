@@ -305,7 +305,14 @@ class _HomePageState extends State<HomePage> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const setting.SettingPage(),
+                                  builder: (_) => setting.SettingPage(
+                                  onLanguageChanged: (Locale newLocale) {
+                                    // Tambahkan logika perubahan bahasa di sini
+                                    // Contoh: memanggil setState atau mengupdate provider
+                                    debugPrint("Bahasa diganti ke: ${newLocale.languageCode}");
+                                  },
+                                ),
+
                                 ),
                               );
                             },

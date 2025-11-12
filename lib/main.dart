@@ -3,10 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hai_time_app/screen/splash_screen.dart';
-import 'package:hai_time_app/utils/app_localizations.dart'; // pastikan file ini dibuat sesuai penjelasan sebelumnya
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz;
+import 'package:hai_time_app/l10n/app_localizations.dart';
+
 
 // 🔹 Variabel global untuk kontrol tema
 ValueNotifier<bool> isDarkMode = ValueNotifier(false);
@@ -76,12 +77,13 @@ class _MyAppState extends State<MyApp> {
           // 🔹 Bahasa aktif aplikasi
           locale: _locale,
           supportedLocales: const [Locale('en'), Locale('id')],
-          localizationsDelegates: const [
+          localizationsDelegates: [
             AppLocalizations.delegate,
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
+
 
           // 🔹 Tema
           themeMode: dark ? ThemeMode.dark : ThemeMode.light,

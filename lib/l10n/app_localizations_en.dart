@@ -1,0 +1,22 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for English (`en`).
+class AppLocalizationsEn extends AppLocalizations {
+  AppLocalizationsEn([String locale = 'en']) : super(locale);
+
+  @override
+  String get title => 'Settings';
+
+  @override
+  String get choose_language => 'Choose Application Language';
+
+  @override
+  String get language_set_to_english => 'Language set to English';
+
+  @override
+  String get language_set_to_indonesia => 'Language set to Indonesian';
+}

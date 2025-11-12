@@ -6,6 +6,8 @@ import 'package:hai_time_app/page/bottom_navigator.dart';
 import 'package:hai_time_app/page/login_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:hai_time_app/l10n/app_localizations.dart';
+
 
 // 🔹 Notifier global untuk tema gelap
 ValueNotifier<bool> isDarkMode = ValueNotifier(false);
@@ -203,7 +205,7 @@ class _SettingPageState extends State<SettingPage> {
             children: [
               Center(
                 child: Text(
-                  AppLocalizations.of(context).translate('choose_language'),
+                  AppLocalizations.of(context)!.choose_language,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -224,12 +226,11 @@ class _SettingPageState extends State<SettingPage> {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(
-                        AppLocalizations.of(
-                          context,
-                        ).translate('language_set_to_indonesia'),
-                      ),
-                    ),
+                  content: Text(
+                    AppLocalizations.of(context)!.choose_language,
+                  ),
+                ),
+
                   );
                 },
               ),
@@ -247,10 +248,9 @@ class _SettingPageState extends State<SettingPage> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
-                        AppLocalizations.of(
-                          context,
-                        ).translate('language_set_to_english'),
-                      ),
+                    AppLocalizations.of(context)!.choose_language,
+                  ),
+
                     ),
                   );
                 },
@@ -329,35 +329,6 @@ class _SettingPageState extends State<SettingPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // _buildSectionTitle("Tampilan", textColor),
-
-            // Card(
-            //   color: cardColor,
-            //   shape: RoundedRectangleBorder(
-            //     borderRadius: BorderRadius.circular(16),
-            //   ),
-            //   child: ValueListenableBuilder(
-            //     valueListenable: isDarkMode,
-            //     builder: (context, value, _) {
-            //       return SwitchListTile(
-            //         title: Text(
-            //           "Mode Gelap",
-            //           style: TextStyle(color: textColor),
-            //         ),
-            //         subtitle: Text(
-            //           "Aktifkan tema gelap",
-            //           style: TextStyle(color: textColor.withOpacity(0.7)),
-            //         ),
-            //         value: value,
-            //         onChanged: (val) {
-            //           isDarkMode.value = val;
-            //           setState(() {});
-            //         },
-            //         secondary: const Icon(Icons.dark_mode, color: Colors.blue),
-            //       );
-            //     },
-            //   ),
-            // ),
             const SizedBox(height: 16),
             _buildSectionTitle("Lokasi & Waktu", textColor),
 

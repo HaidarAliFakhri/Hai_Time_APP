@@ -1,5 +1,5 @@
 import 'dart:async';
-
+import 'package:hai_time_app/services/weather_service.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:hai_time_app/screen/profile.dart';
@@ -11,18 +11,22 @@ import 'package:hai_time_app/view/weather_page.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+
 import '../db/db_activity.dart';
 import '../model/activity.dart';
 
 class HomePage extends StatefulWidget {
   final Function(Locale)? onLocaleChanged;
-  const HomePage({super.key, this.onLocaleChanged});
+  final VoidCallback? onGoToWeather;
+
+  const HomePage({super.key, this.onLocaleChanged, this.onGoToWeather});
 
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+//  Tambahkan TickerProviderStateMixin agar AnimationController bisa jalan
+class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   List<Kegiatan> _listKegiatan = [];
@@ -32,7 +36,6 @@ class _HomePageState extends State<HomePage> {
   String remainingTime = "";
   bool _isAdzanPlaying = false;
 
-  // Jadwal sholat sementara (bisa  ubah sesuai data API nanti)
   final Map<String, String> prayerTimes = {
     "Subuh": "04:45",
     "Dzuhur": "11:45",
@@ -41,20 +44,35 @@ class _HomePageState extends State<HomePage> {
     "Isya": "18:59",
   };
 
+  late AnimationController _animController;
+
   @override
   void initState() {
     super.initState();
+
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 5),
+    )..repeat();
+
     _loadKegiatan();
     _cekDanUpdateKegiatan();
     _periksaKegiatanSelesai();
     _loadNamaUser();
     _updateNextPrayer();
+
     DBKegiatan().onChange.listen((_) {
       if (mounted) _loadKegiatan();
     });
 
-    // Perbarui setiap 30 detik agar lebih responsif mendeteksi waktu adzan
     Timer.periodic(const Duration(seconds: 30), (_) => _updateNextPrayer());
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    _animController.dispose();
+    super.dispose();
   }
 
   Future<void> _periksaKegiatanSelesai() async {
@@ -76,20 +94,18 @@ class _HomePageState extends State<HomePage> {
     final data = await DBKegiatan().getKegiatanList();
     if (mounted) {
       setState(() {
-        // hanya tampilkan yang belum selesai
         _listKegiatan = data.where((k) => k.status != 'Selesai').toList();
       });
     }
   }
 
   Future<void> _playAdzanSound() async {
-    if (_isAdzanPlaying) return; // biar gak dobel
+    if (_isAdzanPlaying) return;
     try {
       _isAdzanPlaying = true;
       await _audioPlayer.play(AssetSource('audio/adzan.mp3'));
-      debugPrint("🔊 Adzan diputar");
       _audioPlayer.onPlayerComplete.listen((_) {
-        _isAdzanPlaying = false; // reset setelah selesai
+        _isAdzanPlaying = false;
       });
     } catch (e) {
       debugPrint("❌ Gagal memutar adzan: $e");
@@ -102,23 +118,17 @@ class _HomePageState extends State<HomePage> {
     DateFormat format = DateFormat("HH:mm");
     DateTime? nextTime;
     String? nextName;
-    final prefs = await SharedPreferences.getInstance();
+    
 
-    bool aktif = prefs.getBool('aktif_$nextPrayerName') ?? true;
     bool isPrayerNow = false;
 
     for (var entry in prayerTimes.entries) {
       final prayerDate = format.parse(entry.value);
       final prayerDateTime = DateTime(
-        now.year,
-        now.month,
-        now.day,
-        prayerDate.hour,
-        prayerDate.minute,
+        now.year, now.month, now.day, prayerDate.hour, prayerDate.minute,
       );
 
       if ((now.difference(prayerDateTime).inMinutes).abs() == 0) {
-        // Tepat waktu sholat
         isPrayerNow = true;
         break;
       } else if (prayerDateTime.isAfter(now)) {
@@ -126,16 +136,10 @@ class _HomePageState extends State<HomePage> {
         nextName = entry.key;
         break;
       }
-      if (isPrayerNow && aktif) {
-        await _playAdzanSound();
-      }
     }
 
-    // Kalau semua sudah lewat, set ke Subuh besok
     nextTime ??= DateTime(
-      now.year,
-      now.month,
-      now.day + 1,
+      now.year, now.month, now.day + 1,
       int.parse(prayerTimes["Subuh"]!.split(":")[0]),
       int.parse(prayerTimes["Subuh"]!.split(":")[1]),
     );
@@ -151,10 +155,7 @@ class _HomePageState extends State<HomePage> {
       remainingTime = "Dalam $hours jam $minutes menit";
     });
 
-    // 🔊 Putar adzan jika tepat waktu sholat
-    if (isPrayerNow) {
-      await _playAdzanSound();
-    }
+    if (isPrayerNow) await _playAdzanSound();
   }
 
   String _getGreeting() {
@@ -167,13 +168,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    // final bool dark = main_app.isDarkMode.value;
-    // final Color bgColor = dark
-    //     ? const Color(0xFF121212)
-    //     : const Color(0xFFF2F6FC);
-
     return Scaffold(
-      // backgroundColor: bgColor,
       body: CustomScrollView(
         slivers: [
           _buildAppBar(),
@@ -184,18 +179,9 @@ class _HomePageState extends State<HomePage> {
                 children: [
                   _buildWeatherCard(),
                   const SizedBox(height: 20),
+                  _buildWeatherAdviceCard(), // Saran cuaca dinamis
+                  const SizedBox(height: 20),
                   _buildPrayerCard(),
-                  const SizedBox(height: 16),
-                  _buildCard(
-                    color: const Color(0xFFFFF6E5),
-                    child: const ListTile(
-                      leading: Icon(Icons.cloud, color: Colors.orange),
-                      title: Text("Cuaca sore mendung"),
-                      subtitle: Text(
-                        "Pertimbangkan berangkat lebih awal untuk kegiatan sore ini.",
-                      ),
-                    ),
-                  ),
                   const SizedBox(height: 16),
                   _buildKegiatanCard(),
                 ],
@@ -218,7 +204,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // 🔹 APP BAR
+  //  AppBar
   Widget _buildAppBar() {
     return SliverAppBar(
       automaticallyImplyLeading: false,
@@ -228,10 +214,9 @@ class _HomePageState extends State<HomePage> {
       elevation: 0,
       flexibleSpace: LayoutBuilder(
         builder: (context, constraints) {
-          final percent =
-              ((constraints.maxHeight - kToolbarHeight) /
-                      (100 - kToolbarHeight))
-                  .clamp(0.0, 1.0);
+          final percent = ((constraints.maxHeight - kToolbarHeight) /
+                  (100 - kToolbarHeight))
+              .clamp(0.0, 1.0);
 
           return ClipRRect(
             borderRadius: const BorderRadius.only(
@@ -249,7 +234,6 @@ class _HomePageState extends State<HomePage> {
               child: SafeArea(
                 child: Stack(
                   children: [
-                    // 👋 Greeting (hilang halus saat mulai discroll)
                     Positioned(
                       left: 5,
                       top: 12,
@@ -266,8 +250,6 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                     ),
-
-                    // 🧍 Nama user
                     AnimatedAlign(
                       alignment: Alignment(0, percent > 0.5 ? 0.5 : 0.0),
                       duration: const Duration(milliseconds: 200),
@@ -281,8 +263,6 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                     ),
-
-                    // ⚙️ Tombol profil & setting
                     Positioned(
                       right: 0,
                       top: 0,
@@ -294,16 +274,13 @@ class _HomePageState extends State<HomePage> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const ProfilePage(),
-                                ),
+                                    builder: (_) => const ProfilePage()),
                               );
                             },
                           ),
                           IconButton(
-                            icon: const Icon(
-                              Icons.settings,
-                              color: Colors.white,
-                            ),
+                            icon: const Icon(Icons.settings,
+                                color: Colors.white),
                             onPressed: () {
                               Navigator.push(
                                 context,
@@ -329,73 +306,203 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // 🔹 CARD CUACA
+  //  CARD CUACA DENGAN ANIMASI
   Widget _buildWeatherCard() {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: WeatherService.fetchWeather(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _loadingWeather();
+        }
+        if (!snapshot.hasData || snapshot.data == null) {
+          return _errorWeather();
+        }
+
+        final weather = snapshot.data!;
+        final city = "${weather['name']}, ${weather['sys']['country']}";
+        final temp = weather['main']['temp'].round();
+        final desc = weather['weather'][0]['description'];
+        final main = weather['weather'][0]['main'].toString().toLowerCase();
+        final hum = weather['main']['humidity'];
+        final wind = weather['wind']['speed'];
+
+        return Stack(
+          children: [
+            Container(
+              width: double.infinity,
+              height: 190,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF5FA4F8), Color(0xFF0079FF)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            Positioned.fill(
+              child: AnimatedWeatherEffect(
+                mainCondition: main,
+                controller: _animController,
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(20),
+              width: double.infinity,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(city,
+                      style:
+                          const TextStyle(color: Colors.white, fontSize: 16)),
+                  const SizedBox(height: 4),
+                  Text(
+                    "$temp°C  ${desc.toUpperCase()}",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Icon(Icons.water_drop, color: Colors.white),
+                      const SizedBox(width: 6),
+                      Text("$hum%", style: const TextStyle(color: Colors.white)),
+                      const SizedBox(width: 20),
+                      const Icon(Icons.air, color: Colors.white),
+                      const SizedBox(width: 6),
+                      Text("${wind.toStringAsFixed(1)} m/s",
+                          style: const TextStyle(color: Colors.white)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: ElevatedButton(
+  style: ElevatedButton.styleFrom(
+    backgroundColor: Colors.white,
+    foregroundColor: Colors.blue,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+    ),
+  ),
+  onPressed: () {
+    widget.onGoToWeather?.call(); //  ganti push ke callback
+  },
+  child: const Text("Detail →"),
+),
+
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _loadingWeather() => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: _blueBox(),
+        child: const Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
+      );
+
+  Widget _errorWeather() => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: _blueBox(),
+        child: const Text(
+          "Gagal memuat data cuaca ",
+          style: TextStyle(color: Colors.white),
+        ),
+      );
+
+  BoxDecoration _blueBox() => BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF5FA4F8), Color(0xFF0079FF)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(20),
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Jakarta, Indonesia",
-            style: TextStyle(color: Colors.white, fontSize: 16),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            "28°C  Cerah ☀️",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
+      );
+
+  //  CARD SARAN CUACA DINAMIS
+  Widget _buildWeatherAdviceCard() {
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: WeatherService.fetchWeather(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildCard(
+            color: const Color(0xFFFFF6E5),
+            child: const ListTile(
+              leading: Icon(Icons.cloud_queue, color: Colors.orange),
+              title: Text("Mengambil data cuaca..."),
+              subtitle: Text("Tunggu sebentar ya ☁️"),
             ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: const [
-              Icon(Icons.water_drop, color: Colors.white),
-              SizedBox(width: 6),
-              Text("65%", style: TextStyle(color: Colors.white)),
-              SizedBox(width: 20),
-              Icon(Icons.air, color: Colors.white),
-              SizedBox(width: 6),
-              Text("15 km/h", style: TextStyle(color: Colors.white)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerRight,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.blue,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const CuacaPage()),
-                );
-              },
-              child: const Text("Detail →"),
+          );
+        }
+
+        if (!snapshot.hasData || snapshot.data == null) {
+          return _buildCard(
+            color: const Color(0xFFFFE5E5),
+            child: const ListTile(
+              leading: Icon(Icons.error, color: Colors.redAccent),
+              title: Text("Gagal memuat cuaca"),
+              subtitle: Text("Pastikan koneksi internetmu aktif 🌐"),
             ),
+          );
+        }
+
+        final data = snapshot.data!;
+        final condition = data['weather'][0]['main'].toString().toLowerCase();
+        IconData icon;
+        String title;
+        String message;
+        Color bgColor;
+
+        if (condition.contains('rain') ||
+            condition.contains('drizzle') ||
+            condition.contains('thunderstorm')) {
+          icon = Icons.umbrella;
+          title = "Cuaca sedang hujan 🌧️";
+          message = "Bawa payung dan berangkat lebih awal ya.";
+          bgColor = const Color(0xFFE3F2FD);
+        } else if (condition.contains('cloud')) {
+          icon = Icons.cloud;
+          title = "Cuaca mendung ☁️";
+          message = "Pertimbangkan berangkat lebih awal untuk kegiatan sore ini.";
+          bgColor = const Color(0xFFFFF6E5);
+        } else if (condition.contains('snow')) {
+          icon = Icons.ac_unit;
+          title = "Turun salju ❄️";
+          message = "Kenakan pakaian hangat agar tetap nyaman.";
+          bgColor = const Color(0xFFE1F5FE);
+        } else {
+          icon = Icons.wb_sunny;
+          title = "Cuaca cerah ☀️";
+          message = "Cuaca bagus! Waktu yang tepat untuk beraktivitas.";
+          bgColor = const Color(0xFFE8F5E9);
+        }
+
+        return _buildCard(
+          color: bgColor,
+          child: ListTile(
+            leading: Icon(icon, color: Colors.orange),
+            title: Text(title),
+            subtitle: Text(message),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  // 🔹 CARD JADWAL SHOLAT
+  //  CARD JADWAL SHOLAT
   Widget _buildPrayerCard() {
     return _buildCard(
       title: "Jadwal Sholat Hari Ini",
@@ -411,79 +518,125 @@ class _HomePageState extends State<HomePage> {
       child: Column(
         children: [
           const _PrayerRow(
-            icon: Icons.brightness_2_outlined,
-            name: "Subuh",
-            time: "04:45",
-          ),
-          const _PrayerRow(icon: Icons.sunny, name: "Dzuhur", time: "11:42"),
+              icon: Icons.brightness_2_outlined, name: "Subuh", time: "04:45"),
           const _PrayerRow(
-            icon: Icons.wb_sunny_outlined,
-            name: "Ashar",
-            time: "14:55",
-          ),
+              icon: Icons.sunny, name: "Dzuhur", time: "11:42"),
           const _PrayerRow(
-            icon: Icons.nightlight_round_outlined,
-            name: "Maghrib",
-            time: "17:47",
-          ),
+              icon: Icons.wb_sunny_outlined, name: "Ashar", time: "14:55"),
           const _PrayerRow(
-            icon: Icons.nightlight_round,
-            name: "Isya",
-            time: "18:59",
-          ),
+              icon: Icons.nightlight_round_outlined,
+              name: "Maghrib",
+              time: "17:47"),
+          const _PrayerRow(
+              icon: Icons.nightlight_round, name: "Isya", time: "18:59"),
           const SizedBox(height: 10),
-          Text(
-            "Waktu $nextPrayerName $remainingTime",
-            style: const TextStyle(fontWeight: FontWeight.w500),
-          ),
+          Text("Waktu $nextPrayerName $remainingTime",
+              style: const TextStyle(fontWeight: FontWeight.w500)),
         ],
       ),
     );
   }
 
-  // 🔹 CARD KEGIATAN
-  Widget _buildKegiatanCard() {
-    return _buildCard(
-      title: "Kegiatan Anda",
-      trailing: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: Colors.blue.shade100,
-          borderRadius: BorderRadius.circular(8),
+  //  CARD KEGIATAN
+Widget _buildKegiatanCard() {
+  return Container(
+    margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+    decoration: BoxDecoration(
+      color: const Color(0xFF0D47A1), //  Biru gelap
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.2),
+          blurRadius: 8,
+          offset: const Offset(0, 4),
         ),
-        child: Text("${_listKegiatan.length} Kegiatan"),
-      ),
+      ],
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(16),
       child: Column(
-        children: _listKegiatan.isEmpty
-            ? [
-                const Text(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          //  Header Card
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "Kegiatan Anda",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  "${_listKegiatan.length} Kegiatan",
+                  style: const TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          //  Isi Card
+          if (_listKegiatan.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 20),
+                child: Text(
                   "Belum ada kegiatan.\nTekan tombol + untuk menambah.",
+                  style: TextStyle(color: Colors.white70),
                   textAlign: TextAlign.center,
                 ),
-              ]
-            : _listKegiatan.map((kegiatan) {
-                return ListTile(
-                  leading: const Icon(Icons.event, color: Colors.blue),
-                  title: Text(kegiatan.judul),
-                  subtitle: Text(
-                    "${kegiatan.lokasi}\n${kegiatan.tanggal} • ${kegiatan.waktu}",
+              ),
+            )
+          else
+            Column(
+              children: _listKegiatan.map((kegiatan) {
+                return Card(
+                  color: Colors.white.withOpacity(0.1),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  onTap: () async {
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => KegiatanPage(kegiatan: kegiatan),
-                      ),
-                    );
-                    if (result == true) _loadKegiatan();
-                  },
+                  margin: const EdgeInsets.only(bottom: 10),
+                  child: ListTile(
+                    leading: const Icon(Icons.event, color: Colors.white),
+                    title: Text(
+                      kegiatan.judul,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    subtitle: Text(
+                      "${kegiatan.lokasi}\n${kegiatan.tanggal} • ${kegiatan.waktu}",
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                    onTap: () async {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => KegiatanPage(kegiatan: kegiatan),
+                        ),
+                      );
+                      if (result == true) _loadKegiatan();
+                    },
+                  ),
                 );
               }).toList(),
+            ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 
-  // 🔹 GENERIC CARD BUILDER
+
+  //  CARD GENERIC BUILDER
   Widget _buildCard({
     String? title,
     Widget? trailing,
@@ -511,10 +664,8 @@ class _HomePageState extends State<HomePage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
+                Text(title,
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
                 if (trailing != null) trailing,
               ],
             ),
@@ -526,7 +677,7 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// 🔹 REUSABLE PRAYER ROW
+//  REUSABLE PRAYER ROW
 class _PrayerRow extends StatelessWidget {
   final IconData icon;
   final String name;

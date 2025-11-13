@@ -160,14 +160,14 @@ class _DashboardAdminPageState extends State<DashboardAdminPage> {
                           "📧 ${p.email}",
                           style: const TextStyle(
                             fontSize:
-                                18, // 🔼 ubah ukuran sesuai keinginan (default biasanya 14–16)
+                                18, //  ubah ukuran sesuai keinginan (default biasanya 14–16)
                             fontWeight: FontWeight
                                 .w500, // opsional: bisa bold atau medium
                             color: Colors.black87, // opsional: ubah warna teks
                           ),
                         ),
 
-                        // Text("📱 ${p.phone}"),
+                        // Text(" ${p.phone}"),
                         const SizedBox(height: 10),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
@@ -256,8 +256,8 @@ class _DashboardAdminPageState extends State<DashboardAdminPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text("📧 Email: ${p.email}"),
-                  // Text("📱 Nomor HP: ${p.phone}"),
-                  // Text("🌆 Asal Kota: ${p.city}"),
+                  // Text(" Nomor HP: ${p.phone}"),
+                  // Text(" Asal Kota: ${p.city}"),
                   const SizedBox(height: 10),
                   Row(
                     children: [

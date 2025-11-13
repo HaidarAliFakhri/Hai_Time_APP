@@ -7,7 +7,7 @@ import 'package:hai_time_app/view/dashborad_admin.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
-  final Function(Locale)? onLocaleChanged; // ✅ Tambahkan ini
+  final Function(Locale)? onLocaleChanged; //  Tambahkan ini
 
   const LoginPage({super.key, this.onLocaleChanged});
   static const id = "/HaiTime";
@@ -41,13 +41,13 @@ class _LoginPageState extends State<LoginPage> {
     final emailInput = emailController.text.trim();
     final passwordInput = passwordController.text.trim();
 
-    // 🔹 1. Login Admin
+    //  1. Login Admin
     if (emailInput == 'admin@haitime.com' && passwordInput == 'admin123') {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Login sebagai Admin berhasil!')),
       );
 
-      // ✅ Simpan status login admin
+      //  Simpan status login admin
       await PreferenceHandler.saveLogin(true);
       await PreferenceHandler.setEmail(emailInput);
 
@@ -58,13 +58,13 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    // 🔹 2. Login User
+    //  2. Login User
     if (emailInput == registeredEmail && passwordInput == registeredPassword) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Login berhasil! Selamat datang 👋')),
       );
 
-      // ✅ Simpan status login user
+      //  Simpan status login user
       await PreferenceHandler.saveLogin(true);
       await PreferenceHandler.setEmail(emailInput);
 

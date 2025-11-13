@@ -88,7 +88,7 @@ class _RegisterPageState extends State<RegisterPage> {
             key: _formKey,
             child: Column(
               children: [
-                // 🔹 Logo jam di atas
+                // Logo jam di atas
                 Container(
                   width: 80,
                   height: 80,
@@ -120,7 +120,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
                 const SizedBox(height: 30),
 
-                // 🔹 Input Username
+                // Input Username
                 _buildTextField(
                   controller: _nameC,
                   label: 'Username',
@@ -131,7 +131,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
                 const SizedBox(height: 16),
 
-                // 🔹 Input Email
+                // Input Email
                 _buildTextField(
                   controller: _emailC,
                   label: 'Email',
@@ -148,7 +148,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
                 const SizedBox(height: 16),
 
-                // 🔹 Password
+                // Password
                 _buildTextField(
                   controller: _passwordC,
                   label: 'Password',
@@ -171,7 +171,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
                 const SizedBox(height: 16),
 
-                // 🔹 Konfirmasi Password
+                // Konfirmasi Password
                 _buildTextField(
                   label: 'Konfirmasi Password',
                   hint: '********',
@@ -186,7 +186,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
                 const SizedBox(height: 24),
 
-                // 🔹 Tombol daftar
+                // Tombol daftar
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -219,7 +219,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
                 const SizedBox(height: 16),
 
-                // 🔹 Link login
+                // Link login
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -246,7 +246,7 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  // 🔹 Widget Reusable TextField
+  // Widget Reusable TextField
   Widget _buildTextField({
     TextEditingController? controller,
     required String label,

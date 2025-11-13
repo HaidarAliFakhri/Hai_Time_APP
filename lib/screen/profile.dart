@@ -109,7 +109,7 @@ class _ProfilePageState extends State<ProfilePage> {
       desiredAccuracy: LocationAccuracy.high,
     );
 
-    // 🔹 Ubah koordinat jadi nama kota, kecamatan, dst.
+    //  Ubah koordinat jadi nama kota, kecamatan, dst.
     List<Placemark> placemarks = await placemarkFromCoordinates(
       position.latitude,
       position.longitude,
@@ -285,7 +285,7 @@ class _ProfilePageState extends State<ProfilePage> {
   pinned: true,
   expandedHeight: 280,
   backgroundColor: Colors.transparent,
-  centerTitle: true, // <-- ini yang bikin teks di tengah
+  centerTitle: true, // ini yang bikin teks di tengah
   leading: IconButton(
     icon: const Icon(Icons.arrow_back, color: Colors.white),
     onPressed: () {
@@ -334,7 +334,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 Align(
                   alignment: const Alignment(-0.0, 0.15),
                   child: Opacity(
-                    opacity: avatarFast, // <--- sudah ada opacity
+                    opacity: avatarFast, // sudah ada opacity
                     child: Transform.scale(
                       scale: avatarScale,
                       alignment: Alignment.center,
@@ -384,7 +384,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 Align(
                   alignment: const Alignment(0.38, 0.45),
                   child: Opacity(
-                    opacity: avatarFast, // <--- sudah ada opacity
+                    opacity: avatarFast, // sudah ada opacity
                     child: Transform.scale(
                       scale: avatarScale,
                       alignment: Alignment.center,
@@ -410,7 +410,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 Align(
                   alignment: const Alignment(0, 0.7),
                   child: Opacity(
-                    opacity: t.clamp(0.0, 1.0), // <--- sudah ada opacity
+                    opacity: t.clamp(0.0, 1.0), // sudah ada opacity
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24.0),
                       child: Text(
@@ -444,7 +444,7 @@ class _ProfilePageState extends State<ProfilePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // 🗂 Info dasar
+                  // Info dasar
                   Card(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -494,7 +494,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
                   const SizedBox(height: 25),
 
-                  // 📊 Statistik Aktivitas
+                  // Statistik Aktivitas
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
@@ -543,7 +543,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
                   const SizedBox(height: 25),
 
-                  // 📅 Aktivitas Terakhir
+                  //  Aktivitas Terakhir
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
@@ -656,7 +656,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
                   const SizedBox(height: 25),
 
-                  // ✏️ Tombol Edit Profil
+                  // Tombol Edit Profil
                   SizedBox(
                     width: double.infinity,
                     child: GestureDetector(

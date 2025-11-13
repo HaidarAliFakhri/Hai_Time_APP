@@ -21,7 +21,7 @@ class _SplashScreenHaiTimeState extends State<SplashScreenHaiTime>
   void initState() {
     super.initState();
 
-    // 🎬 Inisialisasi animasi
+    //  Inisialisasi animasi
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -47,7 +47,7 @@ class _SplashScreenHaiTimeState extends State<SplashScreenHaiTime>
     if (!mounted) return;
 
     if (isLogin == true) {
-      // ✅ Masuk langsung ke BottomNavigator
+      //  Masuk langsung ke BottomNavigator
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -55,7 +55,7 @@ class _SplashScreenHaiTimeState extends State<SplashScreenHaiTime>
         ),
       );
     } else {
-      // ⛔ Belum login → ke LoginPage
+      //  Belum login → ke LoginPage
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(

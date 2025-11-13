@@ -8,10 +8,10 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz;
 
-// 🔹 Variabel global untuk kontrol tema
+//  Variabel global untuk kontrol tema
 ValueNotifier<bool> isDarkMode = ValueNotifier(false);
 
-// 🔹 Notifikasi instance
+// Notifikasi instance
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
@@ -22,7 +22,7 @@ void main() async {
   tz.initializeTimeZones();
   await AndroidAlarmManager.initialize();
 
-  // 🔹 Inisialisasi notifikasi lokal
+  //  Inisialisasi notifikasi lokal
   const AndroidInitializationSettings initSettingsAndroid =
       AndroidInitializationSettings('@mipmap/ic_launcher');
   const InitializationSettings initSettings = InitializationSettings(
@@ -30,7 +30,7 @@ void main() async {
   );
   await flutterLocalNotificationsPlugin.initialize(initSettings);
 
-  // 🔹 Ambil bahasa tersimpan
+  //  Ambil bahasa tersimpan
   final prefs = await SharedPreferences.getInstance();
   String? languageCode = prefs.getString('selectedLanguage');
 

@@ -8,7 +8,7 @@ import 'package:hai_time_app/page/login_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-// 🔹 Notifier global untuk tema gelap
+// Notifier global untuk tema gelap
 ValueNotifier<bool> isDarkMode = ValueNotifier(false);
 
 class SettingPage extends StatefulWidget {
@@ -97,7 +97,7 @@ class _SettingPageState extends State<SettingPage> {
     prefs.setBool('isPushNotif', value);
   }
 
-  // 🔹 Fungsi ambil lokasi otomatis
+  //  Fungsi ambil lokasi otomatis
   Future<void> _getCurrentLocation() async {
     bool serviceEnabled;
     LocationPermission permission;
@@ -264,7 +264,7 @@ class _SettingPageState extends State<SettingPage> {
     );
   }
 
-  // 🔹 Dialog Peringatan Lokasi
+  // Dialog Peringatan Lokasi
   void _showLocationDialog({
     required String title,
     required String message,
@@ -473,7 +473,7 @@ class _SettingPageState extends State<SettingPage> {
     );
   }
 
-  // 🔹 Widget pendukung
+  //  Widget pendukung
   Widget _buildSectionTitle(String title, Color textColor) => Padding(
     padding: const EdgeInsets.only(bottom: 8),
     child: Text(
@@ -494,7 +494,7 @@ class _SettingPageState extends State<SettingPage> {
     Function(bool) onChanged,
     Color cardColor,
     Color textColor, {
-    VoidCallback? onTap, // 🔹 Tambahan opsional
+    VoidCallback? onTap, // Tambahan opsional
   }) {
     return Card(
       color: cardColor,
@@ -507,7 +507,7 @@ class _SettingPageState extends State<SettingPage> {
           style: TextStyle(color: textColor.withOpacity(0.7)),
         ),
         trailing: Switch(value: value, onChanged: onChanged),
-        onTap: onTap, // 🔹 Tambahan agar bisa ditekan
+        onTap: onTap, //  Tambahan agar bisa ditekan
       ),
     );
   }
@@ -518,7 +518,7 @@ class _SettingPageState extends State<SettingPage> {
     String? subtitle,
     Color cardColor,
     Color textColor, {
-    VoidCallback? onTap, // ✅ jadikan named argument opsional
+    VoidCallback? onTap, //  jadikan named argument opsional
   }) {
     return Card(
       color: cardColor,
@@ -532,12 +532,12 @@ class _SettingPageState extends State<SettingPage> {
                 style: TextStyle(color: textColor.withOpacity(0.7)),
               )
             : null,
-        trailing: const Icon(
-          Icons.arrow_forward_ios,
-          size: 16,
-          color: Colors.grey,
-        ),
-        onTap: onTap,
+        // trailing: const Icon(
+        //   Icons.arrow_forward_ios,
+        //   size: 16,
+        //   color: Colors.grey,
+        // ),
+        // onTap: onTap,
       ),
     );
   }

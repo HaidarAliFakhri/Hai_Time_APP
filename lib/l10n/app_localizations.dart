@@ -42,7 +42,7 @@ abstract class AppLocalizations {
     Locale('id'),
   ];
 
-  // 🔹 Daftar teks yang akan diterjemahkan
+  // Daftar teks yang akan diterjemahkan
   String get title;
   String get choose_language;
   String get language_set_to_english;

@@ -13,7 +13,7 @@ class DBKegiatan {
   static Database? _db;
   final _controller = StreamController<void>.broadcast();
 
-  // --- STREAM NOTIFIER ---
+  // STREAM NOTIFIER
   void notifyListeners() => _controller.add(null);
   Stream<void> get onChange => _controller.stream;
 
@@ -51,7 +51,7 @@ class DBKegiatan {
     );
   }
 
-  // 📊 Statistik kegiatan
+  // Statistik kegiatan
   Future<Map<String, int>> getStatistik() async {
     final db = await database;
     final now = DateTime.now();
@@ -82,7 +82,7 @@ class DBKegiatan {
     return {'total': total, 'selesai': selesai, 'mingguIni': mingguIni};
   }
 
-  // ➕ Tambah kegiatan baru
+  // Tambah kegiatan baru
   Future<int> insertKegiatan(Kegiatan kegiatan) async {
     final db = await database;
     final data = kegiatan.toMap();
@@ -94,14 +94,14 @@ class DBKegiatan {
     return id;
   }
 
-  // 📋 Ambil semua kegiatan
+  // Ambil semua kegiatan
   Future<List<Kegiatan>> getKegiatanList() async {
     final db = await database;
     final result = await db.query('kegiatan', orderBy: 'id DESC');
     return result.map((e) => Kegiatan.fromMap(e)).toList();
   }
 
-  // ✏️ Update kegiatan
+  // Update kegiatan
   Future<int> updateKegiatan(Kegiatan kegiatan) async {
     final db = await database;
     final count = await db.update(
@@ -114,7 +114,7 @@ class DBKegiatan {
     return count;
   }
 
-  // 🗑️ Hapus kegiatan
+  // Hapus kegiatan
   Future<int> deleteKegiatan(int id) async {
     final db = await database;
     final count = await db.delete('kegiatan', where: 'id = ?', whereArgs: [id]);
@@ -122,7 +122,7 @@ class DBKegiatan {
     return count;
   }
 
-  // 🔍 Periksa otomatis kegiatan yang sudah lewat
+  // Periksa otomatis kegiatan yang sudah lewat
   Future<void> periksaKegiatanOtomatis() async {
     final db = await database;
     final result = await db.query('kegiatan');
@@ -173,7 +173,7 @@ class DBKegiatan {
     notifyListeners();
   }
 
-  // 🔵 Ambil kegiatan selesai
+  // Ambil kegiatan selesai
   Future<List<Kegiatan>> getKegiatanSelesai() async {
     final db = await database;
     final now = DateTime.now();
@@ -220,7 +220,7 @@ class DBKegiatan {
     return updated.map((e) => Kegiatan.fromMap(e)).toList();
   }
 
-  // 🔤 Helper
+  // Helper
   int _bulanKeAngka(String bulan) {
     switch (bulan.toLowerCase()) {
       case "jan":

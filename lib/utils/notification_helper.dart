@@ -8,7 +8,7 @@ class NotificationHelper {
     required String body,
     required DateTime prayerTime,
   }) async {
-    final scheduledTime = prayerTime.subtract(const Duration(minutes: 10)); // ⏰ 10 menit sebelumnya
+    final scheduledTime = prayerTime.subtract(const Duration(minutes: 10)); //  10 menit sebelumnya
 
     await flutterLocalNotificationsPlugin.zonedSchedule(
       prayerTime.hashCode,

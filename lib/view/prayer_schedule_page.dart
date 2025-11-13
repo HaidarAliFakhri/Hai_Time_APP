@@ -74,7 +74,7 @@ class _JadwalPageState extends State<JadwalPage> {
     tzdata.initializeTimeZones();
     tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
     _initNotifikasi();
-    _loadStatus(); // ✅ muat status aktif/tidak dari SharedPreferences
+    _loadStatus(); //  muat status aktif/tidak dari SharedPreferences
     _updateStatusSholat();
     _mintaIzinNotifikasi();
     _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
@@ -90,7 +90,7 @@ class _JadwalPageState extends State<JadwalPage> {
     super.dispose();
   }
 
-  /// 🔔 Inisialisasi notifikasi lokal
+  ///  Inisialisasi notifikasi lokal
   Future<void> _initNotifikasi() async {
   const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
   const initSettings = InitializationSettings(android: androidInit);
@@ -99,7 +99,7 @@ class _JadwalPageState extends State<JadwalPage> {
     initSettings,
     onDidReceiveNotificationResponse: (NotificationResponse response) async {
       if (response.payload == 'stop_adzan') {
-        // 🔇 Matikan suara adzan
+        //  Matikan suara adzan
         if (_adzanSedangBerbunyi) {
           _adzanSedangBerbunyi = false;
           await _notifikasi.cancelAll(); // hentikan semua notifikasi aktif
@@ -110,7 +110,7 @@ class _JadwalPageState extends State<JadwalPage> {
       }
     },
   );
-    // ✅ Tambahkan konfigurasi channel manual agar aman di Android <8
+    //  Tambahkan konfigurasi channel manual agar aman di Android <8
   // const androidDetails = AndroidNotificationDetails(
   //   'adzan_channel',
   //   'Adzan Reminder',
@@ -120,10 +120,10 @@ class _JadwalPageState extends State<JadwalPage> {
   //   playSound: true,
   //   enableVibration: true,
   // );
-  // 🔔 Tes notifikasi untuk memastikan izin dan channel aktif
+  //  Tes notifikasi untuk memastikan izin dan channel aktif
   // await _notifikasi.show(
   //   999,
-  //   'Notifikasi Siap ✅',
+  //   'Notifikasi Siap ',
   //   'Sistem pengingat adzan aktif.',
   //   const NotificationDetails(android: androidDetails),
   // );
@@ -136,13 +136,13 @@ class _JadwalPageState extends State<JadwalPage> {
 }
 
 
-  /// 💾 Simpan status switch ke SharedPreferences
+  ///  Simpan status switch ke SharedPreferences
   Future<void> _simpanStatus(String nama, bool aktif) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('aktif_$nama', aktif);
   }
 
-  /// 📥 Muat status switch dari SharedPreferences saat pertama kali dibuka
+  ///  Muat status switch dari SharedPreferences saat pertama kali dibuka
   Future<void> _loadStatus() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -155,7 +155,7 @@ class _JadwalPageState extends State<JadwalPage> {
     });
   }
 
-  /// 📅 Jadwalkan semua notifikasi adzan
+  ///  Jadwalkan semua notifikasi adzan
   Future<void> _jadwalkanSemuaSholat() async {
     _adzanSedangBerbunyi = true;
 
@@ -212,7 +212,7 @@ class _JadwalPageState extends State<JadwalPage> {
     }
   }
 
-  /// 🕒 Update status sholat di UI
+  ///  Update status sholat di UI
   void _updateStatusSholat() {
     final now = DateTime.now();
     final format = DateFormat("HH:mm");
@@ -244,7 +244,7 @@ class _JadwalPageState extends State<JadwalPage> {
     });
   }
 
-  /// ⏳ Hitung sisa waktu menuju sholat berikutnya
+  ///  Hitung sisa waktu menuju sholat berikutnya
   String _hitungSisaWaktu(String waktu) {
     final now = DateTime.now();
     final format = DateFormat("HH:mm");
@@ -277,7 +277,7 @@ class _JadwalPageState extends State<JadwalPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🔹 HEADER
+            // HEADER
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(24, 60, 24, 28),
@@ -295,22 +295,14 @@ class _JadwalPageState extends State<JadwalPage> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Align(
-                    alignment: Alignment.topLeft,
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () {
-                        if (Navigator.of(context).canPop()) {
-                          Navigator.of(context).pop();
-                        } else {
-                          widget.onBackToHome?.call();
-                        }
-                      },
-                      tooltip: 'Kembali',
-                      iconSize: 26,
-                      splashColor: Colors.transparent,
-                      highlightColor: Colors.transparent,
-                    ),
-                  ),
+            alignment: Alignment.topLeft,
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () {
+                widget.onBackToHome?.call(); // kembali ke tab Home
+              },
+            ),
+            ),
                   const SizedBox(height: 10),
                   const Icon(Ionicons.moon_outline,
                       color: Colors.white, size: 60),

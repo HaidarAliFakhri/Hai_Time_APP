@@ -142,15 +142,15 @@ class _TambahKegiatanPageState extends State<TambahKegiatanPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FC),
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(100), // 🔹 tinggi AppBar
+        preferredSize: const Size.fromHeight(100), //  tinggi AppBar
         child: AppBar(
           automaticallyImplyLeading: true,
           elevation: 0,
           backgroundColor: Colors.transparent,
           flexibleSpace: ClipRRect(
             borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(30), // 🔹 lengkungan kiri bawah
-              bottomRight: Radius.circular(30), // 🔹 lengkungan kanan bawah
+              bottomLeft: Radius.circular(30), //  lengkungan kiri bawah
+              bottomRight: Radius.circular(30), //  lengkungan kanan bawah
             ),
             child: Container(
               decoration: const BoxDecoration(
@@ -158,7 +158,7 @@ class _TambahKegiatanPageState extends State<TambahKegiatanPage> {
                   colors: [
                     Color(0xFF2196F3),
                     Color(0xFF64B5F6),
-                  ], // 🔹 gradasi biru
+                  ], // gradasi biru
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -166,7 +166,7 @@ class _TambahKegiatanPageState extends State<TambahKegiatanPage> {
             ),
           ),
           title: Padding(
-            padding: const EdgeInsets.only(top: 25), // 🔹 geser teks ke bawah
+            padding: const EdgeInsets.only(top: 25), // geser teks ke bawah
             child: Row(
               children: [
                 Icon(

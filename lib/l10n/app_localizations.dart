@@ -10,69 +10,72 @@ import 'app_localizations_id.dart';
 
 // ignore_for_file: type=lint
 
+/// Kelas utama localization.
+/// Gunakan: AppLocalizations.of(context)!.title
 abstract class AppLocalizations {
   AppLocalizations(String locale)
-      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
+  // Mendapatkan instance localization berdasarkan context
   static AppLocalizations? of(BuildContext context) {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
+  // Delegate utama untuk localization
   static const LocalizationsDelegate<AppLocalizations> delegate =
       _AppLocalizationsDelegate();
 
-  /// Tambahkan semua delegate bawaan Flutter
+  // Delegates yang wajib dimasukkan ke MaterialApp
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
       <LocalizationsDelegate<dynamic>>[
-    delegate,
-    GlobalMaterialLocalizations.delegate,
-    GlobalCupertinoLocalizations.delegate,
-    GlobalWidgetsLocalizations.delegate,
-  ];
+        delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ];
 
-  /// Bahasa yang didukung aplikasi
+  // Bahasa yang didukung
   static const List<Locale> supportedLocales = <Locale>[
     Locale('en'),
     Locale('id'),
   ];
 
-  // ==============================
-  // Semua teks yang diterjemahkan
-  // ==============================
+  // 🔹 Daftar teks yang akan diterjemahkan
   String get title;
   String get choose_language;
   String get language_set_to_english;
   String get language_set_to_indonesia;
+  String get section_location_time;
   String get auto_location;
-  String get time_zone;
-  String get notifications;
+  String get timezone;
+  String get section_notification;
   String get push_notification;
-  String get reminder_activities;
-  String get language;
-  String get about;
+  String get push_notification_desc;
+  String get notif_enabled;
+  String get notif_disabled;
+  String get section_language;
+  String get app_language;
+  String get section_about;
   String get app_version;
-  String get terms_conditions;
+  String get terms;
   String get privacy_policy;
-  String get logout;
-  String get logout_confirm;
+  String get confirm;
+  String get confirm_logout;
   String get cancel;
-  String get close;
-  String get open_settings;
-  String get location_permission_denied;
-  String get location_service_disabled;
+  String get logout;
+  String get logout_account;
 }
 
-/// Delegate untuk memuat terjemahan
 class _AppLocalizationsDelegate
     extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
   Future<AppLocalizations> load(Locale locale) {
-    return SynchronousFuture<AppLocalizations>(
-        lookupAppLocalizations(locale));
+    // Mengembalikan AppLocalizations sesuai bahasa yang dipilih
+    return SynchronousFuture<AppLocalizations>(lookupAppLocalizations(locale));
   }
 
   @override
@@ -83,7 +86,7 @@ class _AppLocalizationsDelegate
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
-/// Fungsi untuk menentukan file lokalization mana yang digunakan
+/// Menentukan file localization mana yang digunakan
 AppLocalizations lookupAppLocalizations(Locale locale) {
   switch (locale.languageCode) {
     case 'en':
@@ -93,6 +96,6 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-    'AppLocalizations.delegate failed to load unsupported locale "$locale".',
+    'AppLocalizations.delegate gagal memuat locale yang tidak didukung "$locale".',
   );
 }

@@ -1,10 +1,8 @@
-// ignore: unused_import
-import 'package:intl/intl.dart' as intl;
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
 
-/// The translations for English (`en`).
+/// Terjemahan untuk bahasa Inggris (`en`).
 class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
@@ -21,53 +19,59 @@ class AppLocalizationsEn extends AppLocalizations {
   String get language_set_to_indonesia => 'Language set to Indonesian';
 
   @override
+  String get section_location_time => 'Location & Time';
+
+  @override
   String get auto_location => 'Automatic Location';
 
   @override
-  String get time_zone => 'Time Zone';
+  String get timezone => 'Timezone';
 
   @override
-  String get notifications => 'Notifications';
+  String get section_notification => 'Notification';
 
   @override
   String get push_notification => 'Push Notification';
 
   @override
-  String get reminder_activities => 'Reminders for activities & prayer';
+  String get push_notification_desc => 'Reminders for prayer & events';
 
   @override
-  String get language => 'Language';
+  String get notif_enabled => 'Notifications enabled';
 
   @override
-  String get about => 'About';
+  String get notif_disabled => 'Notifications disabled';
+
+  @override
+  String get section_language => 'Language';
+
+  @override
+  String get app_language => 'Application Language';
+
+  @override
+  String get section_about => 'About';
 
   @override
   String get app_version => 'App Version';
 
   @override
-  String get terms_conditions => 'Terms & Conditions';
+  String get terms => 'Terms & Conditions';
 
   @override
   String get privacy_policy => 'Privacy Policy';
 
   @override
-  String get logout => 'Log Out';
+  String get confirm => 'Confirmation';
 
   @override
-  String get logout_confirm => 'Are you sure you want to log out from HaiTime?';
+  String get confirm_logout => 'Are you sure you want to logout from HaiTime?';
 
   @override
   String get cancel => 'Cancel';
 
   @override
-  String get close => 'Close';
+  String get logout => 'Logout';
 
   @override
-  String get open_settings => 'Open Settings';
-
-  @override
-  String get location_permission_denied => 'Location permission denied';
-
-  @override
-  String get location_service_disabled => 'Location service is disabled';
+  String get logout_account => 'Logout from Account';
 }

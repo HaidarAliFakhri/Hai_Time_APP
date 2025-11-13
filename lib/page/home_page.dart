@@ -3,11 +3,11 @@ import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:hai_time_app/screen/profile.dart';
-import 'package:hai_time_app/screen/setting.dart' as setting;
+import 'package:hai_time_app/screen/setting.dart';
 import 'package:hai_time_app/view/activity_page.dart';
 import 'package:hai_time_app/view/add_activities.dart';
 import 'package:hai_time_app/view/prayer_schedule_page.dart';
-import 'package:hai_time_app/view/weather.dart';
+import 'package:hai_time_app/view/weather_page.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -15,7 +15,8 @@ import '../db/db_activity.dart';
 import '../model/activity.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final Function(Locale)? onLocaleChanged;
+  const HomePage({super.key, this.onLocaleChanged});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -55,20 +56,23 @@ class _HomePageState extends State<HomePage> {
     // Perbarui setiap 30 detik agar lebih responsif mendeteksi waktu adzan
     Timer.periodic(const Duration(seconds: 30), (_) => _updateNextPrayer());
   }
+
   Future<void> _periksaKegiatanSelesai() async {
-  await DBKegiatan().periksaKegiatanOtomatis();
-  _loadKegiatan();
-}
+    await DBKegiatan().periksaKegiatanOtomatis();
+    _loadKegiatan();
+  }
+
   Future<void> _cekDanUpdateKegiatan() async {
-  await DBKegiatan().periksaKegiatanOtomatis();
-  await _loadKegiatan();
-}
+    await DBKegiatan().periksaKegiatanOtomatis();
+    await _loadKegiatan();
+  }
 
   Future<void> _loadNamaUser() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() => namaUser = prefs.getString('registered_name') ?? "User");
   }
-    Future<void> _loadKegiatan() async {
+
+  Future<void> _loadKegiatan() async {
     final data = await DBKegiatan().getKegiatanList();
     if (mounted) {
       setState(() {
@@ -77,6 +81,7 @@ class _HomePageState extends State<HomePage> {
       });
     }
   }
+
   Future<void> _playAdzanSound() async {
     if (_isAdzanPlaying) return; // biar gak dobel
     try {
@@ -92,8 +97,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  
-
   void _updateNextPrayer() async {
     final now = DateTime.now();
     DateFormat format = DateFormat("HH:mm");
@@ -103,7 +106,7 @@ class _HomePageState extends State<HomePage> {
 
     bool aktif = prefs.getBool('aktif_$nextPrayerName') ?? true;
     bool isPrayerNow = false;
-    
+
     for (var entry in prayerTimes.entries) {
       final prayerDate = format.parse(entry.value);
       final prayerDateTime = DateTime(
@@ -124,8 +127,8 @@ class _HomePageState extends State<HomePage> {
         break;
       }
       if (isPrayerNow && aktif) {
-  await _playAdzanSound();
-}
+        await _playAdzanSound();
+      }
     }
 
     // Kalau semua sudah lewat, set ke Subuh besok
@@ -305,14 +308,10 @@ class _HomePageState extends State<HomePage> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => setting.SettingPage(
-                                  onLanguageChanged: (Locale newLocale) {
-                                    // Tambahkan logika perubahan bahasa di sini
-                                    // Contoh: memanggil setState atau mengupdate provider
-                                    debugPrint("Bahasa diganti ke: ${newLocale.languageCode}");
-                                  },
-                                ),
-
+                                  builder: (_) => SettingPage(
+                                    onLocaleChanged:
+                                        widget.onLocaleChanged ?? (_) {},
+                                  ),
                                 ),
                               );
                             },

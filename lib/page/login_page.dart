@@ -7,7 +7,9 @@ import 'package:hai_time_app/view/dashborad_admin.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  final Function(Locale)? onLocaleChanged; // ✅ Tambahkan ini
+
+  const LoginPage({super.key, this.onLocaleChanged});
   static const id = "/HaiTime";
 
   @override

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:hai_time_app/page/home_page.dart';
 import 'package:hai_time_app/view/prayer_schedule_page.dart';
-import 'package:hai_time_app/view/weather.dart';
+import 'package:hai_time_app/view/weather_page.dart';
 
 class BottomNavigator extends StatefulWidget {
-  const BottomNavigator({super.key});
+  final Function(Locale)? onLocaleChanged; //
+  const BottomNavigator({super.key, this.onLocaleChanged});
 
   @override
   State<BottomNavigator> createState() => _BottomNavigatorState();
@@ -31,7 +32,7 @@ class _BottomNavigatorState extends State<BottomNavigator> {
           });
         },
       ),
-      CuacaPage(onBackToHome: () => _onItemTapped(0)), 
+      CuacaPage(onBackToHome: () => _onItemTapped(0)),
     ];
   }
 
@@ -51,10 +52,7 @@ class _BottomNavigatorState extends State<BottomNavigator> {
           return FadeTransition(opacity: animation, child: child);
         },
         // gunakan key supaya AnimatedSwitcher tahu child berubah
-        child: IndexedStack(
-          index: _selectedIndex,
-          children: _pages,
-        ),
+        child: IndexedStack(index: _selectedIndex, children: _pages),
       ),
 
       bottomNavigationBar: Container(

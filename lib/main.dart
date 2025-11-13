@@ -2,12 +2,11 @@ import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:hai_time_app/l10n/app_localizations.dart';
 import 'package:hai_time_app/screen/splash_screen.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz;
-import 'package:hai_time_app/l10n/app_localizations.dart';
-
 
 // 🔹 Variabel global untuk kontrol tema
 ValueNotifier<bool> isDarkMode = ValueNotifier(false);
@@ -52,14 +51,16 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    if (widget.languageCode == 'English') {
+    if (widget.languageCode == 'en') {
       _locale = const Locale('en');
     } else {
       _locale = const Locale('id');
     }
   }
 
-  void setLocale(Locale locale) {
+  void setLocale(Locale locale) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('selectedLanguage', locale.languageCode);
     setState(() {
       _locale = locale;
     });
@@ -73,19 +74,14 @@ class _MyAppState extends State<MyApp> {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'HaiTime',
-
-          // 🔹 Bahasa aktif aplikasi
           locale: _locale,
-          supportedLocales: AppLocalizations.supportedLocales,
-          localizationsDelegates: [
+          supportedLocales: const [Locale('en'), Locale('id')],
+          localizationsDelegates: const [
             AppLocalizations.delegate,
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-
-
-          // 🔹 Tema
           themeMode: dark ? ThemeMode.dark : ThemeMode.light,
           theme: ThemeData(
             brightness: Brightness.light,
@@ -97,9 +93,7 @@ class _MyAppState extends State<MyApp> {
             scaffoldBackgroundColor: const Color(0xFF121212),
             primarySwatch: Colors.blueGrey,
           ),
-
-          // 🔹 Halaman awal
-          home: SplashScreenHaiTime(),
+          home: SplashScreenHaiTime(onLocaleChanged: setLocale),
         );
       },
     );

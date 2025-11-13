@@ -1,10 +1,8 @@
-// ignore: unused_import
-import 'package:intl/intl.dart' as intl;
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
 
-/// The translations for Indonesian (`id`).
+/// Terjemahan untuk bahasa Indonesia (`id`).
 class AppLocalizationsId extends AppLocalizations {
   AppLocalizationsId([String locale = 'id']) : super(locale);
 
@@ -15,59 +13,64 @@ class AppLocalizationsId extends AppLocalizations {
   String get choose_language => 'Pilih Bahasa Aplikasi';
 
   @override
-  String get language_set_to_english => 'Bahasa diubah ke Bahasa Inggris';
+  String get language_set_to_english => 'Bahasa diatur ke Inggris';
 
   @override
-  String get language_set_to_indonesia => 'Bahasa diubah ke Bahasa Indonesia';
+  String get language_set_to_indonesia => 'Bahasa diatur ke Indonesia';
+  @override
+  String get section_location_time => 'Lokasi & Waktu';
 
   @override
   String get auto_location => 'Lokasi Otomatis';
 
   @override
-  String get time_zone => 'Zona Waktu';
+  String get timezone => 'Zona Waktu';
 
   @override
-  String get notifications => 'Notifikasi';
+  String get section_notification => 'Notifikasi';
 
   @override
   String get push_notification => 'Notifikasi Push';
 
   @override
-  String get reminder_activities => 'Pengingat kegiatan & sholat';
+  String get push_notification_desc => 'Pengingat kegiatan & waktu sholat';
 
   @override
-  String get language => 'Bahasa';
+  String get notif_enabled => 'Notifikasi diaktifkan';
 
   @override
-  String get about => 'Tentang';
+  String get notif_disabled => 'Notifikasi dimatikan';
+
+  @override
+  String get section_language => 'Bahasa';
+
+  @override
+  String get app_language => 'Bahasa Aplikasi';
+
+  @override
+  String get section_about => 'Tentang';
 
   @override
   String get app_version => 'Versi Aplikasi';
 
   @override
-  String get terms_conditions => 'Syarat & Ketentuan';
+  String get terms => 'Syarat & Ketentuan';
 
   @override
   String get privacy_policy => 'Kebijakan Privasi';
 
   @override
-  String get logout => 'Keluar dari Akun';
+  String get confirm => 'Konfirmasi';
 
   @override
-  String get logout_confirm => 'Yakin ingin keluar dari HaiTime?';
+  String get confirm_logout => 'Yakin ingin keluar dari HaiTime?';
 
   @override
   String get cancel => 'Batal';
 
   @override
-  String get close => 'Tutup';
+  String get logout => 'Logout';
 
   @override
-  String get open_settings => 'Buka Pengaturan';
-
-  @override
-  String get location_permission_denied => 'Izin lokasi ditolak';
-
-  @override
-  String get location_service_disabled => 'Layanan lokasi tidak aktif';
+  String get logout_account => 'Keluar dari Akun';
 }

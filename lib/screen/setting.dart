@@ -2,19 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:hai_time_app/l10n/app_localizations.dart';
 import 'package:hai_time_app/page/bottom_navigator.dart';
 import 'package:hai_time_app/page/login_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:hai_time_app/l10n/app_localizations.dart';
-
 
 // 🔹 Notifier global untuk tema gelap
 ValueNotifier<bool> isDarkMode = ValueNotifier(false);
 
 class SettingPage extends StatefulWidget {
-  final Function(Locale) onLanguageChanged;
-  const SettingPage({super.key, required this.onLanguageChanged});
+  final Function(Locale) onLocaleChanged;
+  const SettingPage({super.key, required this.onLocaleChanged});
   @override
   State<SettingPage> createState() => _SettingPageState();
 }
@@ -191,6 +190,8 @@ class _SettingPageState extends State<SettingPage> {
   }
 
   void _showLanguageBottomSheet() {
+    final localizations = AppLocalizations.of(context)!;
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -205,8 +206,7 @@ class _SettingPageState extends State<SettingPage> {
             children: [
               Center(
                 child: Text(
-                  AppLocalizations.of(context)!.choose_language
-,
+                  localizations.choose_language,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -214,6 +214,7 @@ class _SettingPageState extends State<SettingPage> {
                 ),
               ),
               const SizedBox(height: 16),
+              // 🇮🇩 Bahasa Indonesia
               ListTile(
                 leading: const Icon(Icons.language, color: Colors.blue),
                 title: const Text("Bahasa Indonesia"),
@@ -223,18 +224,17 @@ class _SettingPageState extends State<SettingPage> {
                 onTap: () {
                   setState(() => selectedLanguage = "Bahasa Indonesia");
                   _saveLanguagePreference("Bahasa Indonesia");
-                  widget.onLanguageChanged(const Locale('id'));
+                  widget.onLocaleChanged(const Locale('id'));
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                  content: Text(
-                    AppLocalizations.of(context)!.choose_language,
-                  ),
-                ),
-
+                      content: Text(localizations.language_set_to_indonesia),
+                    ),
                   );
                 },
               ),
+
+              // 🇬🇧 English
               ListTile(
                 leading: const Icon(Icons.language, color: Colors.blue),
                 title: const Text("English"),
@@ -244,16 +244,17 @@ class _SettingPageState extends State<SettingPage> {
                 onTap: () {
                   setState(() => selectedLanguage = "English");
                   _saveLanguagePreference("English");
-                  widget.onLanguageChanged(const Locale('en'));
+                  widget.onLocaleChanged(const Locale('en'));
                   Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                    AppLocalizations.of(context)!.choose_language,
-                  ),
 
-                    ),
-                  );
+                  Future.delayed(const Duration(milliseconds: 200), () {
+                    final newLocalization = AppLocalizations.of(context)!;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(newLocalization.language_set_to_english),
+                      ),
+                    );
+                  });
                 },
               ),
             ],
@@ -296,6 +297,7 @@ class _SettingPageState extends State<SettingPage> {
   @override
   Widget build(BuildContext context) {
     final bool dark = isDarkMode.value;
+    final localizations = AppLocalizations.of(context)!;
     final Color textColor = dark ? Colors.white : Colors.black87;
     final Color cardColor = dark ? const Color(0xFF1E1E1E) : Colors.white;
     //final Color bgColor = dark
@@ -305,7 +307,11 @@ class _SettingPageState extends State<SettingPage> {
     return Scaffold(
       // backgroundColor: bgColor,
       appBar: AppBar(
-        title: const Text("Pengaturan", style: TextStyle(color: Colors.white)),
+        title: Text(
+          localizations.title,
+          style: const TextStyle(color: Colors.white),
+        ),
+
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () {
@@ -331,11 +337,11 @@ class _SettingPageState extends State<SettingPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 16),
-            _buildSectionTitle("Lokasi & Waktu", textColor),
+            _buildSectionTitle(localizations.section_location_time, textColor),
 
             _buildSwitchTile(
               Icons.location_on,
-              "Lokasi Otomatis",
+              localizations.auto_location,
               _currentLocation,
               isAutoLocation,
               (v) {
@@ -346,39 +352,35 @@ class _SettingPageState extends State<SettingPage> {
               },
               cardColor,
               textColor,
-              onTap: _openInGoogleMaps, // 🔹 Tambahan
+              onTap: _openInGoogleMaps,
             ),
-
             _buildNavTile(
               Icons.access_time,
-              "Zona Waktu",
+              localizations.timezone,
               "WIB ($_timezone)",
               cardColor,
               textColor,
             ),
 
             const SizedBox(height: 16),
-            _buildSectionTitle("Notifikasi", textColor),
+            _buildSectionTitle(localizations.section_notification, textColor),
             _buildSwitchTile(
               Icons.notifications,
-              "Notifikasi Push",
-              "Pengingat kegiatan & sholat",
+              localizations.push_notification,
+              localizations.push_notification_desc,
               isPushNotif,
               (v) async {
                 setState(() => isPushNotif = v);
                 await _savePreferences(v);
-
                 if (v) {
-                  // Aktifkan (bisa langsung uji coba)
                   await _showTestNotification();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Notifikasi diaktifkan")),
+                    SnackBar(content: Text(localizations.notif_enabled)),
                   );
                 } else {
-                  // Nonaktifkan
                   await flutterLocalNotificationsPlugin.cancelAll();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Notifikasi dimatikan")),
+                    SnackBar(content: Text(localizations.notif_disabled)),
                   );
                 }
               },
@@ -387,29 +389,34 @@ class _SettingPageState extends State<SettingPage> {
             ),
 
             const SizedBox(height: 16),
-            _buildSectionTitle("Bahasa", textColor),
+            _buildSectionTitle(localizations.section_language, textColor),
             _buildNavTile(
               Icons.language,
-              "Bahasa Aplikasi",
-              selectedLanguage, // 🔹 Tampilkan bahasa yang dipilih
+              localizations.app_language,
+              selectedLanguage,
               cardColor,
               textColor,
-              onTap: _showLanguageBottomSheet, // 🔹 Tambahkan aksi klik
+              onTap: _showLanguageBottomSheet,
             ),
 
             const SizedBox(height: 16),
-            _buildSectionTitle("Tentang", textColor),
-            _buildInfoTile("Versi Aplikasi", "1.0.3", cardColor, textColor),
+            _buildSectionTitle(localizations.section_about, textColor),
+            _buildInfoTile(
+              localizations.app_version,
+              "1.0.3",
+              cardColor,
+              textColor,
+            ),
             _buildNavTile(
               Icons.article,
-              "Syarat & Ketentuan",
+              localizations.terms,
               null,
               cardColor,
               textColor,
             ),
             _buildNavTile(
               Icons.privacy_tip,
-              "Kebijakan Privasi",
+              localizations.privacy_policy,
               null,
               cardColor,
               textColor,

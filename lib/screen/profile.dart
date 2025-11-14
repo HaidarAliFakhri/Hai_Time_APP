@@ -11,6 +11,8 @@ import 'package:geocoding/geocoding.dart';
 import '../db/db_activity.dart';
 
 class ProfilePage extends StatefulWidget {
+  //
+
   const ProfilePage({super.key});
 
   @override
@@ -291,7 +293,7 @@ class _ProfilePageState extends State<ProfilePage> {
     onPressed: () {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const BottomNavigator()),
+        MaterialPageRoute( builder: (_) => BottomNavigator(),)
       );
     },
   ),

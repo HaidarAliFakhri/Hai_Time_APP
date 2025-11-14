@@ -4,8 +4,8 @@ import 'package:hai_time_app/view/prayer_schedule_page.dart';
 import 'package:hai_time_app/view/weather_page.dart';
 
 class BottomNavigator extends StatefulWidget {
-  final Function(Locale)? onLocaleChanged;
-  const BottomNavigator({super.key, this.onLocaleChanged});
+  //
+  const BottomNavigator({super.key});
 
   @override
   State<BottomNavigator> createState() => _BottomNavigatorState();
@@ -23,7 +23,7 @@ class _BottomNavigatorState extends State<BottomNavigator> {
       //  HomePage kirim callback ke Cuaca
       HomePage(
         onGoToWeather: () => _onItemTapped(2),
-        onLocaleChanged: widget.onLocaleChanged,
+        
       ),
       //  JadwalPage
       JadwalPage(

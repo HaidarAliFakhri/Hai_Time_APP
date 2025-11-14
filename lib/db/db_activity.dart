@@ -54,32 +54,30 @@ class DBKegiatan {
   // Statistik kegiatan
   Future<Map<String, int>> getStatistik() async {
     final db = await database;
-    final now = DateTime.now();
-
     final result = await db.query('kegiatan');
+
     int total = result.length;
     int selesai = 0;
     int mingguIni = 0;
+
+    final now = DateTime.now();
 
     for (var map in result) {
       final k = Kegiatan.fromMap(map);
       if (k.status == 'Selesai') selesai++;
 
-      try {
-        final partsTanggal = k.tanggal.split('/');
-        if (partsTanggal.length == 3) {
-          final kegiatanDate = DateTime(
-            int.parse(partsTanggal[2]),
-            int.parse(partsTanggal[1]),
-            int.parse(partsTanggal[0]),
-          );
-          final diff = now.difference(kegiatanDate).inDays;
-          if (diff >= 0 && diff <= 7) mingguIni++;
-        }
-      } catch (_) {}
+      final date = _parseTanggalDanWaktu(k.tanggal, k.waktu);
+      if (date == null) continue;
+
+      final diff = now.difference(date).inDays;
+      if (diff >= 0 && diff <= 7) mingguIni++;
     }
 
-    return {'total': total, 'selesai': selesai, 'mingguIni': mingguIni};
+    return {
+      'total': total,
+      'selesai': selesai,
+      'mingguIni': mingguIni,
+    };
   }
 
   // Tambah kegiatan baru
@@ -104,12 +102,14 @@ class DBKegiatan {
   // Update kegiatan
   Future<int> updateKegiatan(Kegiatan kegiatan) async {
     final db = await database;
+
     final count = await db.update(
       'kegiatan',
       kegiatan.toMap(),
       where: 'id = ?',
       whereArgs: [kegiatan.id],
     );
+
     notifyListeners();
     return count;
   }
@@ -117,12 +117,20 @@ class DBKegiatan {
   // Hapus kegiatan
   Future<int> deleteKegiatan(int id) async {
     final db = await database;
-    final count = await db.delete('kegiatan', where: 'id = ?', whereArgs: [id]);
+
+    final count = await db.delete(
+      'kegiatan',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
     notifyListeners();
     return count;
   }
 
-  // Periksa otomatis kegiatan yang sudah lewat
+  // =============================
+  //  AUTO UPDATE STATUS
+  // =============================
   Future<void> periksaKegiatanOtomatis() async {
     final db = await database;
     final result = await db.query('kegiatan');
@@ -131,135 +139,129 @@ class DBKegiatan {
     for (var map in result) {
       final k = Kegiatan.fromMap(map);
 
-      try {
-        final isFormatDenganGarisMiring = k.tanggal.contains("/");
-        final tanggalParts = isFormatDenganGarisMiring
-            ? k.tanggal.split("/")
-            : k.tanggal.split(" ");
-        final waktuParts = k.waktu.split(":");
+      final date = _parseTanggalDanWaktu(k.tanggal, k.waktu);
 
-        int tahun, bulan, hari;
-        if (isFormatDenganGarisMiring) {
-          hari = int.parse(tanggalParts[0]);
-          bulan = int.parse(tanggalParts[1]);
-          tahun = int.parse(tanggalParts[2]);
-        } else {
-          hari = int.parse(tanggalParts[0]);
-          bulan = _bulanKeAngka(tanggalParts[1]);
-          tahun = int.parse(tanggalParts[2]);
-        }
+      if (date == null) {
+        print("⚠️ Format tanggal tidak dikenali: ${k.tanggal}");
+        continue;
+      }
 
-        final kegiatanDate = DateTime(
-          tahun,
-          bulan,
-          hari,
-          int.parse(waktuParts[0]),
-          int.parse(waktuParts[1]),
+      if (date.isBefore(now) && k.status != 'Selesai') {
+        await db.update(
+          'kegiatan',
+          {'status': 'Selesai'},
+          where: 'id = ?',
+          whereArgs: [k.id],
         );
 
-        if (kegiatanDate.isBefore(now) && k.status != 'Selesai') {
-          await db.update(
-            'kegiatan',
-            {'status': 'Selesai'},
-            where: 'id = ?',
-            whereArgs: [k.id],
-          );
-        }
-      } catch (e) {
-        print("⚠️ Gagal parsing tanggal: ${k.tanggal}, error: $e");
+        print("✅ Kegiatan otomatis selesai: ${k.judul}");
       }
     }
 
     notifyListeners();
   }
 
-  // Ambil kegiatan selesai
+  // =============================
+  // PARSING TANGGAL AMAN
+  // =============================
+  DateTime? _parseTanggalDanWaktu(String tanggal, String waktu) {
+  try {
+    tanggal = tanggal.trim();
+    waktu = waktu.trim().replaceAll(".", ":");
+
+    // =========================
+    //  PARSING WAKTU
+    // =========================
+    int jam, menit;
+    final wp = waktu.split(":");
+
+    if (wp.length < 2) return null;
+
+    jam = int.parse(wp[0]);
+    menit = int.parse(wp[1].replaceAll(RegExp(r'[^0-9]'), ''));
+
+    // Format AM/PM
+    final lower = waktu.toLowerCase();
+    if (lower.contains("pm") && jam < 12) jam += 12;
+    if (lower.contains("am") && jam == 12) jam = 0;
+
+    // =========================
+    //  PARSING TANGGAL FORMAT 1
+    // =========================
+    if (tanggal.contains("/")) {
+      final p = tanggal.split("/");
+
+      if (p.length != 3) return null;
+
+      return DateTime(
+        int.parse(p[2]),
+        int.parse(p[1]),
+        int.parse(p[0]),
+        jam,
+        menit,
+      );
+    }
+
+    // =========================
+    //  PARSING TANGGAL FORMAT 2
+    // =========================
+    if (tanggal.contains(" ")) {
+      final p = tanggal.split(" ");
+
+      if (p.length != 3) return null;
+
+      final bulanFix = p[1].trim();
+
+      return DateTime(
+        int.parse(p[2]),
+        _bulanKeAngka(bulanFix),
+        int.parse(p[0]),
+        jam,
+        menit,
+      );
+    }
+
+    return null;
+  } catch (e) {
+    print("⚠️ Gagal parsing: $tanggal $waktu | $e");
+    return null;
+  }
+}
+
+
+
+  // Konversi nama bulan
+  int _bulanKeAngka(String bulan) {
+    const map = {
+      "Januari": 1,
+      "Februari": 2,
+      "Maret": 3,
+      "April": 4,
+      "Mei": 5,
+      "Juni": 6,
+      "Juli": 7,
+      "Agustus": 8,
+      "September": 9,
+      "Oktober": 10,
+      "November": 11,
+      "Desember": 12,
+    };
+    return map[bulan] ?? 1;
+  }
+
+  // =============================
+  // DATA KEGIATAN SELESAI
+  // =============================
   Future<List<Kegiatan>> getKegiatanSelesai() async {
     final db = await database;
-    final now = DateTime.now();
 
     final result = await db.query(
       'kegiatan',
-      where: 'status != ?',
-      whereArgs: ['Selesai'],
-    );
-
-    for (var map in result) {
-      final k = Kegiatan.fromMap(map);
-      try {
-        final tanggalParts = k.tanggal.split(" ");
-        final waktuParts = k.waktu.split(":");
-        final bulan = _bulanKeAngka(tanggalParts[1]);
-        final kegiatanDate = DateTime(
-          int.parse(tanggalParts[2]),
-          bulan,
-          int.parse(tanggalParts[0]),
-          int.parse(waktuParts[0]),
-          int.parse(waktuParts[1]),
-        );
-        if (kegiatanDate.isBefore(now)) {
-          await db.update(
-            'kegiatan',
-            {'status': 'Selesai'},
-            where: 'id = ?',
-            whereArgs: [k.id],
-          );
-        }
-      } catch (e) {
-        print("⚠️ Error parsing tanggal: ${k.tanggal}, $e");
-      }
-    }
-
-    final updated = await db.query(
-      'kegiatan',
       where: 'status = ?',
       whereArgs: ['Selesai'],
-      orderBy: 'tanggal DESC',
+      orderBy: 'id DESC',
     );
 
-    return updated.map((e) => Kegiatan.fromMap(e)).toList();
-  }
-
-  // Helper
-  int _bulanKeAngka(String bulan) {
-    switch (bulan.toLowerCase()) {
-      case "jan":
-      case "januari":
-        return 1;
-      case "feb":
-      case "februari":
-        return 2;
-      case "mar":
-      case "maret":
-        return 3;
-      case "apr":
-      case "april":
-        return 4;
-      case "mei":
-        return 5;
-      case "jun":
-      case "juni":
-        return 6;
-      case "jul":
-      case "juli":
-        return 7;
-      case "agu":
-      case "agustus":
-        return 8;
-      case "sep":
-      case "september":
-        return 9;
-      case "okt":
-      case "oktober":
-        return 10;
-      case "nov":
-      case "november":
-        return 11;
-      case "des":
-      case "desember":
-        return 12;
-      default:
-        return 1;
-    }
+    return result.map((e) => Kegiatan.fromMap(e)).toList();
   }
 }

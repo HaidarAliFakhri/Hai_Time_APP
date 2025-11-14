@@ -299,7 +299,8 @@ class _JadwalPageState extends State<JadwalPage> {
             child: IconButton(
               icon: const Icon(Icons.arrow_back, color: Colors.white),
               onPressed: () {
-                widget.onBackToHome?.call(); // kembali ke tab Home
+                Navigator.pop(context);
+ // kembali ke tab Home
               },
             ),
             ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:hai_time_app/utils/locale_controler.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:hai_time_app/l10n/app_localizations.dart';
 import 'package:hai_time_app/page/bottom_navigator.dart';
@@ -8,12 +9,14 @@ import 'package:hai_time_app/page/login_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+
+
 // Notifier global untuk tema gelap
 ValueNotifier<bool> isDarkMode = ValueNotifier(false);
 
 class SettingPage extends StatefulWidget {
-  final Function(Locale) onLocaleChanged;
-  const SettingPage({super.key, required this.onLocaleChanged});
+  //
+  const SettingPage({super.key});
   @override
   State<SettingPage> createState() => _SettingPageState();
 }
@@ -216,47 +219,61 @@ class _SettingPageState extends State<SettingPage> {
               const SizedBox(height: 16),
               // 🇮🇩 Bahasa Indonesia
               ListTile(
-                leading: const Icon(Icons.language, color: Colors.blue),
-                title: const Text("Bahasa Indonesia"),
-                trailing: selectedLanguage == "Bahasa Indonesia"
-                    ? const Icon(Icons.check, color: Colors.green)
-                    : null,
-                onTap: () {
-                  setState(() => selectedLanguage = "Bahasa Indonesia");
-                  _saveLanguagePreference("Bahasa Indonesia");
-                  widget.onLocaleChanged(const Locale('id'));
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(localizations.language_set_to_indonesia),
-                    ),
-                  );
-                },
-              ),
+  leading: const Icon(Icons.language, color: Colors.blue),
+  title: const Text("Bahasa Indonesia"),
+  trailing: selectedLanguage == "Bahasa Indonesia"
+      ? const Icon(Icons.check, color: Colors.green)
+      : null,
+  onTap: () {
+    setState(() => selectedLanguage = "Bahasa Indonesia");
+
+    _saveLanguagePreference("Bahasa Indonesia");
+
+    // 🔵 Ubah bahasa global (TANPA widget.onLocaleChanged)
+    LocaleController.changeLocale(const Locale('id'));
+
+    Navigator.pop(context);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          AppLocalizations.of(context)!.language_set_to_indonesia,
+        ),
+      ),
+    );
+  },
+),
+
 
               // 🇬🇧 English
               ListTile(
-                leading: const Icon(Icons.language, color: Colors.blue),
-                title: const Text("English"),
-                trailing: selectedLanguage == "English"
-                    ? const Icon(Icons.check, color: Colors.green)
-                    : null,
-                onTap: () {
-                  setState(() => selectedLanguage = "English");
-                  _saveLanguagePreference("English");
-                  widget.onLocaleChanged(const Locale('en'));
-                  Navigator.pop(context);
+  leading: const Icon(Icons.language, color: Colors.blue),
+  title: const Text("English"),
+  trailing: selectedLanguage == "English"
+      ? const Icon(Icons.check, color: Colors.green)
+      : null,
+  onTap: () {
+    setState(() => selectedLanguage = "English");
 
-                  Future.delayed(const Duration(milliseconds: 200), () {
-                    final newLocalization = AppLocalizations.of(context)!;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(newLocalization.language_set_to_english),
-                      ),
-                    );
-                  });
-                },
-              ),
+    _saveLanguagePreference("English");
+
+    // 🔵 Ubah bahasa global (tanpa widget.onLocaleChanged)
+    LocaleController.changeLocale(const Locale('en'));
+
+    Navigator.pop(context);
+
+    Future.delayed(const Duration(milliseconds: 200), () {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.language_set_to_english,
+          ),
+        ),
+      );
+    });
+  },
+),
+
             ],
           ),
         );
@@ -317,7 +334,7 @@ class _SettingPageState extends State<SettingPage> {
           onPressed: () {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const BottomNavigator()),
+              MaterialPageRoute( builder: (_) => BottomNavigator(),)
             );
           },
         ),
@@ -532,12 +549,12 @@ class _SettingPageState extends State<SettingPage> {
                 style: TextStyle(color: textColor.withOpacity(0.7)),
               )
             : null,
-        // trailing: const Icon(
-        //   Icons.arrow_forward_ios,
-        //   size: 16,
-        //   color: Colors.grey,
-        // ),
-        // onTap: onTap,
+         trailing: const Icon(
+           Icons.arrow_forward_ios,
+           size: 16,
+           color: Colors.grey,
+         ),
+         onTap: onTap,
       ),
     );
   }

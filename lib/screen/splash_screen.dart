@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:hai_time_app/page/home_page.dart';
+import 'package:hai_time_app/page/bottom_navigator.dart';
+
 import 'package:hai_time_app/page/login_page.dart';
 import 'package:hai_time_app/preferences/preferences_handler.dart';
 
 class SplashScreenHaiTime extends StatefulWidget {
-  final Function(Locale) onLocaleChanged;
-  const SplashScreenHaiTime({super.key, required this.onLocaleChanged});
+  //
+  const SplashScreenHaiTime({super.key});
 
   @override
   State<SplashScreenHaiTime> createState() => _SplashScreenHaiTimeState();
@@ -51,15 +52,16 @@ class _SplashScreenHaiTimeState extends State<SplashScreenHaiTime>
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => HomePage(onLocaleChanged: widget.onLocaleChanged),
-        ),
-      );
+          builder: (_) => BottomNavigator()),
+
+        );
+      
     } else {
       //  Belum login → ke LoginPage
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => LoginPage(onLocaleChanged: widget.onLocaleChanged),
+          builder: (_) => LoginPage(),
         ),
       );
     }

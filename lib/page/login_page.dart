@@ -7,9 +7,7 @@ import 'package:hai_time_app/view/dashborad_admin.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
-  final Function(Locale)? onLocaleChanged; //  Tambahkan ini
-
-  const LoginPage({super.key, this.onLocaleChanged});
+  const LoginPage({super.key});
   static const id = "/HaiTime";
 
   @override
@@ -70,7 +68,8 @@ class _LoginPageState extends State<LoginPage> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const BottomNavigator()),
+        MaterialPageRoute( builder: (_) => BottomNavigator()
+)
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

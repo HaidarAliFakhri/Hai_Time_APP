@@ -27,28 +27,38 @@ class DBKegiatan {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, 'kegiatan.db');
 
-    return openDatabase(
-      path,
-      version: 2,
-      onCreate: (db, version) async {
-        await db.execute('''
-          CREATE TABLE kegiatan (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            judul TEXT,
-            lokasi TEXT,
-            tanggal TEXT,
-            waktu TEXT,
-            catatan TEXT,
-            status TEXT
-          )
-        ''');
-      },
-      onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 2) {
-          await db.execute("ALTER TABLE kegiatan ADD COLUMN status TEXT");
-        }
-      },
-    );
+   return openDatabase(
+  path,
+  version: 3, // naikkan versi jika perlu
+  onCreate: (db, version) async {
+    await db.execute('''
+      CREATE TABLE kegiatan (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        judul TEXT,
+        lokasi TEXT,
+        tanggal TEXT,
+        waktu TEXT,
+        catatan TEXT,
+        status TEXT,
+        pengingat INTEGER DEFAULT 0
+      )
+    ''');
+  },
+  onUpgrade: (db, oldVersion, newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute("ALTER TABLE kegiatan ADD COLUMN status TEXT");
+    }
+    // jika belum ada pengingat -> tambahkan
+    if (oldVersion < 3) {
+      try {
+        await db.execute("ALTER TABLE kegiatan ADD COLUMN pengingat INTEGER DEFAULT 0");
+      } catch (e) {
+        // ignore jika sudah ada
+      }
+    }
+  },
+);
+
   }
 
   // Statistik kegiatan

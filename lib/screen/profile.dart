@@ -7,6 +7,8 @@ import 'package:hai_time_app/page/bottom_navigator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geocoding/geocoding.dart';
+import 'dart:ui';
+
 
 import '../db/db_activity.dart';
 
@@ -546,17 +548,57 @@ class _ProfilePageState extends State<ProfilePage> {
                   const SizedBox(height: 25),
 
                   //  Aktivitas Terakhir
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      "Aktivitas Terakhir",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[800],
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
+                  Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          "Aktivitas Terakhir",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[800],
+            fontSize: 18,
+          ),
+        ),
+
+        // 🟦 HINT "Geser untuk Menghapus"
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.blue.shade50,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: const [
+              Icon(Icons.swipe_left, size: 16, color: Colors.blue),
+              SizedBox(width: 4),
+              Text(
+                "Geser untuk menghapus",
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.blue,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+
+    const SizedBox(height: 6),
+
+    // Bar kecil pembatas modern
+    Container(
+      height: 2,
+      width: double.infinity,
+      color: Colors.grey.shade300,
+    ),
+  ],
+),
+
                   const SizedBox(height: 10),
 
                   StreamBuilder<void>(
@@ -594,53 +636,127 @@ class _ProfilePageState extends State<ProfilePage> {
                                   ),
                                 ),
                                 confirmDismiss: (direction) async {
-                                  return await showDialog(
-                                    context: context,
-                                    builder: (ctx) => AlertDialog(
-                                      title: const Text("Hapus Aktivitas"),
-                                      content: Text(
-                                        "Yakin ingin menghapus '${k.judul}' dari riwayat?",
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.of(ctx).pop(false),
-                                          child: const Text("Batal"),
-                                        ),
-                                        TextButton(
-                                          onPressed: () =>
-                                              Navigator.of(ctx).pop(true),
-                                          child: const Text(
-                                            "Hapus",
-                                            style: TextStyle(color: Colors.red),
+                                return await showModalBottomSheet<bool>(
+                                  context: context,
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                                  ),
+                                  builder: (ctx) => Padding(
+                                    padding: const EdgeInsets.all(20),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Container(
+                                          width: 40,
+                                          height: 5,
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey[400],
+                                            borderRadius: BorderRadius.circular(10),
                                           ),
+                                        ),
+
+                                        const SizedBox(height: 20),
+
+                                        const Text(
+                                          "Hapus Aktivitas?",
+                                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                        ),
+
+                                        const SizedBox(height: 10),
+
+                                        Text(
+                                          "Apakah kamu yakin ingin menghapus aktivitas ini?",
+                                          style: TextStyle(color: Colors.grey[700]),
+                                          textAlign: TextAlign.center,
+                                        ),
+
+                                        const SizedBox(height: 20),
+
+                                        ElevatedButton(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: Colors.redAccent,
+                                            minimumSize: const Size(double.infinity, 50),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                          onPressed: () => Navigator.of(ctx).pop(true),
+                                          child: const Text("Hapus", style: TextStyle(color: Colors.white)),
+                                        ),
+
+                                        const SizedBox(height: 8),
+
+                                        OutlinedButton(
+                                          style: OutlinedButton.styleFrom(
+                                            minimumSize: const Size(double.infinity, 50),
+                                            side: const BorderSide(color: Colors.grey),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                          onPressed: () => Navigator.of(ctx).pop(false),
+                                          child: const Text("Batal"),
                                         ),
                                       ],
                                     ),
-                                  );
-                                },
+                                  ),
+                                );
+                              },
+
+
                                 onDismissed: (direction) async {
                                   final deletedKegiatan = k;
                                   await db.deleteKegiatan(k.id!);
                                   db.notifyListeners();
 
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        "‘${k.judul}’ telah dihapus",
-                                      ),
-                                      action: SnackBarAction(
-                                        label: "Urungkan",
-                                        textColor: Colors.yellowAccent,
-                                        onPressed: () async {
-                                          await db.insertKegiatan(
-                                            deletedKegiatan,
-                                          );
-                                          db.notifyListeners();
-                                        },
+                                  SnackBar(
+                                    behavior: SnackBarBehavior.floating,
+                                    backgroundColor: Colors.transparent,
+                                    elevation: 0,
+                                    duration: const Duration(seconds: 4),
+                                    content: ClipRRect(
+                                      borderRadius: BorderRadius.circular(18),
+                                      child: BackdropFilter(
+                                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                                          decoration: BoxDecoration(
+                                            color: const Color.fromARGB(255, 0, 2, 99).withOpacity(0.25),
+                                            border: Border.all(color: const Color.fromARGB(255, 0, 0, 0).withOpacity(0.4)),
+                                            borderRadius: BorderRadius.circular(18),
+                                          ),
+                                          child: Row(
+                                            children: [
+                                              const Icon(Icons.info_outline, color: Colors.white),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Text(
+                                                  "‘${k.judul}’ telah dihapus",
+                                                  style: const TextStyle(color: Colors.white, fontSize: 15),
+                                                ),
+                                              ),
+                                              TextButton(
+                                                onPressed: () async {
+                                                  await db.insertKegiatan(deletedKegiatan);
+                                                  db.notifyListeners();
+                                                },
+                                                child: const Text(
+                                                  "Undo",
+                                                  style: TextStyle(
+                                                    color: Color.fromARGB(255, 255, 0, 0),
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  );
+                                  ),
+                                );
+
                                 },
                                 child: _buildActivityCard(
                                   k.judul,
@@ -669,7 +785,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFF3FA9F5), Color(0xFF007BFF)],
+                            colors: [Color.fromARGB(255, 17, 0, 112), Color(0xFF007BFF)],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
@@ -710,31 +826,65 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildStatCard(String title, String value, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 12),
-      child: Card(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-          child: Column(
-            children: [
-              Icon(icon, color: Colors.blue),
-              const SizedBox(height: 6),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  color: Colors.blue,
-                ),
-              ),
-              Text(title, style: const TextStyle(fontSize: 12)),
-            ],
+  return Padding(
+    padding: const EdgeInsets.only(right: 14),
+    child: Container(
+      width: 140,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        gradient: LinearGradient(
+          colors: [
+            Colors.white.withOpacity(0.9),
+            const Color.fromARGB(255, 149, 208, 250).withOpacity(0.7),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.shade100.withOpacity(0.4),
+            blurRadius: 12,
+            spreadRadius: 2,
+            offset: Offset(0, 4),
           ),
+        ],
+        border: Border.all(
+          color: Colors.blue.shade100.withOpacity(0.3),
         ),
       ),
-    );
-  }
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: Colors.blue.shade100,
+            child: Icon(icon, color: Colors.blue.shade700, size: 22),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+              color: Colors.blue.shade700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade600,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 
   Widget _buildActivityCard(
     String title,
@@ -742,28 +892,60 @@ class _ProfilePageState extends State<ProfilePage> {
     String status,
     bool done,
   ) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ListTile(
-        leading: Icon(Icons.event, color: done ? Colors.blue : Colors.orange),
-        title: Text(title),
-        subtitle: Text(date),
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: done ? Colors.blue[50] : Colors.orange[50],
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Text(
-            status,
-            style: TextStyle(
-              color: done ? Colors.blue : Colors.orange,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
+    return Container(
+  margin: const EdgeInsets.symmetric(vertical: 8),
+  padding: const EdgeInsets.all(16),
+  decoration: BoxDecoration(
+    color: const Color(0xFFF1F4F9),
+    borderRadius: BorderRadius.circular(20),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.grey.shade300,
+        offset: const Offset(4, 4),
+        blurRadius: 10,
+      ),
+      BoxShadow(
+        color: Colors.white,
+        offset: const Offset(-4, -4),
+        blurRadius: 10,
+      ),
+    ],
+  ),
+  child: Row(
+    children: [
+      Icon(Icons.event_note, color: Colors.blue.shade700, size: 30),
+      const SizedBox(width: 16),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
             ),
-          ),
+            const SizedBox(height: 4),
+            Text(
+              date,
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+          ],
         ),
       ),
-    );
+      Text(
+        status,
+        style: TextStyle(
+          color: Colors.blue.shade700,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    ],
+  ),
+);
+
+
+
   }
 }

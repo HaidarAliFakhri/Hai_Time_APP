@@ -6,7 +6,10 @@ import 'package:hai_time_app/l10n/app_localizations.dart';
 import 'package:hai_time_app/screen/splash_screen.dart';
 import 'package:hai_time_app/utils/locale_controler.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:hai_time_app/services/notification_service.dart';
+
+
+// TIMEZONE (hapus duplikat)
 import 'package:timezone/data/latest.dart' as tz;
 
 // ------------------ THEME CONTROLLER ------------------
@@ -19,11 +22,17 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Format tanggal Indonesia
   await initializeDateFormatting('id_ID', null);
+  await NotifikasiService.init();
+
+  // Timezone untuk scheduled notification
   tz.initializeTimeZones();
+
+  // Alarm manager (background task)
   await AndroidAlarmManager.initialize();
 
-  // Initialize local notifications
+  // Inisialisasi local notification
   const AndroidInitializationSettings androidSettings =
       AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -33,7 +42,7 @@ void main() async {
 
   await flutterLocalNotificationsPlugin.initialize(initSettings);
 
-  // Load saved locale
+  // Load locale dari SharedPreferences
   await LocaleController.loadSavedLocale();
 
   runApp(const MyApp());
@@ -83,7 +92,7 @@ class MyApp extends StatelessWidget {
                 primarySwatch: Colors.blueGrey,
               ),
 
-              home: const SplashScreenHaiTime(), // Tidak perlu onLocaleChanged
+              home: const SplashScreenHaiTime(),
             );
           },
         );

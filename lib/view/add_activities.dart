@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hai_time_app/db/db_activity.dart';
 import 'package:intl/intl.dart';
+import 'package:hai_time_app/services/notification_service.dart';
 
 import '../model/activity.dart';
 
@@ -19,17 +20,18 @@ class _TambahKegiatanPageState extends State<TambahKegiatanPage> {
   final TextEditingController _tanggalController = TextEditingController();
   final TextEditingController _waktuController = TextEditingController();
   final TextEditingController _catatanController = TextEditingController();
+  int _pengingatMenit = 0;
 
   @override
   void initState() {
     super.initState();
-    // Jika ada kegiatan (mode edit), isi controller dari data lama
     if (widget.kegiatan != null) {
       _judulController.text = widget.kegiatan!.judul;
       _lokasiController.text = widget.kegiatan!.lokasi;
       _tanggalController.text = widget.kegiatan!.tanggal;
       _waktuController.text = widget.kegiatan!.waktu;
       _catatanController.text = widget.kegiatan!.catatan ?? '';
+      _pengingatMenit = widget.kegiatan!.pengingat;
     }
   }
 
@@ -43,37 +45,22 @@ class _TambahKegiatanPageState extends State<TambahKegiatanPage> {
     super.dispose();
   }
 
-  // helper: parse waktu string ke TimeOfDay (mencoba beberapa format umum)
-  TimeOfDay? _tryParseTimeOfDay(String text) {
-    if (text.isEmpty) return null;
+  TimeOfDay? _parseTime(String text) {
     try {
-      // Coba format jam:menit 24-jam (HH:mm)
-      final d1 = DateFormat.Hm().parseLoose(text);
-      return TimeOfDay(hour: d1.hour, minute: d1.minute);
+      final d = DateFormat.jm().parseLoose(text);
+      return TimeOfDay(hour: d.hour, minute: d.minute);
     } catch (_) {}
     try {
-      // Coba format 12-jam seperti "7:30 PM" atau locale-specific (jm)
-      final d2 = DateFormat.jm().parseLoose(text);
-      return TimeOfDay(hour: d2.hour, minute: d2.minute);
+      final d = DateFormat.Hm().parseLoose(text);
+      return TimeOfDay(hour: d.hour, minute: d.minute);
     } catch (_) {}
-    // kalau gagal, return null
     return null;
   }
 
-  // Fungsi pilih tanggal
   Future<void> _pilihTanggal() async {
-    DateTime initial = DateTime.now();
-    if (_tanggalController.text.isNotEmpty) {
-      try {
-        initial = DateFormat('dd/MM/yyyy').parseLoose(_tanggalController.text);
-      } catch (_) {
-        initial = DateTime.now();
-      }
-    }
-
-    DateTime? picked = await showDatePicker(
+    final picked = await showDatePicker(
       context: context,
-      initialDate: initial,
+      initialDate: DateTime.now(),
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
@@ -83,19 +70,13 @@ class _TambahKegiatanPageState extends State<TambahKegiatanPage> {
     }
   }
 
-  // Fungsi pilih waktu
   Future<void> _pilihWaktu() async {
-    TimeOfDay initial = TimeOfDay.now();
-    final parsed = _tryParseTimeOfDay(_waktuController.text);
-    if (parsed != null) initial = parsed;
-
-    TimeOfDay? picked = await showTimePicker(
+    final picked = await showTimePicker(
       context: context,
-      initialTime: initial,
+      initialTime: TimeOfDay.now(),
     );
 
     if (picked != null) {
-      // format waktu sesuai lokal (contoh: 07:30 PM atau 19:30 tergantung locale)
       _waktuController.text = picked.format(context);
     }
   }
@@ -103,212 +84,246 @@ class _TambahKegiatanPageState extends State<TambahKegiatanPage> {
   void _simpanKegiatan() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final data = {
-      "judul": _judulController.text,
-      "lokasi": _lokasiController.text,
-      "tanggal": _tanggalController.text,
-      "waktu": _waktuController.text,
-      "catatan": _catatanController.text,
-    };
+    final data = Kegiatan(
+      id: widget.kegiatan?.id,
+      judul: _judulController.text,
+      lokasi: _lokasiController.text,
+      tanggal: _tanggalController.text,
+      waktu: _waktuController.text,
+      catatan: _catatanController.text.isEmpty ? null : _catatanController.text,
+      pengingat: _pengingatMenit,
+    );
 
+    // ============== MODE EDIT ==============
     if (widget.kegiatan != null) {
-      // EDIT DATA
-      final updated = Kegiatan(
-        id: widget.kegiatan!.id,
-        judul: data['judul']!,
-        lokasi: data['lokasi']!,
-        tanggal: data['tanggal']!,
-        waktu: data['waktu']!,
-        catatan: data['catatan'],
-      );
-      await DBKegiatan().updateKegiatan(updated);
+      await NotifikasiService.cancel(data.id!);
+      await DBKegiatan().updateKegiatan(data);
+      await scheduleReminder(data);
     } else {
-      // TAMBAH BARU
-      final newData = Kegiatan(
-        judul: data['judul']!,
-        lokasi: data['lokasi']!,
-        tanggal: data['tanggal']!,
-        waktu: data['waktu']!,
-        catatan: data['catatan'],
-      );
-      await DBKegiatan().insertKegiatan(newData);
+      // ============== MODE TAMBAH ==============
+      final id = await DBKegiatan().insertKegiatan(data);
+      data.id = id;
+      await scheduleReminder(data);
     }
 
-    if (context.mounted) Navigator.pop(context, true);
+    if (mounted) Navigator.pop(context, true);
   }
 
+  Future<void> scheduleReminder(Kegiatan kegiatan) async {
+    final date = DateFormat('dd/MM/yyyy').parse(kegiatan.tanggal);
+    final time = _parseTime(kegiatan.waktu);
+    if (time == null) return;
+
+    DateTime event = DateTime(
+      date.year,
+      date.month,
+      date.day,
+      time.hour,
+      time.minute,
+    );
+
+    final remindAt = event.subtract(Duration(minutes: kegiatan.pengingat));
+
+    if (remindAt.isBefore(DateTime.now())) return;
+
+    await NotifikasiService.schedule(
+      id: kegiatan.id!,
+      title: "Pengingat Kegiatan",
+      body: "${kegiatan.judul} dimulai jam ${kegiatan.waktu}",
+      date: remindAt,
+    );
+  }
+
+  // ================= UI ==================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FC),
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(100), //  tinggi AppBar
-        child: AppBar(
-          automaticallyImplyLeading: true,
-          elevation: 0,
-          backgroundColor: Colors.transparent,
-          flexibleSpace: ClipRRect(
-            borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(30), //  lengkungan kiri bawah
-              bottomRight: Radius.circular(30), //  lengkungan kanan bawah
-            ),
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Color(0xFF2196F3),
-                    Color(0xFF64B5F6),
-                  ], // gradasi biru
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-            ),
-          ),
-          title: Padding(
-            padding: const EdgeInsets.only(top: 25), // geser teks ke bawah
-            child: Row(
-              children: [
-                Icon(
-                  widget.kegiatan == null ? Icons.add : Icons.edit,
-                  color: Colors.white,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  widget.kegiatan == null ? "Tambah Kegiatan" : "Edit Kegiatan",
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          centerTitle: false,
+  preferredSize: const Size.fromHeight(120),
+  child: ClipPath(
+    clipper: WaveClipper(),
+    child: Container(
+      padding: const EdgeInsets.only(top: 5),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF2196F3), Color(0xFF64B5F6)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
       ),
+      child: Center(
+        child: Text(
+          widget.kegiatan == null ? "Tambah Kegiatan" : "Edit Kegiatan",
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    ),
+  ),
+),
+
+
+
+
+
+
+
 
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Judul Kegiatan"),
-              const SizedBox(height: 8),
               TextFormField(
                 controller: _judulController,
+                validator: (v) => v!.isEmpty ? "Wajib diisi" : null,
                 decoration: const InputDecoration(
-                  hintText: "Misal: Nonton Bioskop",
+                  labelText: "Judul Kegiatan",
                   prefixIcon: Icon(Icons.event),
                 ),
-                validator: (value) =>
-                    value!.isEmpty ? "Judul tidak boleh kosong" : null,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
 
-              const Text("Lokasi"),
-              const SizedBox(height: 8),
               TextFormField(
                 controller: _lokasiController,
                 decoration: const InputDecoration(
-                  hintText: "Nama tempat atau alamat",
+                  labelText: "Lokasi",
                   prefixIcon: Icon(Icons.location_on),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
 
-              const Text("Tanggal"),
-              const SizedBox(height: 8),
               TextFormField(
                 controller: _tanggalController,
                 readOnly: true,
+                validator: (v) => v!.isEmpty ? "Pilih tanggal" : null,
                 decoration: InputDecoration(
-                  hintText: "Pilih tanggal",
+                  labelText: "Tanggal",
                   prefixIcon: const Icon(Icons.calendar_today),
                   suffixIcon: IconButton(
                     icon: const Icon(Icons.date_range),
                     onPressed: _pilihTanggal,
                   ),
                 ),
-                validator: (value) =>
-                    value!.isEmpty ? "Tanggal belum dipilih" : null,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
 
-              const Text("Waktu"),
-              const SizedBox(height: 8),
               TextFormField(
                 controller: _waktuController,
                 readOnly: true,
+                validator: (v) => v!.isEmpty ? "Pilih waktu" : null,
                 decoration: InputDecoration(
-                  hintText: "Pilih waktu",
+                  labelText: "Waktu",
                   prefixIcon: const Icon(Icons.access_time),
                   suffixIcon: IconButton(
                     icon: const Icon(Icons.timer),
                     onPressed: _pilihWaktu,
                   ),
                 ),
-                validator: (value) =>
-                    value!.isEmpty ? "Waktu belum dipilih" : null,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 10),
 
-              const Text("Catatan (Opsional)"),
-              const SizedBox(height: 8),
+              DropdownButtonFormField<int>(
+                value: _pengingatMenit,
+                decoration: const InputDecoration(labelText: "Pengingat"),
+                onChanged: (v) => setState(() => _pengingatMenit = v ?? 0),
+                items: const [
+                  DropdownMenuItem(value: 0, child: Text("Tidak ada")),
+                  DropdownMenuItem(value: 5, child: Text("5 menit sebelum")),
+                  DropdownMenuItem(value: 10, child: Text("10 menit sebelum")),
+                  DropdownMenuItem(value: 30, child: Text("30 menit sebelum")),
+                  DropdownMenuItem(value: 60, child: Text("1 jam sebelum")),
+                ],
+              ),
+
+              const SizedBox(height: 10),
               TextFormField(
                 controller: _catatanController,
                 maxLines: 3,
                 decoration: const InputDecoration(
-                  hintText: "Tambahkan catatan untuk kegiatan ini...",
+                  labelText: "Catatan (opsional)",
                   prefixIcon: Icon(Icons.note_alt_outlined),
                 ),
               ),
+
               const SizedBox(height: 20),
+              ElevatedButton(
+  style: ElevatedButton.styleFrom(
+    padding: const EdgeInsets.symmetric(vertical: 14),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(14),
+    ),
+    backgroundColor: Colors.transparent,
+    shadowColor: Colors.transparent,
+  ),
+  onPressed: _simpanKegiatan,
+  child: Ink(
+    decoration: BoxDecoration(
+      gradient: const LinearGradient(
+        colors: [Color(0xFF2196F3), Color(0xFF64B5F6)],
+      ),
+      borderRadius: BorderRadius.circular(14),
+    ),
+    child: Container(
+      alignment: Alignment.center,
+      height: 50,
+      child: const Text(
+        "Simpan",
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 18,
+        ),
+      ),
+    ),
+  ),
+)
 
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.notifications_active, color: Colors.blueAccent),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        "Pengingat Otomatis\nKami akan menghitung waktu ideal berdasarkan cuaca dan jarak lokasi.",
-                        style: TextStyle(fontSize: 14),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
 
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text("Batal"),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _simpanKegiatan,
-                      child: const Text("Simpan"),
-                    ),
-                  ),
-                ],
-              ),
+
+
+
+
             ],
           ),
         ),
       ),
     );
   }
+}
+class WaveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    var path = Path();
+    path.lineTo(0.0, size.height - 40);
+
+    var firstControlPoint = Offset(size.width / 4, size.height);
+    var firstEndPoint = Offset(size.width / 2, size.height - 30);
+    path.quadraticBezierTo(
+      firstControlPoint.dx,
+      firstControlPoint.dy,
+      firstEndPoint.dx,
+      firstEndPoint.dy,
+    );
+
+    var secondControlPoint = Offset(size.width * 3 / 4, size.height - 80);
+    var secondEndPoint = Offset(size.width, size.height - 40);
+    path.quadraticBezierTo(
+      secondControlPoint.dx,
+      secondControlPoint.dy,
+      secondEndPoint.dx,
+      secondEndPoint.dy,
+    );
+
+    path.lineTo(size.width, 0.0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

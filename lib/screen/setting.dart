@@ -420,7 +420,7 @@ class _SettingPageState extends State<SettingPage> {
             _buildSectionTitle(localizations.section_about, textColor),
             _buildInfoTile(
               localizations.app_version,
-              "1.0.3",
+              "1.0.4",
               cardColor,
               textColor,
             ),

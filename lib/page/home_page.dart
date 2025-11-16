@@ -14,6 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../db/db_activity.dart';
 import '../model/activity.dart';
+enum SkyTime { subuh, dzuhur, ashar, maghrib, isya }
 
 class HomePage extends StatefulWidget {
   final Function(Locale)? onLocaleChanged;
@@ -184,6 +185,46 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     if (hour >= 15 && hour < 18) return "Selamat sore 👋";
     return "Selamat malam 👋";
   }
+  SkyTime getSkyTime() {
+  final hour = DateTime.now().hour;
+
+  if (hour >= 4 && hour < 6) return SkyTime.subuh;
+  if (hour >= 6 && hour < 12) return SkyTime.dzuhur;
+  if (hour >= 12 && hour < 15) return SkyTime.ashar;
+  if (hour >= 15 && hour < 18) return SkyTime.maghrib;
+  return SkyTime.isya;
+}
+List<Color> getSkyGradient(SkyTime time) {
+  switch (time) {
+    case SkyTime.subuh:
+      return [
+        const Color(0xFF0D1B3D),
+        const Color(0xFF4863A0),
+      ];
+    case SkyTime.dzuhur:
+      return [
+        const Color(0xFF4FC3F7),
+        const Color(0xFF0288D1),
+      ];
+    case SkyTime.ashar:
+      return [
+        const Color(0xFFFFD54F),
+        const Color(0xFFFFB300),
+      ];
+    case SkyTime.maghrib:
+      return [
+        const Color(0xFFFF7043),
+        const Color(0xFF8D6E63),
+      ];
+    case SkyTime.isya:
+      return [
+        const Color(0xFF0D1B2A),
+        const Color(0xFF1B263B),
+      ];
+  }
+}
+
+  
 
   @override
   Widget build(BuildContext context) {
@@ -523,38 +564,91 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   //  CARD JADWAL SHOLAT
   Widget _buildPrayerCard() {
-    return _buildCard(
-      title: "Jadwal Sholat Hari Ini",
-      trailing: TextButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const JadwalPage()),
-          );
-        },
-        child: const Text("Lihat semua"),
+  final sky = getSkyTime();
+  final colors = getSkyGradient(sky);
+
+  return AnimatedContainer(
+    duration: const Duration(seconds: 2),
+    curve: Curves.easeInOut,
+    margin: const EdgeInsets.all(12),
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(20),
+      gradient: LinearGradient(
+        colors: colors,
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
       ),
-      child: Column(
-        children: [
-          const _PrayerRow(
-              icon: Icons.brightness_2_outlined, name: "Subuh", time: "04:45"),
-          const _PrayerRow(
-              icon: Icons.sunny, name: "Dzuhur", time: "11:42"),
-          const _PrayerRow(
-              icon: Icons.wb_sunny_outlined, name: "Ashar", time: "14:55"),
-          const _PrayerRow(
-              icon: Icons.nightlight_round_outlined,
-              name: "Maghrib",
-              time: "17:47"),
-          const _PrayerRow(
-              icon: Icons.nightlight_round, name: "Isya", time: "18:59"),
-          const SizedBox(height: 10),
-          Text("Waktu $nextPrayerName $remainingTime",
-              style: const TextStyle(fontWeight: FontWeight.w500)),
-        ],
-      ),
-    );
-  }
+      boxShadow: [
+        BoxShadow(
+          color: colors.last.withOpacity(0.3),
+          blurRadius: 12,
+          offset: const Offset(0, 6),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // HEADER
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              "Jadwal Sholat Hari Ini",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const JadwalPage()),
+                );
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.white,
+              ),
+              child: const Text("Lihat semua"),
+            )
+          ],
+        ),
+
+        const SizedBox(height: 10),
+
+        // LIST SHOLAT
+        const _PrayerRow(
+            icon: Icons.brightness_2_outlined, name: "Subuh", time: "04:45"),
+        const _PrayerRow(
+            icon: Icons.sunny, name: "Dzuhur", time: "11:42"),
+        const _PrayerRow(
+            icon: Icons.wb_sunny_outlined, name: "Ashar", time: "14:55"),
+        const _PrayerRow(
+            icon: Icons.nightlight_round_outlined,
+            name: "Maghrib",
+            time: "17:47"),
+        const _PrayerRow(
+            icon: Icons.nightlight_round, name: "Isya", time: "18:59"),
+
+        const SizedBox(height: 10),
+
+        // NEXT SHOLAT
+        Text(
+          "Waktu $nextPrayerName $remainingTime",
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+            fontSize: 14,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 
   /// 🔹 CARD KEGIATAN (Background Biru)
 Widget _buildKegiatanCard() {
@@ -565,7 +659,7 @@ Widget _buildKegiatanCard() {
     padding: const EdgeInsets.all(16),
     margin: const EdgeInsets.only(bottom: 10),
     decoration: BoxDecoration(
-      color: Colors.blue.shade50,       // 🔵 Warna biru muda background card
+      color: const Color.fromARGB(255, 8, 0, 114),       // 🔵 Warna biru muda background card
       borderRadius: BorderRadius.circular(12),
       border: Border.all(color: Colors.blue.shade200),
     ),
@@ -588,7 +682,7 @@ Widget _buildKegiatanCard() {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.blue.shade200,
+                color: const Color.fromARGB(255, 11, 0, 172),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(

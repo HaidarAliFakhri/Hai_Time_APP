@@ -8,6 +8,7 @@ import 'package:hai_time_app/view/activity_page.dart';
 import 'package:hai_time_app/view/add_activities.dart';
 import 'package:hai_time_app/view/prayer_schedule_page.dart';
 import 'package:hai_time_app/view/weather_page.dart';
+import 'package:hai_time_app/widget/sky_animation.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -563,91 +564,115 @@ List<Color> getSkyGradient(SkyTime time) {
   }
 
   //  CARD JADWAL SHOLAT
-  Widget _buildPrayerCard() {
-  final sky = getSkyTime();
-  final colors = getSkyGradient(sky);
-
-  return AnimatedContainer(
-    duration: const Duration(seconds: 2),
-    curve: Curves.easeInOut,
-    margin: const EdgeInsets.all(12),
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(20),
-      gradient: LinearGradient(
-        colors: colors,
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ),
-      boxShadow: [
-        BoxShadow(
-          color: colors.last.withOpacity(0.3),
-          blurRadius: 12,
-          offset: const Offset(0, 6),
-        ),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+Widget _buildPrayerCard() {
+  return Container(
+    margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+    child: Stack(
       children: [
-        // HEADER
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              "Jadwal Sholat Hari Ini",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const JadwalPage()),
-                );
-              },
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.white,
-              ),
-              child: const Text("Lihat semua"),
-            )
-          ],
+        // 🔵 Background animasi langit
+        ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: SizedBox(
+            height: 280,
+            width: double.infinity,
+            child: SkyAnimation(time: getSkyTime()), // tidak diubah dari sebelumnya
+          ),
         ),
 
-        const SizedBox(height: 10),
+        // 🔵 Overlay gelap agar teks bisa dibaca
+        ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            height: 270,
+            width: double.infinity,
+            color: const Color.fromARGB(255, 255, 255, 255).withOpacity(0.25),
+          ),
+        ),
 
-        // LIST SHOLAT
-        const _PrayerRow(
-            icon: Icons.brightness_2_outlined, name: "Subuh", time: "04:45"),
-        const _PrayerRow(
-            icon: Icons.sunny, name: "Dzuhur", time: "11:42"),
-        const _PrayerRow(
-            icon: Icons.wb_sunny_outlined, name: "Ashar", time: "14:55"),
-        const _PrayerRow(
-            icon: Icons.nightlight_round_outlined,
-            name: "Maghrib",
-            time: "17:47"),
-        const _PrayerRow(
-            icon: Icons.nightlight_round, name: "Isya", time: "18:59"),
+        // 🔵 Konten card (anti overflow)
+        Positioned.fill(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // TITLE + LIHAT SEMUA
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Jadwal Sholat Hari Ini",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
 
-        const SizedBox(height: 10),
+                    // 🔥 FIX OVERFLOW → wrap dengan Flexible
+                    Flexible(
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const JadwalPage(),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          "Lihat semua",
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
 
-        // NEXT SHOLAT
-        Text(
-          "Waktu $nextPrayerName $remainingTime",
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-            fontSize: 14,
+                const SizedBox(height: 10),
+
+                // ROW LIST SHOLAT
+                const _PrayerRow(
+                    icon: Icons.brightness_2_outlined,
+                    name: "Subuh",
+                    time: "04:45"),
+                const _PrayerRow(
+                    icon: Icons.sunny, name: "Dzuhur", time: "11:42"),
+                const _PrayerRow(
+                    icon: Icons.wb_sunny_outlined,
+                    name: "Ashar",
+                    time: "14:55"),
+                const _PrayerRow(
+                    icon: Icons.nightlight_round_outlined,
+                    name: "Maghrib",
+                    time: "17:47"),
+                const _PrayerRow(
+                    icon: Icons.nightlight_round,
+                    name: "Isya",
+                    time: "18:59"),
+
+                const SizedBox(height: 10),
+
+                // NEXT PRAYER
+                Text(
+                  "Waktu $nextPrayerName $remainingTime",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white,
+                  ),
+                )
+              ],
+            ),
           ),
         ),
       ],
     ),
   );
 }
+
 
 
   /// 🔹 CARD KEGIATAN (Background Biru)

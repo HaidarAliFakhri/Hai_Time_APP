@@ -31,14 +31,16 @@ dependencies:
   android_alarm_manager_plus: ^4.0.4
   audioplayers: ^6.0.0
   circle_bottom_navigation: ^2.0.0
+  cloud_firestore: ^6.1.0
   cupertino_icons: ^1.0.8
+  firebase_auth: ^6.1.2
+  firebase_core: ^4.2.1
   flutter:
-    sdk: flutter
-  # ✅ Localization support from Flutter SDK
-  flutter_localizations:
     sdk: flutter
   flutter_launcher_icons: ^0.14.4
   flutter_local_notifications: ^17.2.0
+  flutter_localizations:
+    sdk: flutter
   geocoding: ^4.0.0
   geolocator: ^14.0.2
   google_fonts: ^6.3.2

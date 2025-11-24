@@ -1,4 +1,5 @@
 import 'dart:math' show sin, cos, sqrt, atan2, pi;
+
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
@@ -6,12 +7,13 @@ import 'package:hai_time_app/db/db_activity.dart';
 import 'package:hai_time_app/utils/weather_helper.dart';
 import 'package:hai_time_app/view/add_activities.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../model/activity.dart';
 
 class KegiatanPage extends StatefulWidget {
   final Kegiatan kegiatan;
-  
-const KegiatanPage({super.key, required this.kegiatan});
+
+  const KegiatanPage({super.key, required this.kegiatan});
   @override
   State<KegiatanPage> createState() => _KegiatanPageState();
 }
@@ -53,18 +55,26 @@ class _KegiatanPageState extends State<KegiatanPage> {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied ||
             permission == LocationPermission.deniedForever) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(const SnackBar(content: Text("Izin lokasi ditolak")));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text("Izin lokasi ditolak")));
           setState(() => loading = false);
           return;
         }
       }
 
-      final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
       final lokasiTujuan = await locationFromAddress(widget.kegiatan.lokasi);
       final dest = lokasiTujuan.first;
 
-      double jarakKm = _calculateDistance(pos.latitude, pos.longitude, dest.latitude, dest.longitude);
+      double jarakKm = _calculateDistance(
+        pos.latitude,
+        pos.longitude,
+        dest.latitude,
+        dest.longitude,
+      );
 
       double speed;
       switch (mode) {
@@ -92,8 +102,9 @@ class _KegiatanPageState extends State<KegiatanPage> {
         jarakKeTujuan = "${jarakKm.toStringAsFixed(1)} km";
       });
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Gagal menghitung estimasi: $e")));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Gagal menghitung estimasi: $e")));
     } finally {
       setState(() => loading = false);
     }
@@ -104,9 +115,12 @@ class _KegiatanPageState extends State<KegiatanPage> {
     const R = 6371;
     var dLat = (lat2 - lat1) * pi / 180;
     var dLon = (lon2 - lon1) * pi / 180;
-    var a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(lat1 * pi / 180) * cos(lat2 * pi / 180) *
-            sin(dLon / 2) * sin(dLon / 2);
+    var a =
+        sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1 * pi / 180) *
+            cos(lat2 * pi / 180) *
+            sin(dLon / 2) *
+            sin(dLon / 2);
     var c = 2 * atan2(sqrt(a), sqrt(1 - a));
     return R * c;
   }
@@ -114,7 +128,9 @@ class _KegiatanPageState extends State<KegiatanPage> {
   ///  Buka Google Maps
   Future<void> _bukaMaps() async {
     try {
-      final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
       final asal = '${pos.latitude},${pos.longitude}';
       final tujuan = Uri.encodeComponent(widget.kegiatan.lokasi);
       String travelMode = mode == "two_wheeler" ? "driving" : mode;
@@ -128,8 +144,9 @@ class _KegiatanPageState extends State<KegiatanPage> {
         throw "Tidak bisa membuka Google Maps";
       }
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Gagal membuka Google Maps: $e")));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Gagal membuka Google Maps: $e")));
     }
   }
 
@@ -139,7 +156,10 @@ class _KegiatanPageState extends State<KegiatanPage> {
       final lokasiTujuan = await locationFromAddress(widget.kegiatan.lokasi);
       final dest = lokasiTujuan.first;
 
-      final cuaca = await WeatherHelper.getWeather(dest.latitude, dest.longitude);
+      final cuaca = await WeatherHelper.getWeather(
+        dest.latitude,
+        dest.longitude,
+      );
       if (cuaca != null && mounted) {
         setState(() {
           dataCuaca = cuaca;
@@ -182,12 +202,15 @@ class _KegiatanPageState extends State<KegiatanPage> {
       backgroundColor: const Color(0xFFF3F8FF),
       appBar: AppBar(
         leading: IconButton(
-    icon: const Icon(Icons.arrow_back),
-    onPressed: () {
-      Navigator.pop(context); // kembali ke halaman sebelumnya
-    },
-  ),
-        title: const Text("Detail Kegiatan", style: TextStyle(fontWeight: FontWeight.bold)),
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context); // kembali ke halaman sebelumnya
+          },
+        ),
+        title: const Text(
+          "Detail Kegiatan",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
         elevation: 0,
         flexibleSpace: Container(
@@ -202,23 +225,30 @@ class _KegiatanPageState extends State<KegiatanPage> {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        
+
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // === INFORMASI KEGIATAN ===
             _buildCard(
-              
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  
-                  Text(kegiatan.judul,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(
+                    kegiatan.judul,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.location_on_outlined, size: 18, color: Colors.blue),
+                      const Icon(
+                        Icons.location_on_outlined,
+                        size: 18,
+                        color: Colors.blue,
+                      ),
                       const SizedBox(width: 4),
                       Expanded(child: Text(kegiatan.lokasi)),
                     ],
@@ -226,11 +256,19 @@ class _KegiatanPageState extends State<KegiatanPage> {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      const Icon(Icons.calendar_today_outlined, size: 16, color: Colors.blue),
+                      const Icon(
+                        Icons.calendar_today_outlined,
+                        size: 16,
+                        color: Colors.blue,
+                      ),
                       const SizedBox(width: 6),
                       Text("Tanggal: ${kegiatan.tanggal}"),
                       const SizedBox(width: 16),
-                      const Icon(Icons.access_time, size: 16, color: Colors.blue),
+                      const Icon(
+                        Icons.access_time,
+                        size: 16,
+                        color: Colors.blue,
+                      ),
                       const SizedBox(width: 6),
                       Text("Waktu: ${kegiatan.waktu}"),
                     ],
@@ -246,8 +284,10 @@ class _KegiatanPageState extends State<KegiatanPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Informasi Perjalanan",
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const Text(
+                    "Informasi Perjalanan",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -268,8 +308,10 @@ class _KegiatanPageState extends State<KegiatanPage> {
                             if (jarakKeTujuan != null)
                               Text("Jarak ke Tujuan: $jarakKeTujuan"),
                             Text("Estimasi: ${estimasiWaktu ?? '-'}"),
-                            Text("Waktu Ideal: ${waktuIdeal ?? '-'}",
-                                style: const TextStyle(color: Colors.red)),
+                            Text(
+                              "Waktu Ideal: ${waktuIdeal ?? '-'}",
+                              style: const TextStyle(color: Colors.red),
+                            ),
                           ],
                         ),
                   const SizedBox(height: 12),
@@ -287,8 +329,10 @@ class _KegiatanPageState extends State<KegiatanPage> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.map, color: Colors.blue, size: 28),
-                            Text("Lihat rute di Google Maps",
-                                style: TextStyle(color: Colors.blue)),
+                            Text(
+                              "Lihat rute di Google Maps",
+                              style: TextStyle(color: Colors.blue),
+                            ),
                           ],
                         ),
                       ),
@@ -300,32 +344,31 @@ class _KegiatanPageState extends State<KegiatanPage> {
 
             const SizedBox(height: 16),
 
-            // === CARD CUACA ===
-             _buildCard(
-               child: dataCuaca == null
-                   ? const Center(child: CircularProgressIndicator())
-                   : Row(
-                       children: [
-                         Icon(ikonCuaca, color: warnaCuaca, size: 36),
-                         const SizedBox(width: 8),
-                         Column(
-                           crossAxisAlignment: CrossAxisAlignment.start,
-                           children: [
-                             Text(
-                               kondisiCuaca ?? "Memuat...",
-                               style: TextStyle(
-                                 color: warnaCuaca,
-                                 fontSize: 16,
-                                 fontWeight: FontWeight.bold,
-                               ),
-                             ),
-                             Text("Suhu: $suhu • ${widget.kegiatan.waktu}"),
-                           ],
-                         ),
-                       ],
-                     ),
-             ),
-
+            // // === CARD CUACA ===
+            //  _buildCard(
+            //    child: dataCuaca == null
+            //        ? const Center(child: CircularProgressIndicator())
+            //        : Row(
+            //            children: [
+            //              Icon(ikonCuaca, color: warnaCuaca, size: 36),
+            //              const SizedBox(width: 8),
+            //              Column(
+            //                crossAxisAlignment: CrossAxisAlignment.start,
+            //                children: [
+            //                  Text(
+            //                    kondisiCuaca ?? "Memuat...",
+            //                    style: TextStyle(
+            //                      color: warnaCuaca,
+            //                      fontSize: 16,
+            //                      fontWeight: FontWeight.bold,
+            //                    ),
+            //                  ),
+            //                  Text("Suhu: $suhu • ${widget.kegiatan.waktu}"),
+            //                ],
+            //              ),
+            //            ],
+            //          ),
+            //  ),
             const SizedBox(height: 8),
 
             // === SARAN DINAMIS ===
@@ -380,7 +423,6 @@ class _KegiatanPageState extends State<KegiatanPage> {
                 ),
               ),
 
-
             const SizedBox(height: 10),
 
             // === TOMBOL EDIT / HAPUS / SELESAI ===
@@ -389,9 +431,14 @@ class _KegiatanPageState extends State<KegiatanPage> {
               children: [
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white, elevation: 0),
+                    backgroundColor: Colors.white,
+                    elevation: 0,
+                  ),
                   icon: const Icon(Icons.edit, color: Colors.black),
-                  label: const Text("Edit", style: TextStyle(color: Colors.black)),
+                  label: const Text(
+                    "Edit",
+                    style: TextStyle(color: Colors.black),
+                  ),
                   onPressed: () async {
                     final result = await Navigator.push(
                       context,
@@ -411,17 +458,30 @@ class _KegiatanPageState extends State<KegiatanPage> {
                     side: const BorderSide(color: Colors.red),
                   ),
                   icon: const Icon(Icons.delete, color: Colors.red),
-                  label: const Text("Hapus", style: TextStyle(color: Colors.red)),
+                  label: const Text(
+                    "Hapus",
+                    style: TextStyle(color: Colors.red),
+                  ),
                   onPressed: () async {
                     final konfirmasi = await showDialog<bool>(
                       context: context,
                       builder: (context) => AlertDialog(
                         title: const Text("Konfirmasi Hapus"),
-                        content: const Text("Apakah kamu yakin ingin menghapus kegiatan ini?"),
+                        content: const Text(
+                          "Apakah kamu yakin ingin menghapus kegiatan ini?",
+                        ),
                         actions: [
-                          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Batal")),
-                          TextButton(onPressed: () => Navigator.pop(context, true),
-                              child: const Text("Hapus", style: TextStyle(color: Colors.red))),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text("Batal"),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text(
+                              "Hapus",
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ),
                         ],
                       ),
                     );
@@ -450,7 +510,9 @@ class _KegiatanPageState extends State<KegiatanPage> {
                   );
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("✅ Kegiatan ditandai sebagai selesai")),
+                      const SnackBar(
+                        content: Text("✅ Kegiatan ditandai sebagai selesai"),
+                      ),
                     );
                     Navigator.pop(context, true);
                   }
@@ -479,9 +541,14 @@ class _KegiatanPageState extends State<KegiatanPage> {
           color: isSelected ? Colors.blue.shade100 : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-              color: isSelected ? Colors.blueAccent : Colors.grey.shade300),
+            color: isSelected ? Colors.blueAccent : Colors.grey.shade300,
+          ),
         ),
-        child: Icon(icon, color: isSelected ? Colors.blueAccent : Colors.grey, size: 28),
+        child: Icon(
+          icon,
+          color: isSelected ? Colors.blueAccent : Colors.grey,
+          size: 28,
+        ),
       ),
     );
   }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:hai_time_app/db/db_activity.dart';
+import 'package:hai_time_app/services/weather_service.dart';
 import 'package:hai_time_app/utils/weather_helper.dart';
 import 'package:hai_time_app/view/add_activities.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -156,7 +157,7 @@ class _KegiatanPageState extends State<KegiatanPage> {
       final lokasiTujuan = await locationFromAddress(widget.kegiatan.lokasi);
       final dest = lokasiTujuan.first;
 
-      final cuaca = await WeatherHelper.getWeather(
+      final cuaca = await WeatherService.getWeather(
         dest.latitude,
         dest.longitude,
       );

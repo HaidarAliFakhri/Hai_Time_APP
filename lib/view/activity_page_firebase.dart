@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hai_time_app/model/activitymodel.dart';
 import 'package:hai_time_app/services/activity_service.dart';
+import 'package:hai_time_app/services/weather_service.dart';
 import 'package:hai_time_app/utils/weather_helper.dart';
 import 'package:hai_time_app/view/add_activities_firebase.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -170,7 +171,7 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
       final lokasiTujuan = await locationFromAddress(widget.kegiatan.lokasi);
       final dest = lokasiTujuan.first;
 
-      final cuaca = await WeatherHelper.getWeather(
+      final cuaca = await WeatherService.getWeather(
         dest.latitude,
         dest.longitude,
       );

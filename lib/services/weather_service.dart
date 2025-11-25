@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
@@ -78,4 +79,41 @@ class WeatherService {
     _memoryCacheTime = null;
     return fetchWeather();
   }
+  static Future<Map<String, dynamic>?> getWeather(double lat, double lon) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+
+    final cacheKey = "weather_${lat}_${lon}";
+    final cacheTimeKey = "${cacheKey}_time";
+
+    final cachedData = prefs.getString(cacheKey);
+    final cachedTime = prefs.getInt(cacheTimeKey);
+
+    if (cachedData != null && cachedTime != null) {
+      final age = now.difference(DateTime.fromMillisecondsSinceEpoch(cachedTime));
+      if (age < const Duration(minutes: 30)) {
+        return jsonDecode(cachedData);
+      }
+    }
+
+    final url = Uri.parse(
+      'https://api.openweathermap.org/data/2.5/weather'
+      '?lat=$lat&lon=$lon&appid=$_apiKey&units=metric&lang=id',
+    );
+
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      prefs.setString(cacheKey, response.body);
+      prefs.setInt(cacheTimeKey, now.millisecondsSinceEpoch);
+      return jsonDecode(response.body);
+    }
+
+    return null;
+  } catch (e) {
+    debugPrint("Gagal fetch cuaca berdasarkan koordinat: $e");
+    return null;
+  }
+}
+
 }

@@ -5,6 +5,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:hai_time_app/screen/profile_firebase.dart';
 import 'package:hai_time_app/screen/setting_firebase.dart';
 import 'package:hai_time_app/services/weather_service.dart';
@@ -54,11 +55,12 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
 
   late AnimationController _animController;
   Timer? _prayerTimer;
-
+  late Future<Map<String, dynamic>?> _weatherFuture;
   @override
   void initState() {
     super.initState();
-
+    _weatherFuture = WeatherService.fetchWeather();
+    Geolocator.requestPermission();
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 5),
@@ -340,7 +342,8 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
   //  CARD CUACA DENGAN ANIMASI
   Widget _buildWeatherCard() {
     return FutureBuilder<Map<String, dynamic>?>(
-      future: WeatherService.fetchWeather(),
+      future: _weatherFuture,
+
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return _loadingWeather();
@@ -470,7 +473,8 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
   //  CARD SARAN CUACA DINAMIS
   Widget _buildWeatherAdviceCard() {
     return FutureBuilder<Map<String, dynamic>?>(
-      future: WeatherService.fetchWeather(),
+      future: _weatherFuture,
+
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return _buildCard(

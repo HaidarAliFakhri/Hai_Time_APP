@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "601635775364",
+    "project_id": "haitime-8bdd4",
+    "storage_bucket": "haitime-8bdd4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:601635775364:android:5006ee9b317e43f0bbf3d1",
+        "android_client_info": {
+          "package_name": "com.ppkd.haitime"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCucnfT-M9mDqp7EMrQ4SAUWAKZfA0RLyY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

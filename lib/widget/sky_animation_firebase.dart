@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:hai_time_app/page/home_page_firebase.dart';
-// import 'package:hai_time_app/page/home_page.dart';
+//import 'package:hai_time_app/page/home_page_firebase.dart';
+import 'package:hai_time_app/page/home_page.dart';
 
 class SkyAnimation extends StatefulWidget {
   final SkyTime time;

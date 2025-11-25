@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:hai_time_app/page/bottom_navigator.dart';
-import 'package:hai_time_app/page/form_register.dart';
-import 'package:hai_time_app/page/home_page.dart';
+import 'package:hai_time_app/page/bottom_navigator_firebase.dart';
+import 'package:hai_time_app/page/form_register_firebase.dart';
+import 'package:hai_time_app/page/home_page_firebase.dart';
 import 'package:hai_time_app/preferences/preferences_handler.dart';
+import 'package:hai_time_app/services/firebase.dart';
 import 'package:hai_time_app/view/dashborad_admin.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPageFireBase extends StatefulWidget {
   const LoginPageFireBase({super.key});
@@ -31,21 +31,15 @@ class _LoginPageFireBaseState extends State<LoginPageFireBase> {
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final prefs = await SharedPreferences.getInstance();
-
-    final registeredEmail = prefs.getString('registered_email');
-    final registeredPassword = prefs.getString('registered_password');
-
     final emailInput = emailController.text.trim();
     final passwordInput = passwordController.text.trim();
 
-    //  1. Login Admin
+    // 1️⃣ LOGIN ADMIN (tetap sama)
     if (emailInput == 'admin@haitime.com' && passwordInput == 'admin123') {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Login sebagai Admin berhasil!')),
       );
 
-      //  Simpan status login admin
       await PreferenceHandler.saveLogin(true);
       await PreferenceHandler.setEmail(emailInput);
 
@@ -56,24 +50,36 @@ class _LoginPageFireBaseState extends State<LoginPageFireBase> {
       return;
     }
 
-    //  2. Login User
-    if (emailInput == registeredEmail && passwordInput == registeredPassword) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login berhasil! Selamat datang 👋')),
+    // 2️⃣ LOGIN USER FIREBASE
+    try {
+      final user = await FirebaseService.loginUser(
+        email: emailInput,
+        password: passwordInput,
       );
 
-      //  Simpan status login user
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Email atau password salah")),
+        );
+        return;
+      }
+
+      // ✔ simpan sesi login
       await PreferenceHandler.saveLogin(true);
-      await PreferenceHandler.setEmail(emailInput);
+      await PreferenceHandler.setEmail(user.email ?? "");
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Selamat datang, ${user.username}!')),
+      );
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => BottomNavigator()),
+        MaterialPageRoute(builder: (_) => BottomNavigatorFirebase()),
       );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Email atau password salah')),
-      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Terjadi kesalahan: $e")));
     }
   }
 
@@ -181,7 +187,7 @@ class _LoginPageFireBaseState extends State<LoginPageFireBase> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const HomePage(),
+                                builder: (context) => const HomePageFirebase(),
                               ),
                             );
                           },
@@ -274,7 +280,8 @@ class _LoginPageFireBaseState extends State<LoginPageFireBase> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const RegisterPage(),
+                                builder: (context) =>
+                                    const RegisterPageFireBase(),
                               ),
                             );
                           },

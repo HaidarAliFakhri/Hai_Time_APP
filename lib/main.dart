@@ -1,14 +1,13 @@
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hai_time_app/l10n/app_localizations.dart';
-import 'package:hai_time_app/screen/splash_screen.dart';
+import 'package:hai_time_app/screen/splash_screen_firebase.dart';
+import 'package:hai_time_app/services/notification_service.dart';
 import 'package:hai_time_app/utils/locale_controler.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:hai_time_app/services/notification_service.dart';
-
-
 // TIMEZONE (hapus duplikat)
 import 'package:timezone/data/latest.dart' as tz;
 
@@ -45,6 +44,9 @@ void main() async {
   // Load locale dari SharedPreferences
   await LocaleController.loadSavedLocale();
 
+  //firebase
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(const MyApp());
 }
 
@@ -68,10 +70,7 @@ class MyApp extends StatelessWidget {
 
               // Bahasa mengikuti controller
               locale: locale,
-              supportedLocales: const [
-                Locale('en'),
-                Locale('id'),
-              ],
+              supportedLocales: const [Locale('en'), Locale('id')],
               localizationsDelegates: const [
                 AppLocalizations.delegate,
                 GlobalMaterialLocalizations.delegate,
@@ -92,7 +91,7 @@ class MyApp extends StatelessWidget {
                 primarySwatch: Colors.blueGrey,
               ),
 
-              home: const SplashScreenHaiTime(),
+              home: const SplashScreenHaiTimeFirebase(),
             );
           },
         );

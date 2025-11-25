@@ -1,35 +1,37 @@
 import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:hai_time_app/screen/profile.dart';
-import 'package:hai_time_app/screen/setting.dart';
+import 'package:hai_time_app/screen/profile_firebase.dart';
+import 'package:hai_time_app/screen/setting_firebase.dart';
 import 'package:hai_time_app/services/weather_service.dart';
 import 'package:hai_time_app/view/activity_page.dart';
 import 'package:hai_time_app/view/add_activities.dart';
 import 'package:hai_time_app/view/prayer_schedule_page.dart';
 import 'package:hai_time_app/view/weather_page.dart';
-import 'package:hai_time_app/widget/sky_animation_firebase.dart';
+import 'package:hai_time_app/widget/sky_animation.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../db/db_activity.dart';
 import '../model/activity.dart';
 
 enum SkyTime { subuh, dzuhur, ashar, maghrib, isya }
 
-class HomePage extends StatefulWidget {
+class HomePageFirebase extends StatefulWidget {
   final Function(Locale)? onLocaleChanged;
   final VoidCallback? onGoToWeather;
 
-  const HomePage({super.key, this.onLocaleChanged, this.onGoToWeather});
+  const HomePageFirebase({super.key, this.onLocaleChanged, this.onGoToWeather});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<HomePageFirebase> createState() => _HomePageFirebaseState();
 }
 
 //  Tambahkan TickerProviderStateMixin agar AnimationController bisa jalan
-class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
+class _HomePageFirebaseState extends State<HomePageFirebase>
+    with TickerProviderStateMixin {
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   List<Kegiatan> _listKegiatan = [];
@@ -94,8 +96,24 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Future<void> _loadNamaUser() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() => namaUser = prefs.getString('registered_name') ?? "User");
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      setState(() => namaUser = "User");
+      return;
+    }
+
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+
+    // 🔥 Ambil username jika ada
+    if (doc.exists && doc.data()!.containsKey('username')) {
+      setState(() => namaUser = doc['username']);
+    } else {
+      // fallback ke email
+      setState(() => namaUser = user.email ?? "User");
+    }
   }
 
   Future<void> _loadKegiatan() async {
@@ -324,7 +342,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const ProfilePage(),
+                                  builder: (_) => const ProfilePageFirebase(),
                                 ),
                               );
                             },
@@ -338,7 +356,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => SettingPage(),
+                                  builder: (_) => SettingPageFirebase(),
                                 ),
                               );
                             },

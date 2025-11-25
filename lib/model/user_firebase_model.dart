@@ -3,35 +3,44 @@ import 'dart:convert';
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 class UserFirebaseModel {
   String? uid;
-  String? username;
+  String? username; // untuk profile
+  String? name; // display name
   String? email;
   String? createdAt;
-  String? updateAt;
+  String? updatedAt;
+  String? profileUrl;
+
   UserFirebaseModel({
     this.uid,
     this.username,
+    this.name,
     this.email,
     this.createdAt,
-    this.updateAt,
+    this.updatedAt,
+    this.profileUrl,
   });
 
   Map<String, dynamic> toMap() {
-    return <String, dynamic>{
+    return {
       'uid': uid,
       'username': username,
+      'name': name,
       'email': email,
       'createdAt': createdAt,
-      'updateAt': updateAt,
+      'updatedAt': updatedAt,
+      "profileUrl": profileUrl,
     };
   }
 
   factory UserFirebaseModel.fromMap(Map<String, dynamic> map) {
     return UserFirebaseModel(
-      uid: map['uid'] != null ? map['uid'] as String : null,
-      username: map['username'] != null ? map['username'] as String : null,
-      email: map['email'] != null ? map['email'] as String : null,
-      createdAt: map['createdAt'] != null ? map['createdAt'] as String : null,
-      updateAt: map['updateAt'] != null ? map['updateAt'] as String : null,
+      uid: map['uid'],
+      username: map['username'],
+      name: map['name'],
+      email: map['email'],
+      createdAt: map['createdAt'],
+      updatedAt: map['updatedAt'],
+      profileUrl: map["profileUrl"],
     );
   }
 

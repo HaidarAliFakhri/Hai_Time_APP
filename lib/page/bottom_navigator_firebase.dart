@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:hai_time_app/page/home_page.dart';
+import 'package:hai_time_app/page/home_page_firebase.dart';
 import 'package:hai_time_app/view/prayer_schedule_page.dart';
 import 'package:hai_time_app/view/weather_page.dart';
 
-class BottomNavigator extends StatefulWidget {
+class BottomNavigatorFirebase extends StatefulWidget {
   //
-  const BottomNavigator({super.key});
+  const BottomNavigatorFirebase({super.key});
 
   @override
-  State<BottomNavigator> createState() => _BottomNavigatorState();
+  State<BottomNavigatorFirebase> createState() =>
+      _BottomNavigatorFirebaseState();
 }
 
-class _BottomNavigatorState extends State<BottomNavigator> {
+class _BottomNavigatorFirebaseState extends State<BottomNavigatorFirebase> {
   int _selectedIndex = 0;
 
   late final List<Widget> _pages;
@@ -21,7 +22,7 @@ class _BottomNavigatorState extends State<BottomNavigator> {
     super.initState();
     _pages = [
       //  HomePage kirim callback ke Cuaca
-      HomePage(onGoToWeather: () => _onItemTapped(2)),
+      HomePageFirebase(onGoToWeather: () => _onItemTapped(2)),
       //  JadwalPage
       JadwalPage(onBackToHome: () => _onItemTapped(0)),
       //  CuacaPage

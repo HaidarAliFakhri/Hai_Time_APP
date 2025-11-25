@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hai_time_app/db/db_helper.dart';
-import 'package:hai_time_app/model/participant.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:hai_time_app/services/firebase.dart';
 
 class RegisterPageFireBase extends StatefulWidget {
   const RegisterPageFireBase({super.key});
@@ -31,31 +29,31 @@ class _RegisterPageFireBaseState extends State<RegisterPageFireBase> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
+
     setState(() => _isSaving = true);
 
-    final participant = Participant(
-      name: _nameC.text.trim(),
-      email: _emailC.text.trim(),
-      password: _passwordC.text.trim(),
-    );
-
     try {
-      await DBHelperTime().insertParticipant(participant);
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('registered_email', _emailC.text.trim());
-      await prefs.setString('registered_password', _passwordC.text.trim());
-      await prefs.setString('registered_name', _nameC.text.trim());
+      final user = await FirebaseService.registerUserFirebase(
+        email: _emailC.text.trim(),
+        username: _nameC.text.trim(),
+        password: _passwordC.text.trim(),
+      );
+
+      if (user == null) {
+        throw "Gagal membuat akun";
+      }
 
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Pendaftaran berhasil!')));
+      ).showSnackBar(const SnackBar(content: Text("Pendaftaran berhasil!")));
+
       Navigator.pop(context);
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Gagal menyimpan: $e')));
+      ).showSnackBar(SnackBar(content: Text("Error: $e")));
     } finally {
-      if (mounted) setState(() => _isSaving = false);
+      setState(() => _isSaving = false);
     }
   }
 

@@ -1,3 +1,4 @@
+// home_page_firebase.dart
 import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
@@ -7,15 +8,16 @@ import 'package:flutter/material.dart';
 import 'package:hai_time_app/screen/profile_firebase.dart';
 import 'package:hai_time_app/screen/setting_firebase.dart';
 import 'package:hai_time_app/services/weather_service.dart';
-import 'package:hai_time_app/view/activity_page.dart';
-import 'package:hai_time_app/view/add_activities.dart';
+import 'package:hai_time_app/view/activity_page_firebase.dart';
+import 'package:hai_time_app/view/add_activities_firebase.dart';
 import 'package:hai_time_app/view/prayer_schedule_page.dart';
 import 'package:hai_time_app/view/weather_page.dart';
 import 'package:hai_time_app/widget/sky_animation.dart';
 import 'package:intl/intl.dart';
+import '../services/activity_service.dart';
+import '../model/activitymodel.dart';
 
-import '../db/db_activity.dart';
-import '../model/activity.dart';
+// NOTE: db_activity.dart and model/activity.dart (sqflite) removed intentionally
 
 enum SkyTime { subuh, dzuhur, ashar, maghrib, isya }
 
@@ -33,8 +35,9 @@ class HomePageFirebase extends StatefulWidget {
 class _HomePageFirebaseState extends State<HomePageFirebase>
     with TickerProviderStateMixin {
   final AudioPlayer _audioPlayer = AudioPlayer();
+  final KegiatanService _service = KegiatanService();
+  final user = FirebaseAuth.instance.currentUser;
 
-  List<Kegiatan> _listKegiatan = [];
   String namaUser = "";
   String nextPrayerName = "";
   String nextPrayerTime = "";
@@ -50,6 +53,7 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
   };
 
   late AnimationController _animController;
+  Timer? _prayerTimer;
 
   @override
   void initState() {
@@ -60,39 +64,19 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
       duration: const Duration(seconds: 5),
     )..repeat();
 
-    _loadKegiatan();
-    _cekDanUpdateKegiatan();
-    _periksaKegiatanSelesai();
     _loadNamaUser();
     _updateNextPrayer();
 
-    Timer.periodic(const Duration(seconds: 30), (_) async {
-      await DBKegiatan().periksaKegiatanOtomatis();
-      _loadKegiatan();
-    });
-
-    DBKegiatan().onChange.listen((_) {
-      if (mounted) _loadKegiatan();
-    });
-
-    Timer.periodic(const Duration(seconds: 30), (_) => _updateNextPrayer());
+    // Update next prayer setiap 30 detik (sinkron dengan implementasi sebelumnya)
+    _prayerTimer = Timer.periodic(const Duration(seconds: 30), (_) => _updateNextPrayer());
   }
 
   @override
   void dispose() {
     _audioPlayer.dispose();
     _animController.dispose();
+    _prayerTimer?.cancel();
     super.dispose();
-  }
-
-  Future<void> _periksaKegiatanSelesai() async {
-    await DBKegiatan().periksaKegiatanOtomatis();
-    _loadKegiatan();
-  }
-
-  Future<void> _cekDanUpdateKegiatan() async {
-    await DBKegiatan().periksaKegiatanOtomatis();
-    await _loadKegiatan();
   }
 
   Future<void> _loadNamaUser() async {
@@ -107,33 +91,12 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
         .doc(user.uid)
         .get();
 
-    // 🔥 Ambil username jika ada
-    if (doc.exists && doc.data()!.containsKey('username')) {
+    // Ambil username jika ada, fallback ke email
+    if (doc.exists && doc.data() != null && doc.data()!.containsKey('username')) {
       setState(() => namaUser = doc['username']);
     } else {
-      // fallback ke email
       setState(() => namaUser = user.email ?? "User");
     }
-  }
-
-  Future<void> _loadKegiatan() async {
-    final data = await DBKegiatan().getKegiatanList();
-
-    if (!mounted) return;
-
-    setState(() {
-      _listKegiatan = data
-          .where((k) => k.status.trim().toLowerCase() != 'selesai')
-          .toList();
-    });
-    //   if (_listKegiatan.isEmpty) {
-    //   Future.microtask(() {
-    //     Navigator.push(
-    //       context,
-    //       MaterialPageRoute(builder: (_) => const ProfilePage()),
-    //     );
-    //   });
-    // }
   }
 
   Future<void> _playAdzanSound() async {
@@ -262,9 +225,10 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
         onPressed: () async {
           final result = await Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const TambahKegiatanPage()),
+            MaterialPageRoute(builder: (_) => const TambahKegiatanPageFirebase()),
           );
-          if (result == true) _loadKegiatan();
+          // StreamBuilder sudah realtime; trigger rebuild sebagai safety
+          if (result == true && mounted) setState(() {});
         },
         child: const Icon(Icons.add),
       ),
@@ -282,8 +246,7 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
       flexibleSpace: LayoutBuilder(
         builder: (context, constraints) {
           final percent =
-              ((constraints.maxHeight - kToolbarHeight) /
-                      (100 - kToolbarHeight))
+              ((constraints.maxHeight - kToolbarHeight) / (100 - kToolbarHeight))
                   .clamp(0.0, 1.0);
 
           return ClipRRect(
@@ -574,7 +537,6 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
       },
     );
   }
-
   //  CARD JADWAL SHOLAT
   Widget _buildPrayerCard() {
     return Container(
@@ -694,100 +656,201 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
     );
   }
 
-  /// 🔹 CARD KEGIATAN (Background Biru)
+  /// CARD KEGIATAN (Background Biru)
   Widget _buildKegiatanCard() {
-    final kegiatanAktif = _listKegiatan
-        .where((k) => k.status != "Selesai")
-        .toList();
+    if (user == null) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.blue.shade900,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Text(
+          "Silakan login untuk melihat kegiatan.",
+          style: TextStyle(color: Colors.white),
+        ),
+      );
+    }
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: const Color.fromARGB(
-          255,
-          8,
-          0,
-          114,
-        ), // 🔵 Warna biru muda background card
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue.shade200),
-      ),
+    return StreamBuilder<List<KegiatanFirebase>>(
+      stream: _service.getKegiatanUser(user!.uid),
+      builder: (context, snapshot) {
+        // Loading
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade900,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            ),
+          );
+        }
 
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 🔹 HEADER CARD
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        // Tidak ada data
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade900,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Text(
+              "Belum ada kegiatan.\nTambahkan kegiatanmu sekarang!",
+              style: TextStyle(color: Colors.white),
+            ),
+          );
+        }
+
+        final kegiatanList = snapshot.data!;
+        final kegiatanAktif = kegiatanList.where((k) => k.status != "Selesai").toList();
+
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          margin: const EdgeInsets.only(bottom: 10),
+          decoration: BoxDecoration(
+            color: const Color.fromARGB(255, 8, 0, 114),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.blue.shade200),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                "Kegiatan Anda",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.blue, // 🔵 Judul biru
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 11, 0, 172),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  "${kegiatanAktif.length} Kegiatan",
-                  style: const TextStyle(
-                    color: Colors.white, // 🔵 White text
-                    fontWeight: FontWeight.bold,
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Kegiatan Anda",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                    ),
                   ),
-                ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color.fromARGB(255, 11, 0, 172),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      "${kegiatanAktif.length} Kegiatan",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
               ),
+
+              const SizedBox(height: 12),
+
+              // Jika tidak ada kegiatan aktif
+              if (kegiatanAktif.isEmpty)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(12.0),
+                    child: Text(
+                      "Belum ada kegiatan.\nTekan tombol + untuk menambah.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.blueGrey),
+                    ),
+                  ),
+                )
+              else
+                ...kegiatanAktif.map((kegiatan) {
+                  return Card(
+                    color: Colors.white,
+                    child: ListTile(
+                      leading: const Icon(Icons.event, color: Colors.blue),
+                      title: Text(
+                        kegiatan.judul,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        "${kegiatan.lokasi}\n${kegiatan.tanggal} • ${kegiatan.waktu}",
+                      ),
+                      onTap: () async {
+                        // buka halaman detail firebase
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => KegiatanPageFirebase(kegiatan: kegiatan)
+
+                          ),
+                        );
+                        // stream realtime akan otomatis update; rebuild agar UI menyesuaikan
+                        if (mounted) setState(() {});
+                      },
+                      // long press to show actions (edit / delete)
+                      onLongPress: () {
+                        showModalBottomSheet(
+                          context: context,
+                          builder: (ctx) {
+                            return SafeArea(
+                              child: Wrap(
+                                children: [
+                                  ListTile(
+                                    leading: const Icon(Icons.edit),
+                                    title: const Text('Edit'),
+                                    onTap: () {
+                                      Navigator.pop(ctx);
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => TambahKegiatanPageFirebase(kegiatan: kegiatan)
+
+                                        ),
+                                      ).then((value) {
+                                        if (value == true && mounted) setState(() {});
+                                      });
+                                    },
+                                  ),
+                                  ListTile(
+                                    leading: const Icon(Icons.delete),
+                                    title: const Text('Hapus'),
+                                    onTap: () async {
+                                      Navigator.pop(ctx);
+                                      // Hapus via service
+                                      try {
+                                        await _service.deleteKegiatan(user!.uid, kegiatan.docId ?? "");
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Kegiatan dihapus')),
+                                          );
+                                        }
+                                      } catch (e) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(content: Text('Gagal menghapus: $e')),
+                                          );
+                                        }
+                                      }
+                                    },
+                                  ),
+                                  ListTile(
+                                    leading: const Icon(Icons.close),
+                                    title: const Text('Tutup'),
+                                    onTap: () => Navigator.pop(ctx),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  );
+                }).toList(),
             ],
           ),
-
-          const SizedBox(height: 12),
-
-          // 🔹 LIST KEGIATAN ATAU "BELUM ADA"
-          if (kegiatanAktif.isEmpty)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(12.0),
-                child: Text(
-                  "Belum ada kegiatan.\nTekan tombol + untuk menambah.",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.blueGrey),
-                ),
-              ),
-            )
-          else
-            ...kegiatanAktif.map((kegiatan) {
-              return Card(
-                color:
-                    Colors.white, // 🔹 Card item tetap putih agar lebih kontras
-                child: ListTile(
-                  leading: const Icon(Icons.event, color: Colors.blue),
-                  title: Text(
-                    kegiatan.judul,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(
-                    "${kegiatan.lokasi}\n${kegiatan.tanggal} • ${kegiatan.waktu}",
-                  ),
-                  onTap: () async {
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => KegiatanPage(kegiatan: kegiatan),
-                      ),
-                    );
-                    if (result == true) _loadKegiatan();
-                  },
-                ),
-              );
-            }),
-        ],
-      ),
+        );
+      },
     );
   }
 

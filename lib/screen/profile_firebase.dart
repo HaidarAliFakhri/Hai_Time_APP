@@ -165,7 +165,7 @@ class _ProfilePageFirebaseState extends State<ProfilePageFirebase> {
   }
 
   void _showEditBottomSheet(BuildContext context) {
-    final nameController = TextEditingController(text: nama);
+    // final nameController = TextEditingController(text: nama);
     final emailController = TextEditingController(text: email);
     final usernameController = TextEditingController(text: username);
 

@@ -1,5 +1,5 @@
 class KegiatanFirebase {
-  String? docId;        // ID dokumen Firebase
+  String? docId; // ID dokumen Firebase
   String judul;
   String lokasi;
   String tanggal;
@@ -10,6 +10,9 @@ class KegiatanFirebase {
 
   String? createdAt;
   String? updatedAt;
+
+  // NEW: notifId disimpan di Firestore untuk cancel/schedule yang konsisten
+  int? notifId;
 
   KegiatanFirebase({
     this.docId,
@@ -22,6 +25,7 @@ class KegiatanFirebase {
     this.pengingat = 0,
     this.createdAt,
     this.updatedAt,
+    this.notifId,
   });
 
   // FROM FIREBASE
@@ -37,6 +41,11 @@ class KegiatanFirebase {
       pengingat: map['pengingat'] ?? 0,
       createdAt: map['createdAt'],
       updatedAt: map['updatedAt'],
+      notifId: map['notifId'] is int
+          ? map['notifId'] as int
+          : (map['notifId'] != null
+                ? int.tryParse(map['notifId'].toString())
+                : null),
     );
   }
 
@@ -52,6 +61,7 @@ class KegiatanFirebase {
       'pengingat': pengingat,
       'createdAt': createdAt ?? DateTime.now().toIso8601String(),
       'updatedAt': updatedAt ?? DateTime.now().toIso8601String(),
+      'notifId': notifId,
     };
   }
 
@@ -66,6 +76,7 @@ class KegiatanFirebase {
     int? pengingat,
     String? createdAt,
     String? updatedAt,
+    int? notifId,
   }) {
     return KegiatanFirebase(
       docId: docId ?? this.docId,
@@ -78,6 +89,7 @@ class KegiatanFirebase {
       pengingat: pengingat ?? this.pengingat,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      notifId: notifId ?? this.notifId,
     );
   }
 }

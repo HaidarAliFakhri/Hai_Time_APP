@@ -1,13 +1,12 @@
 import 'dart:math' show sin, cos, sqrt, atan2, pi;
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hai_time_app/model/activitymodel.dart';
 import 'package:hai_time_app/services/activity_service.dart';
 import 'package:hai_time_app/services/weather_service.dart';
-import 'package:hai_time_app/utils/weather_helper.dart';
 import 'package:hai_time_app/view/add_activities_firebase.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -62,8 +61,9 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied ||
             permission == LocationPermission.deniedForever) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(const SnackBar(content: Text("Izin lokasi ditolak")));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text("Izin lokasi ditolak")));
           setState(() => loading = false);
           return;
         }
@@ -109,9 +109,9 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
         jarakKeTujuan = "${jarakKm.toStringAsFixed(1)} km";
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Gagal menghitung estimasi: $e")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Gagal menghitung estimasi: $e")));
     } finally {
       setState(() => loading = false);
     }
@@ -122,7 +122,8 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
     var dLat = (lat2 - lat1) * pi / 180;
     var dLon = (lon2 - lon1) * pi / 180;
 
-    var a = sin(dLat / 2) * sin(dLat / 2) +
+    var a =
+        sin(dLat / 2) * sin(dLat / 2) +
         cos(lat1 * pi / 180) *
             cos(lat2 * pi / 180) *
             sin(dLon / 2) *
@@ -157,9 +158,9 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
         throw "Tidak bisa membuka Google Maps";
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Gagal membuka Google Maps: $e")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Gagal membuka Google Maps: $e")));
     }
   }
 
@@ -224,8 +225,10 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text("Detail Kegiatan",
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          "Detail Kegiatan",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
         elevation: 0,
         flexibleSpace: Container(
@@ -245,7 +248,6 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             // CARD INFO KEGIATAN
             _buildCard(
               child: Column(
@@ -261,7 +263,11 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.location_on_outlined, size: 18, color: Colors.blue),
+                      const Icon(
+                        Icons.location_on_outlined,
+                        size: 18,
+                        color: Colors.blue,
+                      ),
                       const SizedBox(width: 4),
                       Expanded(child: Text(kegiatan.lokasi)),
                     ],
@@ -269,11 +275,19 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      const Icon(Icons.calendar_today_outlined, size: 16, color: Colors.blue),
+                      const Icon(
+                        Icons.calendar_today_outlined,
+                        size: 16,
+                        color: Colors.blue,
+                      ),
                       const SizedBox(width: 6),
                       Text("Tanggal: ${kegiatan.tanggal}"),
                       const SizedBox(width: 16),
-                      const Icon(Icons.access_time, size: 16, color: Colors.blue),
+                      const Icon(
+                        Icons.access_time,
+                        size: 16,
+                        color: Colors.blue,
+                      ),
                       const SizedBox(width: 6),
                       Text("Waktu: ${kegiatan.waktu}"),
                     ],
@@ -289,8 +303,10 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Informasi Perjalanan",
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  const Text(
+                    "Informasi Perjalanan",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 12),
 
                   Row(
@@ -337,8 +353,10 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.map, color: Colors.blue, size: 28),
-                            Text("Lihat rute di Google Maps",
-                                style: TextStyle(color: Colors.blue)),
+                            Text(
+                              "Lihat rute di Google Maps",
+                              style: TextStyle(color: Colors.blue),
+                            ),
                           ],
                         ),
                       ),
@@ -384,15 +402,19 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text("Catatan",
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        )),
+                    const Text(
+                      "Catatan",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
                     const SizedBox(height: 8),
-                    Text(kegiatan.catatan!,
-                        style: const TextStyle(color: Colors.white)),
+                    Text(
+                      kegiatan.catatan!,
+                      style: const TextStyle(color: Colors.white),
+                    ),
                   ],
                 ),
               ),
@@ -409,7 +431,10 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
                     elevation: 0,
                   ),
                   icon: const Icon(Icons.edit, color: Colors.black),
-                  label: const Text("Edit", style: TextStyle(color: Colors.black)),
+                  label: const Text(
+                    "Edit",
+                    style: TextStyle(color: Colors.black),
+                  ),
                   onPressed: () async {
                     final result = await Navigator.push(
                       context,
@@ -431,13 +456,18 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
                     side: const BorderSide(color: Colors.red),
                   ),
                   icon: const Icon(Icons.delete, color: Colors.red),
-                  label: const Text("Hapus", style: TextStyle(color: Colors.red)),
+                  label: const Text(
+                    "Hapus",
+                    style: TextStyle(color: Colors.red),
+                  ),
                   onPressed: () async {
                     final konfirmasi = await showDialog<bool>(
                       context: context,
                       builder: (context) => AlertDialog(
                         title: const Text("Konfirmasi Hapus"),
-                        content: const Text("Apakah kamu yakin ingin menghapus kegiatan ini?"),
+                        content: const Text(
+                          "Apakah kamu yakin ingin menghapus kegiatan ini?",
+                        ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context, false),
@@ -445,7 +475,10 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
                           ),
                           TextButton(
                             onPressed: () => Navigator.pop(context, true),
-                            child: const Text("Hapus", style: TextStyle(color: Colors.red)),
+                            child: const Text(
+                              "Hapus",
+                              style: TextStyle(color: Colors.red),
+                            ),
                           ),
                         ],
                       ),
@@ -456,7 +489,9 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
                       final currentUser = FirebaseAuth.instance.currentUser;
                       if (currentUser == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Silakan login terlebih dahulu")),
+                          const SnackBar(
+                            content: Text("Silakan login terlebih dahulu"),
+                          ),
                         );
                         return;
                       }
@@ -465,7 +500,9 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
                       final docId = widget.kegiatan.docId;
                       if (docId == null || docId.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("DocId kegiatan tidak tersedia")),
+                          const SnackBar(
+                            content: Text("DocId kegiatan tidak tersedia"),
+                          ),
                         );
                         return;
                       }
@@ -491,29 +528,35 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
                 label: const Text("Tandai Selesai"),
                 onPressed: () async {
                   final currentUser = FirebaseAuth.instance.currentUser;
+
                   if (currentUser == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Silakan login terlebih dahulu")),
+                      const SnackBar(
+                        content: Text("Silakan login terlebih dahulu"),
+                      ),
                     );
                     return;
                   }
 
-                  // buat salinan kegiatan dengan status baru (copyWith sudah tersedia)
-                  final updated = widget.kegiatan.copyWith(status: "Selesai", updatedAt: DateTime.now().toIso8601String());
+                  // copy dengan status selesai + updatedAt baru
+                  final updated = widget.kegiatan.copyWith(
+                    status: "Selesai",
+                    updatedAt: DateTime.now().toIso8601String(),
+                  );
 
-                  // panggil service sesuai signature: (uid, KegiatanFirebase)
                   await _service.updateKegiatan(currentUser.uid, updated);
 
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("✅ Kegiatan ditandai sebagai selesai")),
+                      const SnackBar(
+                        content: Text("✅ Kegiatan ditandai sebagai selesai"),
+                      ),
                     );
                     Navigator.pop(context, true);
                   }
                 },
               ),
             ),
-
           ],
         ),
       ),

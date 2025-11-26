@@ -15,8 +15,9 @@ import 'package:hai_time_app/view/prayer_schedule_page.dart';
 import 'package:hai_time_app/view/weather_page.dart';
 import 'package:hai_time_app/widget/sky_animation.dart';
 import 'package:intl/intl.dart';
-import '../services/activity_service.dart';
+
 import '../model/activitymodel.dart';
+import '../services/activity_service.dart';
 
 // NOTE: db_activity.dart and model/activity.dart (sqflite) removed intentionally
 
@@ -70,7 +71,10 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
     _updateNextPrayer();
 
     // Update next prayer setiap 30 detik (sinkron dengan implementasi sebelumnya)
-    _prayerTimer = Timer.periodic(const Duration(seconds: 30), (_) => _updateNextPrayer());
+    _prayerTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) => _updateNextPrayer(),
+    );
   }
 
   @override
@@ -94,7 +98,9 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
         .get();
 
     // Ambil username jika ada, fallback ke email
-    if (doc.exists && doc.data() != null && doc.data()!.containsKey('username')) {
+    if (doc.exists &&
+        doc.data() != null &&
+        doc.data()!.containsKey('username')) {
       setState(() => namaUser = doc['username']);
     } else {
       setState(() => namaUser = user.email ?? "User");
@@ -227,7 +233,9 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
         onPressed: () async {
           final result = await Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const TambahKegiatanPageFirebase()),
+            MaterialPageRoute(
+              builder: (_) => const TambahKegiatanPageFirebase(),
+            ),
           );
           // StreamBuilder sudah realtime; trigger rebuild sebagai safety
           if (result == true && mounted) setState(() {});
@@ -248,7 +256,8 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
       flexibleSpace: LayoutBuilder(
         builder: (context, constraints) {
           final percent =
-              ((constraints.maxHeight - kToolbarHeight) / (100 - kToolbarHeight))
+              ((constraints.maxHeight - kToolbarHeight) /
+                      (100 - kToolbarHeight))
                   .clamp(0.0, 1.0);
 
           return ClipRRect(
@@ -541,6 +550,7 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
       },
     );
   }
+
   //  CARD JADWAL SHOLAT
   Widget _buildPrayerCard() {
     return Container(
@@ -709,8 +719,9 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
         }
 
         final kegiatanList = snapshot.data!;
-        final kegiatanAktif = kegiatanList.where((k) => k.status != "Selesai").toList();
-
+        final kegiatanAktif = kegiatanList
+            .where((k) => k.status != "Selesai")
+            .toList();
 
         return Container(
           padding: const EdgeInsets.all(16),
@@ -736,7 +747,10 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color.fromARGB(255, 11, 0, 172),
                       borderRadius: BorderRadius.circular(8),
@@ -784,8 +798,8 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
                         await Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => KegiatanPageFirebase(kegiatan: kegiatan)
-
+                            builder: (_) =>
+                                KegiatanPageFirebase(kegiatan: kegiatan),
                           ),
                         );
                         // stream realtime akan otomatis update; rebuild agar UI menyesuaikan
@@ -807,11 +821,14 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (_) => TambahKegiatanPageFirebase(kegiatan: kegiatan)
-
+                                          builder: (_) =>
+                                              TambahKegiatanPageFirebase(
+                                                kegiatan: kegiatan,
+                                              ),
                                         ),
                                       ).then((value) {
-                                        if (value == true && mounted) setState(() {});
+                                        if (value == true && mounted)
+                                          setState(() {});
                                       });
                                     },
                                   ),
@@ -822,16 +839,29 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
                                       Navigator.pop(ctx);
                                       // Hapus via service
                                       try {
-                                        await _service.deleteKegiatan(user!.uid, kegiatan.docId ?? "");
+                                        await _service.deleteKegiatan(
+                                          user!.uid,
+                                          kegiatan.docId ?? "",
+                                        );
                                         if (mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('Kegiatan dihapus')),
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Kegiatan dihapus'),
+                                            ),
                                           );
                                         }
                                       } catch (e) {
                                         if (mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(content: Text('Gagal menghapus: $e')),
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'Gagal menghapus: $e',
+                                              ),
+                                            ),
                                           );
                                         }
                                       }
@@ -850,7 +880,7 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
                       },
                     ),
                   );
-                }).toList(),
+                }),
             ],
           ),
         );

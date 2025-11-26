@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:ui';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,17 +6,15 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:hai_time_app/model/activity.dart';
 import 'package:hai_time_app/model/user_firebase_model.dart';
 import 'package:hai_time_app/page/bottom_navigator_firebase.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../db/db_activity.dart';
 
 class ProfilePageFirebase extends StatefulWidget {
-  //
-
   const ProfilePageFirebase({super.key});
 
   @override
@@ -34,6 +31,7 @@ class _ProfilePageFirebaseState extends State<ProfilePageFirebase> {
   String? profileUrl;
 
   final DBKegiatan db = DBKegiatan();
+  final user = FirebaseAuth.instance.currentUser;
 
   @override
   void initState() {
@@ -42,6 +40,69 @@ class _ProfilePageFirebaseState extends State<ProfilePageFirebase> {
     _loadUserData();
     _getCurrentLocation();
     _loadJoinDate();
+  }
+
+  Stream<Map<String, int>> streamFirebaseStatistik() {
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+    final ref = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('kegiatan');
+
+    // Stream Total
+    final totalStream = ref.snapshots().map((snap) => snap.size);
+
+    // Stream Selesai
+    final selesaiStream = ref
+        .where('status', isEqualTo: 'Selesai')
+        .snapshots()
+        .map((snap) => snap.size);
+
+    // Stream Minggu Ini
+    final now = DateTime.now();
+    final mingguLalu = now.subtract(Duration(days: 7));
+
+    final mingguIniStream = ref
+        .where('createdAt', isGreaterThanOrEqualTo: mingguLalu)
+        .snapshots()
+        .map((snap) => snap.size);
+
+    // Gabungkan 3 stream jadi 1 data Map<String,int>
+    return Rx.combineLatest3(totalStream, selesaiStream, mingguIniStream, (
+      int total,
+      int selesai,
+      int mingguIni,
+    ) {
+      return {"total": total, "selesai": selesai, "mingguIni": mingguIni};
+    });
+  }
+
+  Future<Map<String, int>> getFirebaseStatistik() async {
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+    final ref = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('kegiatan');
+
+    // Total
+    final totalSnap = await ref.get();
+
+    // Selesai
+    final selesaiSnap = await ref.where('status', isEqualTo: 'Selesai').get();
+
+    // Minggu ini
+    final now = DateTime.now();
+    final mingguLalu = now.subtract(Duration(days: 7));
+
+    final mingguIniSnap = await ref
+        .where('createdAt', isGreaterThanOrEqualTo: mingguLalu)
+        .get();
+
+    return {
+      "total": totalSnap.size,
+      "selesai": selesaiSnap.size,
+      "mingguIni": mingguIniSnap.size,
+    };
   }
 
   Future<void> _loadUserData() async {
@@ -165,7 +226,6 @@ class _ProfilePageFirebaseState extends State<ProfilePageFirebase> {
   }
 
   void _showEditBottomSheet(BuildContext context) {
-    // final nameController = TextEditingController(text: nama);
     final emailController = TextEditingController(text: email);
     final usernameController = TextEditingController(text: username);
 
@@ -345,6 +405,64 @@ class _ProfilePageFirebaseState extends State<ProfilePageFirebase> {
     return url;
   }
 
+  // ---------------------------
+  // Helper untuk bottom sheet konfirmasi HAPUS (dipanggil dari StreamBuilder)
+  // ---------------------------
+  Widget _buildBottomSheetConfirm(String judul) {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 5,
+            decoration: BoxDecoration(
+              color: Colors.grey[400],
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            "Hapus Aktivitas?",
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            "Apakah kamu yakin ingin menghapus aktivitas ini?\n\n‘$judul’",
+            style: TextStyle(color: Colors.grey[700]),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              minimumSize: const Size(double.infinity, 50),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text("Hapus", style: TextStyle(color: Colors.white)),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 50),
+              side: const BorderSide(color: Colors.grey),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text("Batal"),
+          ),
+          const SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -355,7 +473,7 @@ class _ProfilePageFirebaseState extends State<ProfilePageFirebase> {
             pinned: true,
             expandedHeight: 280,
             backgroundColor: Colors.transparent,
-            centerTitle: true, // ini yang bikin teks di tengah
+            centerTitle: true,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back, color: Colors.white),
               onPressed: () {
@@ -374,7 +492,6 @@ class _ProfilePageFirebaseState extends State<ProfilePageFirebase> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             flexibleSpace: LayoutBuilder(
               builder: (context, constraints) {
                 final expandedHeight = 280.0;
@@ -406,11 +523,10 @@ class _ProfilePageFirebaseState extends State<ProfilePageFirebase> {
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          // Avatar (menghilang cepat)
                           Align(
                             alignment: const Alignment(-0.0, 0.15),
                             child: Opacity(
-                              opacity: avatarFast, // sudah ada opacity
+                              opacity: avatarFast,
                               child: Transform.scale(
                                 scale: avatarScale,
                                 alignment: Alignment.center,
@@ -458,12 +574,10 @@ class _ProfilePageFirebaseState extends State<ProfilePageFirebase> {
                               ),
                             ),
                           ),
-
-                          // Tombol edit yang ikut menghilang bersama avatar
                           Align(
                             alignment: const Alignment(0.38, 0.45),
                             child: Opacity(
-                              opacity: avatarFast, // sudah ada opacity
+                              opacity: avatarFast,
                               child: Transform.scale(
                                 scale: avatarScale,
                                 alignment: Alignment.center,
@@ -493,22 +607,18 @@ class _ProfilePageFirebaseState extends State<ProfilePageFirebase> {
                                       final url = await uploadProfileImage(
                                         user.uid,
                                       );
-
-                                      if (url != null) {
+                                      if (url != null)
                                         setState(() => profileUrl = url);
-                                      }
                                     },
                                   ),
                                 ),
                               ),
                             ),
                           ),
-
-                          // Nama kecil di area expanded (hanya dekorasi)
                           Align(
                             alignment: const Alignment(0, 0.7),
                             child: Opacity(
-                              opacity: t.clamp(0.0, 1.0), // sudah ada opacity
+                              opacity: t.clamp(0.0, 1.0),
                               child: Padding(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 24.0,
@@ -534,14 +644,13 @@ class _ProfilePageFirebaseState extends State<ProfilePageFirebase> {
             ),
           ),
 
-          // Bagian isi bawah
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Info dasar
+                  // Info dasar (tidak diubah)
                   Card(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -559,7 +668,6 @@ class _ProfilePageFirebaseState extends State<ProfilePageFirebase> {
                             title: const Text("Email"),
                             subtitle: Text(email),
                           ),
-
                           const Divider(),
                           ListTile(
                             leading: const Icon(Icons.tag, color: Colors.blue),
@@ -598,7 +706,7 @@ class _ProfilePageFirebaseState extends State<ProfilePageFirebase> {
 
                   const SizedBox(height: 25),
 
-                  // Statistik Aktivitas
+                  // Statistik Aktivitas (menggunakan DB lokal sesuai permintaan)
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
@@ -612,14 +720,15 @@ class _ProfilePageFirebaseState extends State<ProfilePageFirebase> {
                   ),
                   const SizedBox(height: 10),
 
-                  FutureBuilder<Map<String, int>>(
-                    future: db.getStatistik(),
-
+                  StreamBuilder<Map<String, int>>(
+                    stream: streamFirebaseStatistik(),
                     builder: (context, snapshot) {
                       if (!snapshot.hasData) {
                         return const Center(child: CircularProgressIndicator());
                       }
+
                       final data = snapshot.data!;
+
                       return SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: Row(
@@ -647,7 +756,7 @@ class _ProfilePageFirebaseState extends State<ProfilePageFirebase> {
 
                   const SizedBox(height: 25),
 
-                  //  Aktivitas Terakhir
+                  // Aktivitas Terakhir — Firestore stream (stabil & terurut)
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -662,8 +771,6 @@ class _ProfilePageFirebaseState extends State<ProfilePageFirebase> {
                               fontSize: 16,
                             ),
                           ),
-
-                          // 🟦 HINT "Geser untuk Menghapus"
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 10,
@@ -683,8 +790,7 @@ class _ProfilePageFirebaseState extends State<ProfilePageFirebase> {
                                   color: Colors.blue,
                                 ),
                                 SizedBox(
-                                  width:
-                                      145, // optional: batasi lebar agar wrapping konsisten
+                                  width: 145,
                                   child: Text(
                                     "Tekan & Tahan untuk Menghapus",
                                     style: TextStyle(
@@ -699,10 +805,7 @@ class _ProfilePageFirebaseState extends State<ProfilePageFirebase> {
                           ),
                         ],
                       ),
-
                       const SizedBox(height: 6),
-
-                      // Bar kecil pembatas modern
                       Container(
                         height: 2,
                         width: double.infinity,
@@ -713,241 +816,153 @@ class _ProfilePageFirebaseState extends State<ProfilePageFirebase> {
 
                   const SizedBox(height: 10),
 
-                  StreamBuilder<void>(
-                    stream: db.onChange,
-                    builder: (context, snapshot) {
-                      return FutureBuilder<List<Kegiatan>>(
-                        future: db.getKegiatanSelesai(),
-                        builder: (context, snapshot) {
-                          if (!snapshot.hasData) {
-                            return const Center(
-                              child: CircularProgressIndicator(),
-                            );
-                          }
-                          final selesai = snapshot.data!;
-                          if (selesai.isEmpty) {
-                            return const Text("Belum ada aktivitas selesai");
-                          }
-                          return Column(
-                            children: selesai.map((k) {
-                              return Column(
-                                children: selesai.map((k) {
-                                  return GestureDetector(
-                                    onLongPress: () async {
-                                      final confirm = await showModalBottomSheet<bool>(
-                                        context: context,
-                                        shape: const RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.vertical(
-                                            top: Radius.circular(20),
-                                          ),
-                                        ),
-                                        builder: (ctx) => Padding(
-                                          padding: const EdgeInsets.all(20),
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Container(
-                                                width: 40,
-                                                height: 5,
-                                                decoration: BoxDecoration(
-                                                  color: Colors.grey[400],
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
-                                                ),
-                                              ),
+                  // -------------- StreamBuilder Firestore --------------
+                  if (user == null)
+                    const Text("Silakan login untuk melihat aktivitas")
+                  else
+                    StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(user!.uid)
+                          .collection('kegiatan')
+                          .where('status', isEqualTo: 'Selesai')
+                          .orderBy(
+                            'createdAt',
+                            descending: true,
+                          ) // cuma ini saja
+                          .snapshots(),
 
-                                              const SizedBox(height: 20),
-
-                                              const Text(
-                                                "Hapus Aktivitas?",
-                                                style: TextStyle(
-                                                  fontSize: 20,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-
-                                              const SizedBox(height: 10),
-
-                                              Text(
-                                                "Apakah kamu yakin ingin menghapus aktivitas ini?",
-                                                style: TextStyle(
-                                                  color: Colors.grey[700],
-                                                ),
-                                                textAlign: TextAlign.center,
-                                              ),
-
-                                              const SizedBox(height: 20),
-
-                                              ElevatedButton(
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor:
-                                                      Colors.redAccent,
-                                                  minimumSize: const Size(
-                                                    double.infinity,
-                                                    50,
-                                                  ),
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          12,
-                                                        ),
-                                                  ),
-                                                ),
-                                                onPressed: () =>
-                                                    Navigator.of(ctx).pop(true),
-                                                child: const Text(
-                                                  "Hapus",
-                                                  style: TextStyle(
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                              ),
-
-                                              const SizedBox(height: 8),
-
-                                              OutlinedButton(
-                                                style: OutlinedButton.styleFrom(
-                                                  minimumSize: const Size(
-                                                    double.infinity,
-                                                    50,
-                                                  ),
-                                                  side: const BorderSide(
-                                                    color: Colors.grey,
-                                                  ),
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          12,
-                                                        ),
-                                                  ),
-                                                ),
-                                                onPressed: () => Navigator.of(
-                                                  ctx,
-                                                ).pop(false),
-                                                child: const Text("Batal"),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      );
-
-                                      if (confirm == true) {
-                                        final deletedKegiatan = k;
-                                        await db.deleteKegiatan(k.id!);
-                                        db.notifyListeners();
-
-                                        // SNACKBAR UNDO
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            behavior: SnackBarBehavior.floating,
-                                            backgroundColor: Colors.transparent,
-                                            elevation: 0,
-                                            duration: const Duration(
-                                              seconds: 4,
-                                            ),
-                                            content: ClipRRect(
-                                              borderRadius:
-                                                  BorderRadius.circular(18),
-                                              child: BackdropFilter(
-                                                filter: ImageFilter.blur(
-                                                  sigmaX: 10,
-                                                  sigmaY: 10,
-                                                ),
-                                                child: Container(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        vertical: 14,
-                                                        horizontal: 16,
-                                                      ),
-                                                  decoration: BoxDecoration(
-                                                    color: const Color.fromARGB(
-                                                      255,
-                                                      0,
-                                                      2,
-                                                      99,
-                                                    ).withOpacity(0.25),
-                                                    border: Border.all(
-                                                      color:
-                                                          const Color.fromARGB(
-                                                            255,
-                                                            0,
-                                                            0,
-                                                            0,
-                                                          ).withOpacity(0.4),
-                                                    ),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          18,
-                                                        ),
-                                                  ),
-                                                  child: Row(
-                                                    children: [
-                                                      const Icon(
-                                                        Icons.info_outline,
-                                                        color: Colors.white,
-                                                      ),
-                                                      const SizedBox(width: 12),
-                                                      Expanded(
-                                                        child: Text(
-                                                          "‘${k.judul}’ telah dihapus",
-                                                          style:
-                                                              const TextStyle(
-                                                                color: Colors
-                                                                    .white,
-                                                                fontSize: 15,
-                                                              ),
-                                                        ),
-                                                      ),
-                                                      TextButton(
-                                                        onPressed: () async {
-                                                          await db
-                                                              .insertKegiatan(
-                                                                deletedKegiatan,
-                                                              );
-                                                          db.notifyListeners();
-                                                        },
-                                                        child: const Text(
-                                                          "Undo",
-                                                          style: TextStyle(
-                                                            color:
-                                                                Color.fromARGB(
-                                                                  255,
-                                                                  255,
-                                                                  0,
-                                                                  0,
-                                                                ),
-                                                            fontWeight:
-                                                                FontWeight.bold,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      }
-                                    },
-
-                                    child: _buildActivityCard(
-                                      k.judul,
-                                      k.tanggal,
-                                      "Selesai",
-                                      true,
-                                    ),
-                                  );
-                                }).toList(),
-                              );
-                            }).toList(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Padding(
+                            padding: EdgeInsets.all(20),
+                            child: Center(child: CircularProgressIndicator()),
                           );
-                        },
-                      );
-                    },
-                  ),
+                        }
+
+                        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 10),
+                            child: Text("Belum ada aktivitas selesai"),
+                          );
+                        }
+
+                        final docs = snapshot.data!.docs;
+
+                        // tampilkan dengan ListView.builder (shrinkWrap)
+                        return ListView.builder(
+                          physics: const NeverScrollableScrollPhysics(),
+                          shrinkWrap: true,
+                          itemCount: docs.length,
+                          itemBuilder: (context, index) {
+                            final doc = docs[index];
+                            final data = doc.data() as Map<String, dynamic>;
+                            final docId = doc.id;
+
+                            final judul = data['judul'] ?? "-";
+                            final tanggal = data['tanggal'] ?? "-";
+
+                            return GestureDetector(
+                              onLongPress: () async {
+                                final confirm =
+                                    await showModalBottomSheet<bool>(
+                                      context: context,
+                                      shape: const RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.vertical(
+                                          top: Radius.circular(20),
+                                        ),
+                                      ),
+                                      builder: (ctx) =>
+                                          _buildBottomSheetConfirm(judul),
+                                    );
+
+                                if (confirm != true) return;
+
+                                final deletedData = Map<String, dynamic>.from(
+                                  data,
+                                );
+
+                                try {
+                                  await FirebaseFirestore.instance
+                                      .collection('users')
+                                      .doc(user!.uid)
+                                      .collection('kegiatan')
+                                      .doc(docId)
+                                      .delete();
+                                } catch (e) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text("Gagal menghapus: $e"),
+                                      ),
+                                    );
+                                  }
+                                  return;
+                                }
+
+                                if (!mounted) return;
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    duration: const Duration(seconds: 4),
+                                    content: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text("‘$judul’ telah dihapus"),
+                                        ),
+                                        TextButton(
+                                          child: const Text("Undo"),
+                                          onPressed: () async {
+                                            try {
+                                              await FirebaseFirestore.instance
+                                                  .collection("users")
+                                                  .doc(user!.uid)
+                                                  .collection("kegiatan")
+                                                  .doc(docId)
+                                                  .set(deletedData);
+                                              if (mounted) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      "Dibatalkan (Undo)",
+                                                    ),
+                                                  ),
+                                                );
+                                              }
+                                            } catch (e) {
+                                              if (mounted) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      "Gagal mengembalikan: $e",
+                                                    ),
+                                                  ),
+                                                );
+                                              }
+                                            }
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: _buildActivityCard(
+                                judul,
+                                tanggal,
+                                "Selesai",
+                                true,
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
 
                   const SizedBox(height: 25),
 
@@ -1026,7 +1041,7 @@ class _ProfilePageFirebaseState extends State<ProfilePageFirebase> {
               color: Colors.blue.shade100.withOpacity(0.4),
               blurRadius: 12,
               spreadRadius: 2,
-              offset: Offset(0, 4),
+              offset: const Offset(0, 4),
             ),
           ],
           border: Border.all(color: Colors.blue.shade100.withOpacity(0.3)),

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../model/activitymodel.dart';
 
 class KegiatanService {
@@ -6,13 +7,17 @@ class KegiatanService {
 
   // 1️⃣ Tambah kegiatan
   Future<void> addKegiatan(String uid, KegiatanFirebase kegiatan) async {
-    final ref = _db
-        .collection("users")
-        .doc(uid)
-        .collection("kegiatan")
-        .doc();
+    final ref = _db.collection("users").doc(uid).collection("kegiatan").doc();
 
-    final data = kegiatan.copyWith(docId: ref.id);
+    final now = DateTime.now().toIso8601String();
+
+    // Ensure notifId handled by caller normally, but if not present, we'll keep null here.
+    // Prefer caller (UI) to create notifId via NotifikasiService.generateSafeNotifId()
+    final data = kegiatan.copyWith(
+      docId: ref.id,
+      createdAt: now,
+      updatedAt: now,
+    );
 
     await ref.set(data.toMap());
   }
@@ -23,28 +28,28 @@ class KegiatanService {
         .collection("users")
         .doc(uid)
         .collection("kegiatan")
-        .orderBy('tanggal')
-        .orderBy('waktu')
+        // orderBy createdAt descending gives newest first and avoids composite index issues
+        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return KegiatanFirebase.fromMap(doc.data(), doc.id);
-      }).toList();
-    });
+          return snapshot.docs.map((doc) {
+            return KegiatanFirebase.fromMap(doc.data(), doc.id);
+          }).toList();
+        });
   }
 
   // 3️⃣ Update kegiatan
   Future<void> updateKegiatan(String uid, KegiatanFirebase kegiatan) async {
+    // ensure updatedAt set
+    final updated = kegiatan.copyWith(
+      updatedAt: DateTime.now().toIso8601String(),
+    );
     await _db
         .collection("users")
         .doc(uid)
         .collection("kegiatan")
         .doc(kegiatan.docId)
-        .update(
-          kegiatan.copyWith(
-            updatedAt: DateTime.now().toIso8601String(),
-          ).toMap(),
-        );
+        .update(updated.toMap());
   }
 
   // 4️⃣ Hapus kegiatan
@@ -64,12 +69,12 @@ class KegiatanService {
         .doc(uid)
         .collection("kegiatan")
         .where('status', isEqualTo: 'Selesai')
-        .orderBy('tanggal', descending: true)
+        .orderBy('updatedAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        return KegiatanFirebase.fromMap(doc.data(), doc.id);
-      }).toList();
-    });
+          return snapshot.docs.map((doc) {
+            return KegiatanFirebase.fromMap(doc.data(), doc.id);
+          }).toList();
+        });
   }
 }

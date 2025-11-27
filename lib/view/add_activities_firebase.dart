@@ -5,7 +5,15 @@ import 'package:hai_time_app/model/activitymodel.dart';
 import 'package:hai_time_app/page/home_page_firebase.dart';
 import 'package:hai_time_app/services/activity_service.dart';
 import 'package:hai_time_app/services/notification_service.dart';
+import 'package:hai_time_app/view/activity_page_firebase.dart';
 import 'package:intl/intl.dart';
+import 'package:google_places_flutter/google_places_flutter.dart';
+import 'package:google_places_flutter/model/prediction.dart';
+
+
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+
+
 
 class TambahKegiatanPageFirebase extends StatefulWidget {
   final KegiatanFirebase? kegiatan;
@@ -19,6 +27,9 @@ class TambahKegiatanPageFirebase extends StatefulWidget {
 
 class _TambahKegiatanPageFirebaseState
     extends State<TambahKegiatanPageFirebase> {
+  double? _latitude;
+  double? _longitude;
+
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _judulController = TextEditingController();
   final TextEditingController _lokasiController = TextEditingController();
@@ -35,6 +46,7 @@ class _TambahKegiatanPageFirebaseState
   @override
   void initState() {
     super.initState();
+  const String googleApiKey = "AIzaSyDk_IqTjxDnhlwFcVf8bYfNR0qBtEGAyJw";
 
     if (widget.kegiatan != null) {
       _judulController.text = widget.kegiatan!.judul;
@@ -93,7 +105,7 @@ class _TambahKegiatanPageFirebaseState
 
     return null;
   }
-
+  
   Future<void> _pilihTanggal() async {
     final picked = await showDatePicker(
       context: context,
@@ -133,6 +145,29 @@ class _TambahKegiatanPageFirebaseState
     final minute = t.minute.toString().padLeft(2, '0');
     return '$hour:$minute';
   }
+  Future<void> _pilihLokasi() async {
+  Prediction? p = await PlacesAutocomplete.show(
+    context: context,
+    apiKey: kGoogleApiKey,
+    mode: Mode.overlay,
+    language: "id",
+    components: [Component(Component.country, "id")],
+  );
+
+  if (p != null) {
+    final places = GoogleMapsPlaces(apiKey: googleApiKey);
+    final detail = await places.getDetailsByPlaceId(p.placeId!);
+
+    final loc = detail.result.geometry!.location;
+
+    setState(() {
+      _lokasiController.text = detail.result.name;
+      _latitude = loc.lat;
+      _longitude = loc.lng;
+    });
+  }
+}
+
 
   void _simpanKegiatan() async {
     if (_isSaving) return;
@@ -156,17 +191,17 @@ class _TambahKegiatanPageFirebaseState
     try {
       // Build data WITHOUT notifId first
       KegiatanFirebase data = KegiatanFirebase(
-        judul: _judulController.text,
-        lokasi: _lokasiController.text,
-        tanggal: _tanggalController.text,
-        waktu: _timeOfDayTo24HourString(parsedTime),
-        catatan: _catatanController.text.isEmpty
-            ? null
-            : _catatanController.text,
-        pengingat: _pengingatMenit,
-        status: widget.kegiatan?.status ?? "Belum Selesai",
-        // createdAt/updatedAt will be set by service
-      );
+      judul: _judulController.text,
+      lokasi: _lokasiController.text,
+      latitude: _latitude,
+      longitude: _longitude,
+      tanggal: _tanggalController.text,
+      waktu: _timeOfDayTo24HourString(parsedTime),
+      catatan: _catatanController.text.isEmpty ? null : _catatanController.text,
+      pengingat: _pengingatMenit,
+      status: widget.kegiatan?.status ?? "Belum Selesai",
+    );
+
 
       if (widget.kegiatan != null) {
         // EDIT: preserve docId and notifId if exists
@@ -323,13 +358,40 @@ class _TambahKegiatanPageFirebaseState
             ),
             const SizedBox(height: 10),
 
-            TextFormField(
-              controller: _lokasiController,
-              decoration: const InputDecoration(
-                labelText: "Lokasi",
-                prefixIcon: Icon(Icons.location_on),
-              ),
-            ),
+            GooglePlaceAutoCompleteTextField(
+  textEditingController: _lokasiController,
+  googleAPIKey: googleApiKey,
+  inputDecoration: const InputDecoration(
+    labelText: "Lokasi",
+    hintText: "Cari lokasi...",
+    border: OutlineInputBorder(),
+  ),
+  debounceTime: 800,
+  countries: const ["id"],
+
+  // ✅ Ketika user pilih lokasi
+  getPlaceDetailWithLatLng: (Prediction prediction) {
+    setState(() {
+      _latitude = prediction.lat;
+      _longitude = prediction.lng;
+    });
+
+    print("✅ Lokasi dipilih:");
+    print("Place: ${prediction.description}");
+    print("Lat: $_latitude");
+    print("Lng: $_longitude");
+  },
+
+  // ✅ Ketika user klik salah satu hasil
+  itemClick: (Prediction prediction) {
+    _lokasiController.text = prediction.description!;
+    _lokasiController.selection = TextSelection.fromPosition(
+      TextPosition(offset: prediction.description!.length),
+    );
+  },
+),
+
+
             const SizedBox(height: 10),
 
             TextFormField(

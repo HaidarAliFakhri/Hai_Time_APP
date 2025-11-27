@@ -45,6 +45,9 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
   String nextPrayerTime = "";
   String remainingTime = "";
   bool _isAdzanPlaying = false;
+  String? _userLocation;
+  bool _isLoadingLocation = true;
+
 
   final Map<String, String> prayerTimes = {
     "Subuh": "04:45",
@@ -60,8 +63,14 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
   @override
   void initState() {
     super.initState();
+    Timer.periodic(const Duration(seconds: 30), (_) {
+  if (mounted) setState(() {});
+  });
+
+    
     _weatherFuture = WeatherService.fetchWeather();
     Geolocator.requestPermission();
+    _getUserLocation();
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 5),
@@ -84,6 +93,53 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
     _prayerTimer?.cancel();
     super.dispose();
   }
+  Future<void> _getUserLocation() async {
+  try {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      setState(() {
+        _userLocation = "GPS tidak aktif";
+        _isLoadingLocation = false;
+      });
+      return;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        setState(() {
+          _userLocation = "Izin lokasi ditolak";
+          _isLoadingLocation = false;
+        });
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      setState(() {
+        _userLocation = "Izin lokasi ditolak permanen";
+        _isLoadingLocation = false;
+      });
+      return;
+    }
+
+    final position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+
+    setState(() {
+      _userLocation =
+          "Lat: ${position.latitude.toStringAsFixed(4)}, Lon: ${position.longitude.toStringAsFixed(4)}";
+      _isLoadingLocation = false;
+    });
+  } catch (e) {
+    setState(() {
+      _userLocation = "Gagal mengambil lokasi";
+      _isLoadingLocation = false;
+    });
+  }
+}
 
   Future<void> _loadNamaUser() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -178,6 +234,50 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
     if (hour >= 15 && hour < 18) return "Selamat sore 👋";
     return "Selamat malam 👋";
   }
+  Widget _buildGreetingCard() {
+  final now = DateFormat("HH:mm").format(DateTime.now());
+  final timezone = DateFormat("z").format(DateTime.now());
+
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.blue.shade600,
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          _getGreeting(),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          "Hai, $namaUser",
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          "$now WIB",
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 16,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 
   SkyTime getSkyTime() {
     final hour = DateTime.now().hour;
@@ -215,8 +315,13 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
+                  _buildGreetingCard(),
+                  const SizedBox(height: 16),
+
                   _buildWeatherCard(),
                   const SizedBox(height: 20),
+                   _buildLocationCard(),
+                   const SizedBox(height: 20),
                   _buildWeatherAdviceCard(), // Saran cuaca dinamis
                   const SizedBox(height: 20),
                   _buildPrayerCard(),
@@ -276,22 +381,7 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
               child: SafeArea(
                 child: Stack(
                   children: [
-                    Positioned(
-                      left: 5,
-                      top: 12,
-                      child: AnimatedOpacity(
-                        opacity: percent < 0.95 ? 0.0 : 1.0,
-                        duration: const Duration(milliseconds: 200),
-                        curve: Curves.easeOut,
-                        child: Text(
-                          _getGreeting(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ),
-                    ),
+                    
                     AnimatedAlign(
                       alignment: Alignment(0, percent > 0.5 ? 0.5 : 0.0),
                       duration: const Duration(milliseconds: 200),
@@ -550,6 +640,43 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
       },
     );
   }
+  Widget _buildLocationCard() {
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.withOpacity(0.2),
+          blurRadius: 6,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    ),
+    child: Row(
+      children: [
+        const Icon(Icons.location_on, color: Colors.red, size: 28),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _isLoadingLocation
+              ? const Text(
+                  "Mengambil lokasi...",
+                  style: TextStyle(fontSize: 16),
+                )
+              : Text(
+                  _userLocation ?? "Lokasi tidak tersedia",
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+        ),
+      ],
+    ),
+  );
+}
 
   //  CARD JADWAL SHOLAT
   Widget _buildPrayerCard() {

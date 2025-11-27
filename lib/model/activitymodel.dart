@@ -7,12 +7,12 @@ class KegiatanFirebase {
   String? catatan;
   String status;
   int pengingat;
-
+  
   String? createdAt;
   String? updatedAt;
-
-  // NEW: notifId disimpan di Firestore untuk cancel/schedule yang konsisten
   int? notifId;
+  final double? latitude;
+  final double? longitude;
 
   KegiatanFirebase({
     this.docId,
@@ -26,6 +26,8 @@ class KegiatanFirebase {
     this.createdAt,
     this.updatedAt,
     this.notifId,
+    this.latitude,
+    this.longitude,
   });
 
   // FROM FIREBASE
@@ -46,6 +48,9 @@ class KegiatanFirebase {
           : (map['notifId'] != null
                 ? int.tryParse(map['notifId'].toString())
                 : null),
+      // ✅ Ambil koordinat dari Firestore
+      latitude: map['latitude'] != null ? (map['latitude'] as num).toDouble() : null,
+      longitude: map['longitude'] != null ? (map['longitude'] as num).toDouble() : null,          
     );
   }
 
@@ -62,6 +67,8 @@ class KegiatanFirebase {
       'createdAt': createdAt ?? DateTime.now().toIso8601String(),
       'updatedAt': updatedAt ?? DateTime.now().toIso8601String(),
       'notifId': notifId,
+      'latitude': latitude,
+      'longitude': longitude,
     };
   }
 
@@ -77,6 +84,8 @@ class KegiatanFirebase {
     String? createdAt,
     String? updatedAt,
     int? notifId,
+    double? latitude,
+    double? longitude,
   }) {
     return KegiatanFirebase(
       docId: docId ?? this.docId,
@@ -90,6 +99,8 @@ class KegiatanFirebase {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       notifId: notifId ?? this.notifId,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
     );
   }
 }

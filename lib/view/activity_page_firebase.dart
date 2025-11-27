@@ -3,21 +3,21 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:flutter_polyline_points/flutter_polyline_points.dart';
-import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart';
 import 'package:hai_time_app/model/activitymodel.dart';
 import 'package:hai_time_app/services/activity_service.dart';
+import 'package:hai_time_app/services/notification_service.dart'
+    as notif_service;
 import 'package:hai_time_app/services/weather_service.dart';
 import 'package:hai_time_app/view/add_activities_firebase.dart';
-import 'package:hai_time_app/services/notification_service.dart' as notif_service;
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 const String kGoogleApiKey =
@@ -55,7 +55,6 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
   LatLng? _dest;
   final Set<Marker> _markers = {};
   final Map<PolylineId, Polyline> _polylines = {};
-  
 
   // Countdown & reminder
   Timer? _countdownTimer;
@@ -69,11 +68,10 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
     "driving": "Mobil",
   };
 
-
   @override
   void initState() {
     super.initState();
-    
+
     _initAll();
   }
 
@@ -142,130 +140,132 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
   // MAPS, DIRECTIONS & POLYLINE
   // ---------------------------
   Future<void> _prepareMapAndRoute() async {
-  setState(() => loading = true);
+    setState(() => loading = true);
 
-  try {
-    // 1) Lokasi saat ini
-    final pos = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
+    try {
+      // 1) Lokasi saat ini
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
 
-    // 2) Lokasi tujuan (dari alamat)
-    final lokasiTujuan = await locationFromAddress(widget.kegiatan.lokasi);
-    final dest = lokasiTujuan.first;
+      // 2) Lokasi tujuan (dari alamat)
+      final lokasiTujuan = await locationFromAddress(widget.kegiatan.lokasi);
+      final dest = lokasiTujuan.first;
 
-    _origin = LatLng(pos.latitude, pos.longitude);
-    _dest = LatLng(dest.latitude, dest.longitude);
+      _origin = LatLng(pos.latitude, pos.longitude);
+      _dest = LatLng(dest.latitude, dest.longitude);
 
-    // Setup kamera tengah
-    final centerLat = (_origin!.latitude + _dest!.latitude) / 2;
-    final centerLng = (_origin!.longitude + _dest!.longitude) / 2;
-    _initialCamera = CameraPosition(
-      target: LatLng(centerLat, centerLng),
-      zoom: 12,
-    );
+      // Setup kamera tengah
+      final centerLat = (_origin!.latitude + _dest!.latitude) / 2;
+      final centerLng = (_origin!.longitude + _dest!.longitude) / 2;
+      _initialCamera = CameraPosition(
+        target: LatLng(centerLat, centerLng),
+        zoom: 12,
+      );
 
-    // Marker
-    _markers.clear();
-    _markers.add(Marker(
-      markerId: const MarkerId('origin'),
-      position: _origin!,
-      infoWindow: const InfoWindow(title: 'Lokasimu'),
-    ));
-    _markers.add(Marker(
-      markerId: const MarkerId('dest'),
-      position: _dest!,
-      infoWindow: InfoWindow(title: widget.kegiatan.lokasi),
-    ));
+      // Marker
+      _markers.clear();
+      _markers.add(
+        Marker(
+          markerId: const MarkerId('origin'),
+          position: _origin!,
+          infoWindow: const InfoWindow(title: 'Lokasimu'),
+        ),
+      );
+      _markers.add(
+        Marker(
+          markerId: const MarkerId('dest'),
+          position: _dest!,
+          infoWindow: InfoWindow(title: widget.kegiatan.lokasi),
+        ),
+      );
 
-    // 3) Fetch Directions API
-    final directions = await _fetchDirections(
-      _origin!.latitude,
-      _origin!.longitude,
-      _dest!.latitude,
-      _dest!.longitude,
-      travelMode: mode == "two_wheeler" ? "driving" : mode,
-    );
-
-    if (directions != null) {
-      final route = directions['routes'][0];
-      final leg = route['legs'][0];
-
-      final distanceText = leg['distance']?['text'] ?? '';
-      final durationText = leg['duration']?['text'] ?? '';
-
-      // ✅ AMBIL POLYLINE YANG BENAR
-      final encodedPolyline = route['overview_polyline']?['points'];
-
-      if (encodedPolyline != null) {
-  // ✅ Decode polyline
-  final decodedPoints = PolylinePoints.decodePolyline(encodedPolyline);
-
-  final points = decodedPoints
-      .map((p) => LatLng(p.latitude, p.longitude))
-      .toList();
-
-  final id = const PolylineId('route_poly');
-  final poly = Polyline(
-    polylineId: id,
-    points: points,
-    color: Colors.blue,
-    width: 5,
-  );
-
-  setState(() {
-    estimasiWaktu = durationText;
-    jarakKeTujuan = distanceText;
-    _polylines.clear();
-    _polylines[id] = poly;
-  });
-
-  // ✅ Auto fit kamera
-  if (_mapController != null && points.isNotEmpty) {
-    final swLat = points.map((e) => e.latitude).reduce(min);
-    final swLng = points.map((e) => e.longitude).reduce(min);
-    final neLat = points.map((e) => e.latitude).reduce(max);
-    final neLng = points.map((e) => e.longitude).reduce(max);
-
-    final bounds = LatLngBounds(
-      southwest: LatLng(swLat, swLng),
-      northeast: LatLng(neLat, neLng),
-    );
-
-    await _mapController!.animateCamera(
-      CameraUpdate.newLatLngBounds(bounds, 60),
-    );
-  }
-}
-
-    } else {
-      // ✅ fallback jarak garis lurus
-      final jarakKm = _calculateDistance(
+      // 3) Fetch Directions API
+      final directions = await _fetchDirections(
         _origin!.latitude,
         _origin!.longitude,
         _dest!.latitude,
         _dest!.longitude,
+        travelMode: mode == "two_wheeler" ? "driving" : mode,
       );
 
-      final estimatedMin = (jarakKm / 60 * 60).round();
+      if (directions != null) {
+        final route = directions['routes'][0];
+        final leg = route['legs'][0];
 
-      setState(() {
-        estimasiWaktu = "$estimatedMin menit (perkiraan)";
-        jarakKeTujuan = "${jarakKm.toStringAsFixed(1)} km";
-      });
+        final distanceText = leg['distance']?['text'] ?? '';
+        final durationText = leg['duration']?['text'] ?? '';
+
+        // ✅ AMBIL POLYLINE YANG BENAR
+        final encodedPolyline = route['overview_polyline']?['points'];
+
+        if (encodedPolyline != null) {
+          // ✅ Decode polyline
+          final decodedPoints = PolylinePoints.decodePolyline(encodedPolyline);
+
+          final points = decodedPoints
+              .map((p) => LatLng(p.latitude, p.longitude))
+              .toList();
+
+          final id = const PolylineId('route_poly');
+          final poly = Polyline(
+            polylineId: id,
+            points: points,
+            color: Colors.blue,
+            width: 5,
+          );
+
+          setState(() {
+            estimasiWaktu = durationText;
+            jarakKeTujuan = distanceText;
+            _polylines.clear();
+            _polylines[id] = poly;
+          });
+
+          // ✅ Auto fit kamera
+          if (_mapController != null && points.isNotEmpty) {
+            final swLat = points.map((e) => e.latitude).reduce(min);
+            final swLng = points.map((e) => e.longitude).reduce(min);
+            final neLat = points.map((e) => e.latitude).reduce(max);
+            final neLng = points.map((e) => e.longitude).reduce(max);
+
+            final bounds = LatLngBounds(
+              southwest: LatLng(swLat, swLng),
+              northeast: LatLng(neLat, neLng),
+            );
+
+            await _mapController!.animateCamera(
+              CameraUpdate.newLatLngBounds(bounds, 60),
+            );
+          }
+        }
+      } else {
+        // ✅ fallback jarak garis lurus
+        final jarakKm = _calculateDistance(
+          _origin!.latitude,
+          _origin!.longitude,
+          _dest!.latitude,
+          _dest!.longitude,
+        );
+
+        final estimatedMin = (jarakKm / 60 * 60).round();
+
+        setState(() {
+          estimasiWaktu = "$estimatedMin menit (perkiraan)";
+          jarakKeTujuan = "${jarakKm.toStringAsFixed(1)} km";
+        });
+      }
+    } catch (e) {
+      debugPrint("Error prepareMapAndRoute: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Gagal memuat rute")));
+      }
+    } finally {
+      setState(() => loading = false);
     }
-  } catch (e) {
-    debugPrint("Error prepareMapAndRoute: $e");
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Gagal memuat rute")),
-      );
-    }
-  } finally {
-    setState(() => loading = false);
   }
-}
-
 
   Future<Map<String, dynamic>?> _fetchDirections(
     double originLat,
@@ -288,7 +288,9 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
 
       final Map<String, dynamic> data = json.decode(resp.body);
       if (data['status'] != 'OK') {
-        debugPrint('Directions API status: ${data['status']} - ${data['error_message']}');
+        debugPrint(
+          'Directions API status: ${data['status']} - ${data['error_message']}',
+        );
         return null;
       }
       return data;
@@ -309,7 +311,8 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
       final date = DateFormat('dd/MM/yyyy').parse(widget.kegiatan.tanggal);
       final timeParts = widget.kegiatan.waktu.split(':');
       final hour = int.tryParse(timeParts[0]) ?? 0;
-      final minute = int.tryParse(timeParts.length > 1 ? timeParts[1] : '0') ?? 0;
+      final minute =
+          int.tryParse(timeParts.length > 1 ? timeParts[1] : '0') ?? 0;
 
       final eventDate = DateTime(date.year, date.month, date.day, hour, minute);
       _updateCountdown(eventDate);
@@ -336,12 +339,15 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
       final date = DateFormat('dd/MM/yyyy').parse(widget.kegiatan.tanggal);
       final timeParts = widget.kegiatan.waktu.split(':');
       final hour = int.tryParse(timeParts[0]) ?? 0;
-      final minute = int.tryParse(timeParts.length > 1 ? timeParts[1] : '0') ?? 0;
+      final minute =
+          int.tryParse(timeParts.length > 1 ? timeParts[1] : '0') ?? 0;
       final eventDate = DateTime(date.year, date.month, date.day, hour, minute);
       final reminderTime = eventDate.subtract(Duration(minutes: 30));
 
       if (reminderTime.isAfter(DateTime.now())) {
-        final notifId = DateTime.now().millisecondsSinceEpoch.remainder(1000000);
+        final notifId = DateTime.now().millisecondsSinceEpoch.remainder(
+          1000000,
+        );
 
         await notif_service.NotifikasiService.schedule(
           id: notifId,
@@ -371,11 +377,14 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
   // ---------------------------
   Future<void> _bukaMapsExternal() async {
     try {
-      final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
       final asal = '${pos.latitude},${pos.longitude}';
       final tujuan = Uri.encodeComponent(widget.kegiatan.lokasi);
       final travelMode = mode == "two_wheeler" ? "driving" : mode;
-      final url = 'https://www.google.com/maps/dir/?api=1&origin=$asal&destination=$tujuan&travelmode=$travelMode';
+      final url =
+          'https://www.google.com/maps/dir/?api=1&origin=$asal&destination=$tujuan&travelmode=$travelMode';
       final uri = Uri.parse(url);
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -383,7 +392,9 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
         throw "Tidak bisa membuka Google Maps";
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gagal membuka Google Maps: $e")));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Gagal membuka Google Maps: $e")));
     }
   }
 
@@ -394,13 +405,15 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
     const R = 6371;
     var dLat = (lat2 - lat1) * pi / 180;
     var dLon = (lon2 - lon1) * pi / 180;
-    var a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(lat1 * pi / 180) * cos(lat2 * pi / 180) * sin(dLon / 2) * sin(dLon / 2);
+    var a =
+        sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1 * pi / 180) *
+            cos(lat2 * pi / 180) *
+            sin(dLon / 2) *
+            sin(dLon / 2);
     var c = 2 * atan2(sqrt(a), sqrt(1 - a));
     return R * c;
   }
-
-  
 
   // ---------------------------
   // UI BUILD
@@ -413,15 +426,22 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
       backgroundColor: const Color(0xFFF3F8FF),
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(
+            Icons.arrow_back,
+            color: Colors.white, // ← warna putih
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           "Detail Kegiatan",
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.white, // ← warna putih
+          ),
         ),
         centerTitle: true,
         elevation: 0,
+        backgroundColor: Colors.transparent, // penting, biar gradient keliatan
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
@@ -432,6 +452,7 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
           ),
         ),
       ),
+
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -498,15 +519,27 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
                     children: [
                       const Text(
                         "Informasi Perjalanan",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.blue.shade50,
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Text("Data Google Maps", style: TextStyle(color: Colors.blue, fontWeight: FontWeight.w600)),
+                        child: const Text(
+                          "Data Google Maps",
+                          style: TextStyle(
+                            color: Colors.blue,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -558,18 +591,34 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
                           top: 10,
                           right: 10,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.95),
                               borderRadius: BorderRadius.circular(8),
-                              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 6)],
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.08),
+                                  blurRadius: 6,
+                                ),
+                              ],
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                Text(jarakKeTujuan ?? "-", style: const TextStyle(fontWeight: FontWeight.bold)),
+                                Text(
+                                  jarakKeTujuan ?? "-",
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                                 const SizedBox(height: 4),
-                                Text(estimasiWaktu ?? "-", style: const TextStyle(fontSize: 12)),
+                                Text(
+                                  estimasiWaktu ?? "-",
+                                  style: const TextStyle(fontSize: 12),
+                                ),
                               ],
                             ),
                           ),
@@ -586,7 +635,8 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text("Mode: ${modeLabel[mode]}"),
-                            if (jarakKeTujuan != null) Text("Jarak ke Tujuan: $jarakKeTujuan"),
+                            if (jarakKeTujuan != null)
+                              Text("Jarak ke Tujuan: $jarakKeTujuan"),
                             Text("Estimasi: ${estimasiWaktu ?? '-'}"),
                             Text(
                               "Waktu Ideal: ${_timeToEvent == Duration.zero ? '-' : _calcWaktuIdeal()}",
@@ -634,7 +684,9 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
               child: Row(
                 children: [
                   Icon(
-                    (kondisiCuaca ?? "").contains("rain") ? Icons.umbrella : Icons.lightbulb_outline,
+                    (kondisiCuaca ?? "").contains("rain")
+                        ? Icons.umbrella
+                        : Icons.lightbulb_outline,
                     color: Colors.orange,
                     size: 24,
                   ),
@@ -661,10 +713,17 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
                   children: [
                     const Text(
                       "Catatan",
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(height: 8),
-                    Text(kegiatan.catatan!, style: const TextStyle(color: Colors.white)),
+                    Text(
+                      kegiatan.catatan!,
+                      style: const TextStyle(color: Colors.white),
+                    ),
                   ],
                 ),
               ),
@@ -675,13 +734,22 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.white, elevation: 0),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    elevation: 0,
+                  ),
                   icon: const Icon(Icons.edit, color: Colors.black),
-                  label: const Text("Edit", style: TextStyle(color: Colors.black)),
+                  label: const Text(
+                    "Edit",
+                    style: TextStyle(color: Colors.black),
+                  ),
                   onPressed: () async {
                     final result = await Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => TambahKegiatanPageFirebase(kegiatan: kegiatan)),
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            TambahKegiatanPageFirebase(kegiatan: kegiatan),
+                      ),
                     );
                     if (result == true && mounted) {
                       Navigator.pop(context, true);
@@ -689,18 +757,36 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
                   },
                 ),
                 ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.white, elevation: 0, side: const BorderSide(color: Colors.red)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    elevation: 0,
+                    side: const BorderSide(color: Colors.red),
+                  ),
                   icon: const Icon(Icons.delete, color: Colors.red),
-                  label: const Text("Hapus", style: TextStyle(color: Colors.red)),
+                  label: const Text(
+                    "Hapus",
+                    style: TextStyle(color: Colors.red),
+                  ),
                   onPressed: () async {
                     final konfirmasi = await showDialog<bool>(
                       context: context,
                       builder: (context) => AlertDialog(
                         title: const Text("Konfirmasi Hapus"),
-                        content: const Text("Apakah kamu yakin ingin menghapus kegiatan ini?"),
+                        content: const Text(
+                          "Apakah kamu yakin ingin menghapus kegiatan ini?",
+                        ),
                         actions: [
-                          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Batal")),
-                          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Hapus", style: TextStyle(color: Colors.red))),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text("Batal"),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text(
+                              "Hapus",
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ),
                         ],
                       ),
                     );
@@ -708,13 +794,21 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
                     if (konfirmasi == true) {
                       final currentUser = FirebaseAuth.instance.currentUser;
                       if (currentUser == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Silakan login terlebih dahulu")));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Silakan login terlebih dahulu"),
+                          ),
+                        );
                         return;
                       }
 
                       final docId = widget.kegiatan.docId;
                       if (docId == null || docId.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("DocId kegiatan tidak tersedia")));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("DocId kegiatan tidak tersedia"),
+                          ),
+                        );
                         return;
                       }
 
@@ -726,9 +820,16 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
                             .collection('kegiatan')
                             .doc(docId)
                             .get();
-                        if (snap.exists && snap.data() != null && snap.data()!['notifId'] != null) {
-                          final nid = int.tryParse(snap.data()!['notifId'].toString()) ?? 0;
-                          if (nid > 0) await notif_service.NotifikasiService.cancel(nid);
+                        if (snap.exists &&
+                            snap.data() != null &&
+                            snap.data()!['notifId'] != null) {
+                          final nid =
+                              int.tryParse(
+                                snap.data()!['notifId'].toString(),
+                              ) ??
+                              0;
+                          if (nid > 0)
+                            await notif_service.NotifikasiService.cancel(nid);
                         }
                       } catch (e) {
                         debugPrint("Gagal cancel notif saat hapus: $e");
@@ -746,20 +847,34 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
 
             Center(
               child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                ),
                 icon: const Icon(Icons.check_circle_outline),
                 label: const Text("Tandai Selesai"),
                 onPressed: () async {
                   final currentUser = FirebaseAuth.instance.currentUser;
                   if (currentUser == null) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Silakan login terlebih dahulu")));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Silakan login terlebih dahulu"),
+                      ),
+                    );
                     return;
                   }
-                  final updated = widget.kegiatan.copyWith(status: "Selesai", updatedAt: DateTime.now().toIso8601String());
+                  final updated = widget.kegiatan.copyWith(
+                    status: "Selesai",
+                    updatedAt: DateTime.now().toIso8601String(),
+                  );
                   await _service.updateKegiatan(currentUser.uid, updated);
 
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("✅ Kegiatan ditandai sebagai selesai")));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("✅ Kegiatan ditandai sebagai selesai"),
+                      ),
+                    );
                     Navigator.pop(context, true);
                   }
                 },
@@ -806,14 +921,24 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
         decoration: BoxDecoration(
           color: isSelected ? Colors.blue.shade100 : Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isSelected ? Colors.blueAccent : Colors.grey.shade300),
+          border: Border.all(
+            color: isSelected ? Colors.blueAccent : Colors.grey.shade300,
+          ),
         ),
-        child: Icon(icon, color: isSelected ? Colors.blueAccent : Colors.grey, size: 28),
+        child: Icon(
+          icon,
+          color: isSelected ? Colors.blueAccent : Colors.grey,
+          size: 28,
+        ),
       ),
     );
   }
 
-  Widget _buildCard({required Widget child, Color color = Colors.white, Color borderColor = Colors.transparent}) {
+  Widget _buildCard({
+    required Widget child,
+    Color color = Colors.white,
+    Color borderColor = Colors.transparent,
+  }) {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 12),
@@ -822,7 +947,13 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
         color: color,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: borderColor),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6, offset: const Offset(0, 3))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: child,
     );

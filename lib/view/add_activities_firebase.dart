@@ -1,19 +1,12 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// file: add_activities_firebase.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:hai_time_app/model/activitymodel.dart';
 import 'package:hai_time_app/page/home_page_firebase.dart';
 import 'package:hai_time_app/services/activity_service.dart';
 import 'package:hai_time_app/services/notification_service.dart';
-import 'package:hai_time_app/view/activity_page_firebase.dart';
+import 'package:hai_time_app/view/custom_app_bar.dart';
 import 'package:intl/intl.dart';
-import 'package:google_places_flutter/google_places_flutter.dart';
-import 'package:google_places_flutter/model/prediction.dart';
-
-
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-
-
 
 class TambahKegiatanPageFirebase extends StatefulWidget {
   final KegiatanFirebase? kegiatan;
@@ -27,17 +20,14 @@ class TambahKegiatanPageFirebase extends StatefulWidget {
 
 class _TambahKegiatanPageFirebaseState
     extends State<TambahKegiatanPageFirebase> {
-  double? _latitude;
-  double? _longitude;
-
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _judulController = TextEditingController();
   final TextEditingController _lokasiController = TextEditingController();
   final TextEditingController _tanggalController = TextEditingController();
   final TextEditingController _waktuController = TextEditingController();
   final TextEditingController _catatanController = TextEditingController();
-  bool _isSaving = false;
 
+  bool _isSaving = false;
   int _pengingatMenit = 0;
 
   final _service = KegiatanService();
@@ -46,13 +36,10 @@ class _TambahKegiatanPageFirebaseState
   @override
   void initState() {
     super.initState();
-  const String googleApiKey = "AIzaSyDk_IqTjxDnhlwFcVf8bYfNR0qBtEGAyJw";
-
     if (widget.kegiatan != null) {
       _judulController.text = widget.kegiatan!.judul;
       _lokasiController.text = widget.kegiatan!.lokasi;
       _tanggalController.text = widget.kegiatan!.tanggal;
-      // Pastikan waktu tersimpan sebagai HH:mm; jika data lama punya format lain, biarkan saja
       _waktuController.text = widget.kegiatan!.waktu;
       _catatanController.text = widget.kegiatan!.catatan ?? '';
       _pengingatMenit = widget.kegiatan!.pengingat;
@@ -69,34 +56,31 @@ class _TambahKegiatanPageFirebaseState
     super.dispose();
   }
 
-  /// Parse waktu fleksibel: menerima "HH:mm", "H:mm", "h:mm a", "HH.mm" (mengganti '.' -> ':')
+  // ---------- parsing waktu fleksibel ----------
   TimeOfDay? _parseTime(String? text) {
     if (text == null || text.trim().isEmpty) return null;
 
-    String t = text.trim();
+    var t = text.trim();
+    t = t.replaceAll('.', ':'); // terima 09.30 juga
 
-    // Ganti titik menjadi titik dua (banyak locale memakai 09.58)
-    t = t.replaceAll('.', ':');
-
-    // Coba beberapa pola parse secara aman
+    // 1) coba HH:mm (24h)
     try {
-      // 1) coba jam-menit 24h (HH:mm)
       final d = DateFormat.Hm().parseLoose(t);
       return TimeOfDay(hour: d.hour, minute: d.minute);
     } catch (_) {}
 
+    // 2) coba h:mm a (AM/PM)
     try {
-      // 2) coba format dengan am/pm (e.g., 5:30 PM)
       final d = DateFormat.jm().parseLoose(t);
       return TimeOfDay(hour: d.hour, minute: d.minute);
     } catch (_) {}
 
+    // 3) fallback: angka saja "930" -> 09:30
     try {
-      // 3) fallback: ambil angka saja (contoh "953" -> 09:53) -- sangat permissive
-      final justDigits = t.replaceAll(RegExp(r'[^0-9]'), '');
-      if (justDigits.length >= 3 && justDigits.length <= 4) {
-        final minutes = int.parse(justDigits.substring(justDigits.length - 2));
-        final hours = int.parse(justDigits.substring(0, justDigits.length - 2));
+      final digits = t.replaceAll(RegExp(r'[^0-9]'), '');
+      if (digits.length >= 3 && digits.length <= 4) {
+        final minutes = int.parse(digits.substring(digits.length - 2));
+        final hours = int.parse(digits.substring(0, digits.length - 2));
         if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
           return TimeOfDay(hour: hours, minute: minutes);
         }
@@ -105,13 +89,15 @@ class _TambahKegiatanPageFirebaseState
 
     return null;
   }
-  
+
   Future<void> _pilihTanggal() async {
+    final initial = _tanggalController.text.isNotEmpty
+        ? _tryParseDate(_tanggalController.text) ?? DateTime.now()
+        : DateTime.now();
+
     final picked = await showDatePicker(
       context: context,
-      initialDate: _tanggalController.text.isNotEmpty
-          ? _tryParseDate(_tanggalController.text) ?? DateTime.now()
-          : DateTime.now(),
+      initialDate: initial,
       firstDate: DateTime(2020),
       lastDate: DateTime(2100),
     );
@@ -130,129 +116,114 @@ class _TambahKegiatanPageFirebaseState
   }
 
   Future<void> _pilihWaktu() async {
-    final initial = TimeOfDay.now();
-    final picked = await showTimePicker(context: context, initialTime: initial);
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
 
     if (picked != null) {
-      // Simpan **normalisasi** ke format 24-jam HH:mm (mis: 09:58)
-      final normalized = _timeOfDayTo24HourString(picked);
-      _waktuController.text = normalized;
+      _waktuController.text = _timeOfDayTo24HourString(picked);
     }
   }
 
   String _timeOfDayTo24HourString(TimeOfDay t) {
-    final hour = t.hour.toString().padLeft(2, '0');
-    final minute = t.minute.toString().padLeft(2, '0');
-    return '$hour:$minute';
+    final h = t.hour.toString().padLeft(2, '0');
+    final m = t.minute.toString().padLeft(2, '0');
+    return '$h:$m';
   }
-  Future<void> _pilihLokasi() async {
-  Prediction? p = await PlacesAutocomplete.show(
-    context: context,
-    apiKey: kGoogleApiKey,
-    mode: Mode.overlay,
-    language: "id",
-    components: [Component(Component.country, "id")],
-  );
 
-  if (p != null) {
-    final places = GoogleMapsPlaces(apiKey: googleApiKey);
-    final detail = await places.getDetailsByPlaceId(p.placeId!);
-
-    final loc = detail.result.geometry!.location;
-
-    setState(() {
-      _lokasiController.text = detail.result.name;
-      _latitude = loc.lat;
-      _longitude = loc.lng;
-    });
-  }
-}
-
-
+  // ================= SIMPAN =================
   void _simpanKegiatan() async {
-    if (_isSaving) return;
+    if (_isSaving) return; // mencegah klik ganda
     if (!_formKey.currentState!.validate()) return;
+
+    final user = _auth.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Silakan login terlebih dahulu.")),
+      );
+      return;
+    }
 
     setState(() => _isSaving = true);
 
-    final uid = _auth.currentUser!.uid;
-
+    // Validasi & parsing waktu
     final parsedTime = _parseTime(_waktuController.text);
     if (parsedTime == null) {
       setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Format waktu tidak valid. Gunakan 17:30."),
+          content: Text("Format waktu tidak valid. Contoh: 17:30"),
         ),
       );
       return;
     }
 
     try {
-      // Build data WITHOUT notifId first
-      KegiatanFirebase data = KegiatanFirebase(
-      judul: _judulController.text,
-      lokasi: _lokasiController.text,
-      latitude: _latitude,
-      longitude: _longitude,
-      tanggal: _tanggalController.text,
-      waktu: _timeOfDayTo24HourString(parsedTime),
-      catatan: _catatanController.text.isEmpty ? null : _catatanController.text,
-      pengingat: _pengingatMenit,
-      status: widget.kegiatan?.status ?? "Belum Selesai",
-    );
+      final nowIso = DateTime.now().toIso8601String();
 
+      // Build objek (sesuai model KegiatanFirebase yang ada)
+      final data = KegiatanFirebase(
+        docId: widget.kegiatan?.docId,
+        judul: _judulController.text.trim(),
+        lokasi: _lokasiController.text.trim(),
+        tanggal: _tanggalController.text.trim(),
+        waktu: _timeOfDayTo24HourString(parsedTime),
+        catatan: _catatanController.text.trim().isEmpty
+            ? null
+            : _catatanController.text.trim(),
+        pengingat: _pengingatMenit,
+        status: widget.kegiatan?.status ?? "Belum Selesai",
+        createdAt: widget.kegiatan?.createdAt ?? nowIso,
+        updatedAt: nowIso,
+      );
+
+      final notifDate = _notifDate(data);
 
       if (widget.kegiatan != null) {
-        // EDIT: preserve docId and notifId if exists
-        data = data.copyWith(
-          docId: widget.kegiatan!.docId,
-          notifId: widget.kegiatan!.notifId,
-          createdAt: widget.kegiatan!.createdAt,
-        );
-        await NotifikasiService.safeCancel(data.notifId ?? 0);
-        await _service.updateKegiatan(uid, data);
+        // EDIT
+        // 1) Try cancel old notification (two attempts: raw docId and mapped safe id)
+        try {
+          final raw = int.tryParse(widget.kegiatan!.docId ?? "");
+          if (raw != null) {
+            // cancel original raw id (some apps may have used numeric small ids)
+            await NotifikasiService.safeCancel(raw);
 
-        // schedule using existing notifId if available, otherwise generate new and update doc
-        int notifId = data.notifId ?? NotifikasiService.generateSafeNotifId();
-        final notifDate = _notifDate(data);
-        await NotifikasiService.safeSchedule(
-          id: notifId,
-          title: "Pengingat Kegiatan",
-          body: "${data.judul} dimulai jam ${data.waktu}",
-          date: notifDate,
-        );
+            // cancel mapped safe id in case earlier implementation used a mapping
+            final mapped = (raw % 2147483647).toInt();
+            if (mapped != raw) await NotifikasiService.safeCancel(mapped);
+          }
+        } catch (_) {}
 
-        // ensure notifId persisted
-        if (data.notifId == null) {
-          // write notifId back to document without changing other fields
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(uid)
-              .collection('kegiatan')
-              .doc(data.docId)
-              .update({'notifId': notifId});
+        await _service.updateKegiatan(user.uid, data);
+
+        // 2) schedule new notification using safe id
+        final notifId = NotifikasiService.generateSafeNotifId();
+        if (!notifDate.isBefore(DateTime.now())) {
+          await NotifikasiService.safeSchedule(
+            id: notifId,
+            title: "Pengingat Kegiatan",
+            body: "${data.judul} dimulai jam ${data.waktu}",
+            date: notifDate,
+          );
         }
       } else {
-        // ADD: create notifId first so we can store it with document atomically
+        // ADD
+        await _service.addKegiatan(user.uid, data);
+
+        // schedule notifikasi using safe 32-bit id
         final notifId = NotifikasiService.generateSafeNotifId();
-        data = data.copyWith(notifId: notifId);
-
-        await _service.addKegiatan(uid, data);
-
-        // schedule (safe)
-        final notifDate = _notifDate(data);
-        await NotifikasiService.safeSchedule(
-          id: notifId,
-          title: "Pengingat Kegiatan",
-          body: "${data.judul} dimulai jam ${data.waktu}",
-          date: notifDate,
-        );
+        if (!notifDate.isBefore(DateTime.now())) {
+          await NotifikasiService.safeSchedule(
+            id: notifId,
+            title: "Pengingat Kegiatan",
+            body: "${data.judul} dimulai jam ${data.waktu}",
+            date: notifDate,
+          );
+        }
       }
 
       if (!mounted) return;
-
-      // selesai: langsung kembali ke home (hapus stack)
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const HomePageFirebase()),
@@ -268,38 +239,25 @@ class _TambahKegiatanPageFirebaseState
     }
   }
 
-  // ============= NOTIFIKASI =============
-  Future<void> scheduleReminder(KegiatanFirebase kegiatan, String uid) async {
-    final remindAt = _notifDate(kegiatan);
-
-    if (remindAt.isBefore(DateTime.now())) return;
-
-    final notifId =
-        int.tryParse(kegiatan.docId ?? "0") ??
-        DateTime.now().millisecondsSinceEpoch;
-
-    await NotifikasiService.schedule(
-      id: notifId,
-      title: "Pengingat Kegiatan",
-      body: "${kegiatan.judul} dimulai jam ${kegiatan.waktu}",
-      date: remindAt,
-    );
-  }
-
   DateTime _notifDate(KegiatanFirebase kegiatan) {
-    final date = DateFormat('dd/MM/yyyy').parse(kegiatan.tanggal);
-    final timeOfDay = _parseTime(kegiatan.waktu);
-    if (timeOfDay == null) {
-      // Safety fallback, hindari null check operator
-      throw Exception("Format waktu tidak valid saat menghitung notifikasi");
+    // parse tanggal (dd/MM/yyyy) dan waktu yang sudah dinormalisasi ke HH:mm
+    final date = DateFormat('dd/MM/yyyy').parseLoose(kegiatan.tanggal);
+    final tod = _parseTime(kegiatan.waktu);
+    if (tod == null) {
+      // safety fallback: gunakan jam 00:00
+      return DateTime(
+        date.year,
+        date.month,
+        date.day,
+      ).subtract(Duration(minutes: kegiatan.pengingat));
     }
 
     final event = DateTime(
       date.year,
       date.month,
       date.day,
-      timeOfDay.hour,
-      timeOfDay.minute,
+      tod.hour,
+      tod.minute,
     );
 
     return event.subtract(Duration(minutes: kegiatan.pengingat));
@@ -310,31 +268,10 @@ class _TambahKegiatanPageFirebaseState
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FC),
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(120),
-        child: ClipPath(
-          clipper: WaveClipper(),
-          child: Container(
-            padding: const EdgeInsets.only(top: 5),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF2196F3), Color(0xFF64B5F6)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Center(
-              child: Text(
-                widget.kegiatan == null ? "Tambah Kegiatan" : "Edit Kegiatan",
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-        ),
+      appBar: buildCustomAppBar(
+        context,
+        title: widget.kegiatan == null ? "Tambah Kegiatan" : "Edit Kegiatan",
+        showBack: true,
       ),
 
       body: _buildForm(),
@@ -357,43 +294,14 @@ class _TambahKegiatanPageFirebaseState
               ),
             ),
             const SizedBox(height: 10),
-
-            GooglePlaceAutoCompleteTextField(
-  textEditingController: _lokasiController,
-  googleAPIKey: googleApiKey,
-  inputDecoration: const InputDecoration(
-    labelText: "Lokasi",
-    hintText: "Cari lokasi...",
-    border: OutlineInputBorder(),
-  ),
-  debounceTime: 800,
-  countries: const ["id"],
-
-  // ✅ Ketika user pilih lokasi
-  getPlaceDetailWithLatLng: (Prediction prediction) {
-    setState(() {
-      _latitude = prediction.lat;
-      _longitude = prediction.lng;
-    });
-
-    print("✅ Lokasi dipilih:");
-    print("Place: ${prediction.description}");
-    print("Lat: $_latitude");
-    print("Lng: $_longitude");
-  },
-
-  // ✅ Ketika user klik salah satu hasil
-  itemClick: (Prediction prediction) {
-    _lokasiController.text = prediction.description!;
-    _lokasiController.selection = TextSelection.fromPosition(
-      TextPosition(offset: prediction.description!.length),
-    );
-  },
-),
-
-
+            TextFormField(
+              controller: _lokasiController,
+              decoration: const InputDecoration(
+                labelText: "Lokasi",
+                prefixIcon: Icon(Icons.location_on),
+              ),
+            ),
             const SizedBox(height: 10),
-
             TextFormField(
               controller: _tanggalController,
               readOnly: true,
@@ -408,14 +316,12 @@ class _TambahKegiatanPageFirebaseState
               ),
             ),
             const SizedBox(height: 10),
-
             TextFormField(
               controller: _waktuController,
               readOnly: true,
               validator: (v) {
                 if (v == null || v.isEmpty) return "Pilih waktu";
-                final parsed = _parseTime(v);
-                if (parsed == null)
+                if (_parseTime(v) == null)
                   return "Format waktu tidak valid. Contoh: 17:30";
                 return null;
               },
@@ -429,7 +335,6 @@ class _TambahKegiatanPageFirebaseState
               ),
             ),
             const SizedBox(height: 10),
-
             DropdownButtonFormField<int>(
               initialValue: _pengingatMenit,
               decoration: const InputDecoration(labelText: "Pengingat"),
@@ -442,7 +347,6 @@ class _TambahKegiatanPageFirebaseState
                 DropdownMenuItem(value: 60, child: Text("1 jam sebelum")),
               ],
             ),
-
             const SizedBox(height: 10),
             TextFormField(
               controller: _catatanController,
@@ -452,7 +356,6 @@ class _TambahKegiatanPageFirebaseState
                 prefixIcon: Icon(Icons.note_alt_outlined),
               ),
             ),
-
             const SizedBox(height: 20),
             _tombolSimpan(),
           ],
@@ -462,18 +365,52 @@ class _TambahKegiatanPageFirebaseState
   }
 
   Widget _tombolSimpan() {
-    return ElevatedButton(
-      onPressed: _isSaving ? null : _simpanKegiatan,
-      child: _isSaving
-          ? const SizedBox(
-              height: 20,
-              width: 20,
-              child: CircularProgressIndicator(
-                color: Colors.white,
-                strokeWidth: 2,
-              ),
-            )
-          : const Text("Simpan"),
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: _isSaving ? null : _simpanKegiatan,
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          elevation: 6,
+          shadowColor: Colors.blue.withOpacity(0.3),
+          backgroundColor: _isSaving
+              ? Colors.blue.shade300
+              : Colors.blue, // gradient illusion via shadow
+        ),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 250),
+          child: _isSaving
+              ? const SizedBox(
+                  key: ValueKey(1),
+                  height: 24,
+                  width: 24,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2.6,
+                  ),
+                )
+              : Row(
+                  key: const ValueKey(2),
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.save_rounded, color: Colors.white),
+                    SizedBox(width: 8),
+                    Text(
+                      "Simpan",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        letterSpacing: 0.5,
+                        color: Colors.white, // ← warna putih
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+      ),
     );
   }
 }

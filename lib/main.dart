@@ -1,3 +1,4 @@
+// main.dart (perbaikan minimal, fungsional identik)
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -18,20 +19,33 @@ ValueNotifier<bool> isDarkMode = ValueNotifier(false);
 final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load locale dari SharedPreferences (jangan tunda terlalu lama)
+  await LocaleController.loadSavedLocale();
+
+  // firebase (init dulu agar service lain yang bergantung ke firebase aman)
+  try {
+    await Firebase.initializeApp();
+  } catch (e, st) {
+    // Log error supaya mudah dilacak; tetap lanjut bila bisa
+    debugPrint('⚠️ Firebase initialization failed: $e\n$st');
+  }
 
   // Format tanggal Indonesia
   await initializeDateFormatting('id_ID', null);
-  await NotifikasiService.init();
 
   // Timezone untuk scheduled notification
   tz.initializeTimeZones();
 
+  // Inisialisasi notification service (plugin lokal)
+  await NotifikasiService.init();
+
   // Alarm manager (background task)
   await AndroidAlarmManager.initialize();
 
-  // Inisialisasi local notification
+  // Inisialisasi local notification (instance fallback jika diperlukan)
   const AndroidInitializationSettings androidSettings =
       AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -39,14 +53,11 @@ void main() async {
     android: androidSettings,
   );
 
+  // Kalau NotifikasiService.init sudah melakukan init internal terhadap
+  // flutterLocalNotificationsPlugin, memanggil initialize lagi biasanya harmless.
+  // Kita tetap inisialisasi instance lokal ini untuk safety.
   await flutterLocalNotificationsPlugin.initialize(initSettings);
 
-  // Load locale dari SharedPreferences
-  await LocaleController.loadSavedLocale();
-
-  //firebase
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
   runApp(const MyApp());
 }
 

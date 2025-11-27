@@ -5,7 +5,9 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hai_time_app/screen/profile_firebase.dart';
 import 'package:hai_time_app/screen/setting_firebase.dart';
 import 'package:hai_time_app/services/weather_service.dart';
@@ -45,9 +47,16 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
   String nextPrayerTime = "";
   String remainingTime = "";
   bool _isAdzanPlaying = false;
+
+  // Lokasi user (string untuk tampil cepat) dan koordinat untuk peta
   String? _userLocation;
   bool _isLoadingLocation = true;
+  double? _latitude;
+  double? _longitude;
 
+  // Google Map controller untuk animate camera
+  final Completer<GoogleMapController> _mapController = Completer();
+  Marker? _selectedMarker;
 
   final Map<String, String> prayerTimes = {
     "Subuh": "04:45",
@@ -64,10 +73,9 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
   void initState() {
     super.initState();
     Timer.periodic(const Duration(seconds: 30), (_) {
-  if (mounted) setState(() {});
-  });
+      if (mounted) setState(() {});
+    });
 
-    
     _weatherFuture = WeatherService.fetchWeather();
     Geolocator.requestPermission();
     _getUserLocation();
@@ -93,53 +101,106 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
     _prayerTimer?.cancel();
     super.dispose();
   }
-  Future<void> _getUserLocation() async {
-  try {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      setState(() {
-        _userLocation = "GPS tidak aktif";
-        _isLoadingLocation = false;
-      });
-      return;
-    }
 
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
+  Future<void> _getUserLocation() async {
+    setState(() {
+      _isLoadingLocation = true;
+    });
+
+    try {
+      // cek service & permission
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
         setState(() {
-          _userLocation = "Izin lokasi ditolak";
+          _userLocation = "GPS tidak aktif";
           _isLoadingLocation = false;
         });
         return;
       }
-    }
 
-    if (permission == LocationPermission.deniedForever) {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          setState(() {
+            _userLocation = "Izin lokasi ditolak";
+            _isLoadingLocation = false;
+          });
+          return;
+        }
+      }
+      if (permission == LocationPermission.deniedForever) {
+        setState(() {
+          _userLocation = "Izin lokasi ditolak permanen";
+          _isLoadingLocation = false;
+        });
+        return;
+      }
+
+      // ambil posisi akurat
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      // reverse geocoding -> dapatkan alamat manusiawi
+      String humanAddress = "";
+      try {
+        final placemarks = await placemarkFromCoordinates(
+          pos.latitude,
+          pos.longitude,
+        );
+        if (placemarks.isNotEmpty) {
+          final p = placemarks.first;
+          final parts = <String>[];
+          if ((p.name ?? "").isNotEmpty)
+            parts.add(p.name!); // contoh: "Gedung A" atau nama tempat
+          if ((p.subLocality ?? "").isNotEmpty)
+            parts.add(p.subLocality!); // kelurahan / kecamatan kecil
+          if ((p.locality ?? "").isNotEmpty) parts.add(p.locality!); // kota
+          if ((p.administrativeArea ?? "").isNotEmpty)
+            parts.add(p.administrativeArea!); // provinsi
+          if ((p.country ?? "").isNotEmpty) parts.add(p.country!); // negara
+          humanAddress = parts.join(', ');
+        }
+      } catch (e) {
+        // bila geocoding gagal, fallback ke lat/lon yang lebih berguna daripada kosong
+        humanAddress =
+            "Lokasi terdeteksi (${pos.latitude.toStringAsFixed(4)}, ${pos.longitude.toStringAsFixed(4)})";
+      }
+
+      // set marker & store coords untuk peta (jika ada)
       setState(() {
-        _userLocation = "Izin lokasi ditolak permanen";
+        _latitude = pos.latitude;
+        _longitude = pos.longitude;
+        _selectedMarker = Marker(
+          markerId: const MarkerId('user_location'),
+          position: LatLng(_latitude!, _longitude!),
+        );
+        _userLocation = humanAddress;
         _isLoadingLocation = false;
       });
-      return;
+
+      // animate camera jika map sudah siap
+      try {
+        if (_mapController.isCompleted) {
+          final ctrl = await _mapController.future;
+          await ctrl.animateCamera(
+            CameraUpdate.newLatLngZoom(LatLng(_latitude!, _longitude!), 14),
+          );
+        }
+      } catch (_) {
+        // silent
+      }
+    } catch (e) {
+      setState(() {
+        _userLocation = "Gagal mengambil lokasi";
+        _isLoadingLocation = false;
+        _latitude = null;
+        _longitude = null;
+        _selectedMarker = null;
+      });
     }
-
-    final position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
-
-    setState(() {
-      _userLocation =
-          "Lat: ${position.latitude.toStringAsFixed(4)}, Lon: ${position.longitude.toStringAsFixed(4)}";
-      _isLoadingLocation = false;
-    });
-  } catch (e) {
-    setState(() {
-      _userLocation = "Gagal mengambil lokasi";
-      _isLoadingLocation = false;
-    });
   }
-}
 
   Future<void> _loadNamaUser() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -234,50 +295,51 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
     if (hour >= 15 && hour < 18) return "Selamat sore 👋";
     return "Selamat malam 👋";
   }
+
   Widget _buildGreetingCard() {
-  final now = DateFormat("HH:mm").format(DateTime.now());
-  final timezone = DateFormat("z").format(DateTime.now());
+    final now = DateFormat("HH:mm").format(DateTime.now());
+    final timezone = DateFormat("z").format(DateTime.now());
 
-  return Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: Colors.blue.shade600,
-      borderRadius: BorderRadius.circular(16),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          _getGreeting(),
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF5FA4F8), Color(0xFF0079FF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        const SizedBox(height: 6),
-        Text(
-          "Hai, $namaUser",
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _getGreeting(),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          "$now WIB",
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 16,
+          const SizedBox(height: 6),
+          Text(
+            "Hai, $namaUser",
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+            ),
           ),
-        ),
-      ],
-    ),
-  );
-}
-
+          const SizedBox(height: 6),
+          Text(
+            "$now WIB",
+            style: const TextStyle(color: Colors.white70, fontSize: 16),
+          ),
+        ],
+      ),
+    );
+  }
 
   SkyTime getSkyTime() {
     final hour = DateTime.now().hour;
@@ -317,11 +379,10 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
                 children: [
                   _buildGreetingCard(),
                   const SizedBox(height: 16),
-
                   _buildWeatherCard(),
                   const SizedBox(height: 20),
-                   _buildLocationCard(),
-                   const SizedBox(height: 20),
+                  _buildLocationCard(),
+                  const SizedBox(height: 20),
                   _buildWeatherAdviceCard(), // Saran cuaca dinamis
                   const SizedBox(height: 20),
                   _buildPrayerCard(),
@@ -352,18 +413,25 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
 
   //  AppBar
   Widget _buildAppBar() {
-    return SliverAppBar(
+    return // Ganti SliverAppBar lama dengan ini
+    SliverAppBar(
       automaticallyImplyLeading: false,
       pinned: true,
-      expandedHeight: 100,
+      expandedHeight:
+          120, // sesuaikan kalau CardGreeting lebih tinggi/lebih rendah
       backgroundColor: Colors.transparent,
       elevation: 0,
       flexibleSpace: LayoutBuilder(
         builder: (context, constraints) {
-          final percent =
-              ((constraints.maxHeight - kToolbarHeight) /
-                      (100 - kToolbarHeight))
-                  .clamp(0.0, 1.0);
+          // constraints.maxHeight akan berada antara kToolbarHeight .. expandedHeight
+          final max = 120.0; // harus sama dengan expandedHeight
+          final min = kToolbarHeight;
+          final current = constraints.maxHeight.clamp(min, max);
+          // percent = 1.0 ketika expanded (besar), 0.0 ketika collapsed (kecil)
+          final percent = ((current - min) / (max - min)).clamp(0.0, 1.0);
+
+          // threshold kapan nama kecil muncul (ketika percent turun di bawah nilai ini)
+          const showCollapsedThreshold = 0.45;
 
           return ClipRRect(
             borderRadius: const BorderRadius.only(
@@ -381,20 +449,59 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
               child: SafeArea(
                 child: Stack(
                   children: [
-                    
-                    AnimatedAlign(
-                      alignment: Alignment(0, percent > 0.5 ? 0.5 : 0.0),
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeOut,
-                      child: Text(
-                        namaUser,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22 + (4 * percent),
-                          fontWeight: FontWeight.bold,
+                    // Large greeting area (visible saat expanded)
+                    Positioned.fill(
+                      child: Align(
+                        alignment: Alignment.center,
+                        child: AnimatedOpacity(
+                          opacity: percent > showCollapsedThreshold ? 1.0 : 0.0,
+                          duration: const Duration(milliseconds: 220),
+                          curve: Curves.easeOut,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'HaiTime',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20 + (6 * percent),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
+
+                    // Small title that appears when collapsed
+                    // positioned near top-left like a usual AppBar title
+                    Positioned(
+                      left: 16,
+                      top: 12,
+                      child: AnimatedOpacity(
+                        opacity: percent <= showCollapsedThreshold ? 1.0 : 0.0,
+                        duration: const Duration(milliseconds: 180),
+                        curve: Curves.easeOut,
+                        child: Transform.translate(
+                          // sedikit naik turun untuk efek halus
+                          offset: Offset(
+                            0,
+                            percent <= showCollapsedThreshold ? 0 : 6,
+                          ),
+                          child: Text(
+                            namaUser,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Right-side icons (tetap tampil)
                     Positioned(
                       right: 0,
                       top: 0,
@@ -442,7 +549,6 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
   Widget _buildWeatherCard() {
     return FutureBuilder<Map<String, dynamic>?>(
       future: _weatherFuture,
-
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return _loadingWeather();
@@ -573,7 +679,6 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
   Widget _buildWeatherAdviceCard() {
     return FutureBuilder<Map<String, dynamic>?>(
       future: _weatherFuture,
-
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return _buildCard(
@@ -640,43 +745,77 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
       },
     );
   }
+
+  // UPDATED: _buildLocationCard now shows GoogleMap if coords available
   Widget _buildLocationCard() {
-  return Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.grey.withOpacity(0.2),
-          blurRadius: 6,
-          offset: const Offset(0, 4),
-        ),
-      ],
-    ),
-    child: Row(
-      children: [
-        const Icon(Icons.location_on, color: Colors.red, size: 28),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _isLoadingLocation
-              ? const Text(
-                  "Mengambil lokasi...",
-                  style: TextStyle(fontSize: 16),
-                )
-              : Text(
-                  _userLocation ?? "Lokasi tidak tersedia",
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.2),
+            blurRadius: 6,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.location_on, color: Colors.red, size: 28),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _isLoadingLocation
+                    ? const Text(
+                        "Mengambil lokasi...",
+                        style: TextStyle(fontSize: 16),
+                      )
+                    : Text(
+                        _userLocation ?? "Lokasi tidak tersedia",
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.refresh, color: Colors.blue),
+                onPressed: _getUserLocation,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_latitude != null && _longitude != null)
+            SizedBox(
+              height: 160,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: GoogleMap(
+                  initialCameraPosition: CameraPosition(
+                    target: LatLng(_latitude!, _longitude!),
+                    zoom: 14,
                   ),
+                  markers: _selectedMarker != null ? {_selectedMarker!} : {},
+                  myLocationEnabled: false,
+                  zoomControlsEnabled: false,
+                  onMapCreated: (controller) {
+                    if (!_mapController.isCompleted)
+                      _mapController.complete(controller);
+                  },
                 ),
-        ),
-      ],
-    ),
-  );
-}
+              ),
+            )
+          else
+            const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
 
   //  CARD JADWAL SHOLAT
   Widget _buildPrayerCard() {
@@ -797,14 +936,18 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
     );
   }
 
-  /// CARD KEGIATAN (Background Biru)
+  /// CARD KEGIATAN
   Widget _buildKegiatanCard() {
     if (user == null) {
       return Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.blue.shade900,
-          borderRadius: BorderRadius.circular(16),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF5FA4F8), Color(0xFF0079FF)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
         ),
         child: const Text(
           "Silakan login untuk melihat kegiatan.",
@@ -854,7 +997,7 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
           padding: const EdgeInsets.all(16),
           margin: const EdgeInsets.only(bottom: 10),
           decoration: BoxDecoration(
-            color: const Color.fromARGB(255, 8, 0, 114),
+            color: const Color.fromARGB(255, 52, 152, 245),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.blue.shade200),
           ),
@@ -870,7 +1013,7 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: Colors.blue,
+                      color: Color.fromARGB(255, 255, 255, 255),
                     ),
                   ),
                   Container(
@@ -879,7 +1022,7 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color.fromARGB(255, 11, 0, 172),
+                      color: const Color.fromARGB(255, 52, 141, 243),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -936,70 +1079,263 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
                       onLongPress: () {
                         showModalBottomSheet(
                           context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.transparent,
                           builder: (ctx) {
                             return SafeArea(
-                              child: Wrap(
-                                children: [
-                                  ListTile(
-                                    leading: const Icon(Icons.edit),
-                                    title: const Text('Edit'),
-                                    onTap: () {
-                                      Navigator.pop(ctx);
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) =>
-                                              TambahKegiatanPageFirebase(
-                                                kegiatan: kegiatan,
-                                              ),
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(ctx).cardColor,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.12),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 6),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // drag handle
+                                    Padding(
+                                      padding: const EdgeInsets.all(10),
+                                      child: Container(
+                                        width: 40,
+                                        height: 4,
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[300],
+                                          borderRadius: BorderRadius.circular(
+                                            2,
+                                          ),
                                         ),
-                                      ).then((value) {
-                                        if (value == true && mounted)
-                                          setState(() {});
-                                      });
-                                    },
-                                  ),
-                                  ListTile(
-                                    leading: const Icon(Icons.delete),
-                                    title: const Text('Hapus'),
-                                    onTap: () async {
-                                      Navigator.pop(ctx);
-                                      // Hapus via service
-                                      try {
-                                        await _service.deleteKegiatan(
-                                          user!.uid,
-                                          kegiatan.docId ?? "",
-                                        );
-                                        if (mounted) {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text('Kegiatan dihapus'),
+                                      ),
+                                    ),
+
+                                    // optional title / subtitle
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.event,
+                                            color: Colors.blue,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  kegiatan.judul,
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  "${kegiatan.lokasi} • ${kegiatan.tanggal} ${kegiatan.waktu}",
+                                                  style: TextStyle(
+                                                    color: Colors.grey[600],
+                                                    fontSize: 13,
+                                                  ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ],
                                             ),
-                                          );
-                                        }
-                                      } catch (e) {
-                                        if (mounted) {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                'Gagal menghapus: $e',
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 6),
+                                    const Divider(height: 1),
+
+                                    // actions
+                                    ListTile(
+                                      leading: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.blue.withOpacity(0.12),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        padding: const EdgeInsets.all(8),
+                                        child: const Icon(
+                                          Icons.edit,
+                                          color: Colors.blue,
+                                        ),
+                                      ),
+                                      title: const Text('Edit'),
+                                      subtitle: const Text(
+                                        'Ubah detail kegiatan',
+                                      ),
+                                      onTap: () {
+                                        Navigator.pop(ctx);
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                TambahKegiatanPageFirebase(
+                                                  kegiatan: kegiatan,
+                                                ),
+                                          ),
+                                        ).then((value) {
+                                          if (value == true && mounted)
+                                            setState(() {});
+                                        });
+                                      },
+                                    ),
+
+                                    ListTile(
+                                      leading: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.orange.withOpacity(
+                                            0.12,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        padding: const EdgeInsets.all(8),
+                                        child: const Icon(
+                                          Icons.copy,
+                                          color: Colors.orange,
+                                        ),
+                                      ),
+                                      title: const Text('Duplikat (Salin)'),
+                                      subtitle: const Text(
+                                        'Buat kegiatan baru berdasarkan ini',
+                                      ),
+                                      onTap: () {
+                                        Navigator.pop(ctx);
+                                        // buat copy: buka form dengan data terisi (implementasi mudah: pass kegiatan ke form but mode == new)
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => TambahKegiatanPageFirebase(
+                                              kegiatan: KegiatanFirebase(
+                                                // pastikan model punya properti yang diperlukan; sesuaikan jika beda
+                                                judul:
+                                                    "${kegiatan.judul} (Copy)",
+                                                lokasi: kegiatan.lokasi,
+                                                tanggal: kegiatan.tanggal,
+                                                waktu: kegiatan.waktu,
+                                                catatan: kegiatan.catatan,
+                                                pengingat: kegiatan.pengingat,
+                                                status: "Belum Selesai",
                                               ),
                                             ),
-                                          );
+                                          ),
+                                        ).then((value) {
+                                          if (value == true && mounted)
+                                            setState(() {});
+                                        });
+                                      },
+                                    ),
+
+                                    ListTile(
+                                      leading: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.red.withOpacity(0.12),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        padding: const EdgeInsets.all(8),
+                                        child: const Icon(
+                                          Icons.delete,
+                                          color: Colors.red,
+                                        ),
+                                      ),
+                                      title: const Text(
+                                        'Hapus',
+                                        style: TextStyle(color: Colors.red),
+                                      ),
+                                      subtitle: const Text(
+                                        'Hapus kegiatan ini secara permanen',
+                                      ),
+                                      onTap: () async {
+                                        Navigator.pop(ctx);
+                                        // konfirmasi sebelum menghapus
+                                        final confirm = await showDialog<bool>(
+                                          context: context,
+                                          builder: (dCtx) => AlertDialog(
+                                            title: const Text(
+                                              'Konfirmasi hapus',
+                                            ),
+                                            content: const Text(
+                                              'Yakin ingin menghapus kegiatan ini? Tindakan ini tidak bisa dibatalkan.',
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.of(
+                                                  dCtx,
+                                                ).pop(false),
+                                                child: const Text('Batal'),
+                                              ),
+                                              ElevatedButton(
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: Colors.red,
+                                                ),
+                                                onPressed: () => Navigator.of(
+                                                  dCtx,
+                                                ).pop(true),
+                                                child: const Text('Hapus'),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+
+                                        if (confirm == true) {
+                                          try {
+                                            await _service.deleteKegiatan(
+                                              user!.uid,
+                                              kegiatan.docId ?? "",
+                                            );
+                                            if (mounted) {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                    'Kegiatan dihapus',
+                                                  ),
+                                                ),
+                                              );
+                                              setState(() {}); // refresh list
+                                            }
+                                          } catch (e) {
+                                            if (mounted) {
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(
+                                                    'Gagal menghapus: $e',
+                                                  ),
+                                                ),
+                                              );
+                                            }
+                                          }
                                         }
-                                      }
-                                    },
-                                  ),
-                                  ListTile(
-                                    leading: const Icon(Icons.close),
-                                    title: const Text('Tutup'),
-                                    onTap: () => Navigator.pop(ctx),
-                                  ),
-                                ],
+                                      },
+                                    ),
+
+                                    const SizedBox(height: 8),
+                                  ],
+                                ),
                               ),
                             );
                           },

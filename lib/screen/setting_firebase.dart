@@ -420,21 +420,21 @@ class _SettingPageFirebaseState extends State<SettingPageFirebase> {
               cardColor,
               textColor,
             ),
-            _buildNavTile(
-              Icons.article,
-              localizations.terms,
-              null,
-              cardColor,
-              textColor,
-            ),
-            _buildNavTile(
-              Icons.privacy_tip,
-              localizations.privacy_policy,
-              null,
-              cardColor,
-              textColor,
-            ),
 
+            // _buildNavTile(
+            //   Icons.article,
+            //   localizations.terms,
+            //   null,
+            //   cardColor,
+            //   textColor,
+            // ),
+            // _buildNavTile(
+            //   Icons.privacy_tip,
+            //   localizations.privacy_policy,
+            //   null,
+            //   cardColor,
+            //   textColor,
+            // ),
             const SizedBox(height: 24),
             Center(
               child: OutlinedButton.icon(

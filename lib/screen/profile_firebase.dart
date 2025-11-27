@@ -278,14 +278,14 @@ class _ProfilePageFirebaseState extends State<ProfilePageFirebase> {
 
                 const SizedBox(height: 12),
 
-                TextField(
-                  controller: emailController,
-                  decoration: const InputDecoration(
-                    labelText: "Email",
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.email),
-                  ),
-                ),
+                // TextField(
+                //   controller: emailController,
+                //   decoration: const InputDecoration(
+                //     labelText: "Email",
+                //     border: OutlineInputBorder(),
+                //     prefixIcon: Icon(Icons.email),
+                //   ),
+                // ),
                 const SizedBox(height: 12),
 
                 Row(
@@ -576,44 +576,44 @@ class _ProfilePageFirebaseState extends State<ProfilePageFirebase> {
                           ),
                           Align(
                             alignment: const Alignment(0.38, 0.45),
-                            child: Opacity(
-                              opacity: avatarFast,
-                              child: Transform.scale(
-                                scale: avatarScale,
-                                alignment: Alignment.center,
-                                child: Container(
-                                  width: 34,
-                                  height: 34,
-                                  decoration: BoxDecoration(
-                                    color: Colors.blueAccent,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: Colors.white,
-                                      width: 2,
-                                    ),
-                                  ),
-                                  child: IconButton(
-                                    padding: EdgeInsets.zero,
-                                    icon: const Icon(
-                                      Icons.edit,
-                                      color: Colors.white,
-                                      size: 18,
-                                    ),
-                                    onPressed: () async {
-                                      final user =
-                                          FirebaseAuth.instance.currentUser;
-                                      if (user == null) return;
+                            // child: Opacity(
+                            //   opacity: avatarFast,
+                            //   child: Transform.scale(
+                            //     scale: avatarScale,
+                            //     alignment: Alignment.center,
+                            //     child: Container(
+                            //       width: 34,
+                            //       height: 34,
+                            //       decoration: BoxDecoration(
+                            //         color: Colors.blueAccent,
+                            //         shape: BoxShape.circle,
+                            //         border: Border.all(
+                            //           color: Colors.white,
+                            //           width: 2,
+                            //         ),
+                            //       ),
+                            //       // child: IconButton(
+                            //       //   padding: EdgeInsets.zero,
+                            //       //   icon: const Icon(
+                            //       //     Icons.edit,
+                            //       //     color: Colors.white,
+                            //       //     size: 18,
+                            //       //   ),
+                            //       //   onPressed: () async {
+                            //       //     final user =
+                            //       //         FirebaseAuth.instance.currentUser;
+                            //       //     if (user == null) return;
 
-                                      final url = await uploadProfileImage(
-                                        user.uid,
-                                      );
-                                      if (url != null)
-                                        setState(() => profileUrl = url);
-                                    },
-                                  ),
-                                ),
-                              ),
-                            ),
+                            //       //     final url = await uploadProfileImage(
+                            //       //       user.uid,
+                            //       //     );
+                            //       //     if (url != null)
+                            //       //       setState(() => profileUrl = url);
+                            //       //   },
+                            //       // ),
+                            //     ),
+                            //   ),
+                            // ),
                           ),
                           Align(
                             alignment: const Alignment(0, 0.7),
@@ -1049,11 +1049,11 @@ class _ProfilePageFirebaseState extends State<ProfilePageFirebase> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: Colors.blue.shade100,
-              child: Icon(icon, color: Colors.blue.shade700, size: 22),
-            ),
+            // CircleAvatar(
+            //   radius: 20,
+            //   backgroundColor: Colors.blue.shade100,
+            //   child: Icon(icon, color: Colors.blue.shade700, size: 22),
+            // ),
             const SizedBox(height: 12),
             Text(
               value,

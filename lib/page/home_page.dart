@@ -563,7 +563,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       child: Stack(
         children: [
-          // 🔵 Background animasi langit
+          //  Background animasi langit
           ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: SizedBox(
@@ -575,7 +575,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             ),
           ),
 
-          // 🔵 Overlay gelap agar teks bisa dibaca
+          //  Overlay gelap agar teks bisa dibaca
           ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: Container(
@@ -585,7 +585,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             ),
           ),
 
-          // 🔵 Konten card (anti overflow)
+          //  Konten card (anti overflow)
           Positioned.fill(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -605,7 +605,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         ),
                       ),
 
-                      // 🔥 FIX OVERFLOW → wrap dengan Flexible
+                      //  FIX OVERFLOW → wrap dengan Flexible
                       Flexible(
                         child: TextButton(
                           style: TextButton.styleFrom(
@@ -676,7 +676,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  /// 🔹 CARD KEGIATAN (Background Biru)
+  ///  CARD KEGIATAN (Background Biru)
   Widget _buildKegiatanCard() {
     final kegiatanAktif = _listKegiatan
         .where((k) => k.status != "Selesai")
@@ -691,7 +691,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           8,
           0,
           114,
-        ), // 🔵 Warna biru muda background card
+        ), //  Warna biru muda background card
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.blue.shade200),
       ),
@@ -699,7 +699,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 🔹 HEADER CARD
+          //  HEADER CARD
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -708,7 +708,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.blue, // 🔵 Judul biru
+                  color: Colors.blue, //  Judul biru
                 ),
               ),
               Container(
@@ -720,7 +720,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 child: Text(
                   "${kegiatanAktif.length} Kegiatan",
                   style: const TextStyle(
-                    color: Colors.white, // 🔵 White text
+                    color: Colors.white, //  White text
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -730,7 +730,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
           const SizedBox(height: 12),
 
-          // 🔹 LIST KEGIATAN ATAU "BELUM ADA"
+          //  LIST KEGIATAN ATAU "BELUM ADA"
           if (kegiatanAktif.isEmpty)
             const Center(
               child: Padding(
@@ -746,7 +746,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             ...kegiatanAktif.map((kegiatan) {
               return Card(
                 color:
-                    Colors.white, // 🔹 Card item tetap putih agar lebih kontras
+                    Colors.white, //  Card item tetap putih agar lebih kontras
                 child: ListTile(
                   leading: const Icon(Icons.event, color: Colors.blue),
                   title: Text(

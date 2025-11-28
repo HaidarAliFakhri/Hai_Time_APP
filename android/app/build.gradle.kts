@@ -28,7 +28,7 @@ android {
         versionName = flutter.versionName
     }
 
-    // ✅ Kompatibilitas Java 11 + desugaring aktif
+    //  Kompatibilitas Java 11 + desugaring aktif
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -39,7 +39,7 @@ android {
         jvmTarget = "11"
     }
 
-    // ✅ Konfigurasi tanda tangan (release)
+    //  Konfigurasi tanda tangan (release)
     signingConfigs {
         if (keystoreProperties.isNotEmpty()) {
             create("release") {
@@ -51,7 +51,7 @@ android {
         }
     }
 
-    // ✅ Build types: release dan debug
+    //  Build types: release dan debug
     buildTypes {
         getByName("release") {
             if (signingConfigs.names.contains("release")) {
@@ -67,7 +67,7 @@ android {
         }
     }
 
-    // ✅ Packaging options
+    //  Packaging options
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -80,15 +80,16 @@ flutter {
 }
 
 dependencies {
-    // ✅ Desugaring library
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    //  Desugaring library
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 
-    // ✅ Kotlin stdlib
+    //  Kotlin stdlib
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 
-    // ✅ AndroidX Core
+    //  AndroidX Core
     implementation("androidx.core:core-ktx:1.12.0")
 
-    // 🔔 Jika pakai notifikasi / alarm / background task
+    //  Jika pakai notifikasi / alarm / background task
     implementation("androidx.work:work-runtime-ktx:2.9.0")
+    
 }

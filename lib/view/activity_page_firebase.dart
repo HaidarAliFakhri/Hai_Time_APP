@@ -196,11 +196,11 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
         final distanceText = leg['distance']?['text'] ?? '';
         final durationText = leg['duration']?['text'] ?? '';
 
-        // ✅ AMBIL POLYLINE YANG BENAR
+        //  AMBIL POLYLINE YANG BENAR
         final encodedPolyline = route['overview_polyline']?['points'];
 
         if (encodedPolyline != null) {
-          // ✅ Decode polyline
+          //  Decode polyline
           final decodedPoints = PolylinePoints.decodePolyline(encodedPolyline);
 
           final points = decodedPoints
@@ -222,7 +222,7 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
             _polylines[id] = poly;
           });
 
-          // ✅ Auto fit kamera
+          //  Auto fit kamera
           if (_mapController != null && points.isNotEmpty) {
             final swLat = points.map((e) => e.latitude).reduce(min);
             final swLng = points.map((e) => e.longitude).reduce(min);
@@ -240,7 +240,7 @@ class _KegiatanPageFirebaseState extends State<KegiatanPageFirebase> {
           }
         }
       } else {
-        // ✅ fallback jarak garis lurus
+        //  fallback jarak garis lurus
         final jarakKm = _calculateDistance(
           _origin!.latitude,
           _origin!.longitude,

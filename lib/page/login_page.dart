@@ -3,7 +3,6 @@ import 'package:hai_time_app/page/bottom_navigator.dart';
 import 'package:hai_time_app/page/form_register.dart';
 import 'package:hai_time_app/page/home_page.dart';
 import 'package:hai_time_app/preferences/preferences_handler.dart';
-import 'package:hai_time_app/view/dashborad_admin.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
@@ -40,21 +39,21 @@ class _LoginPageState extends State<LoginPage> {
     final passwordInput = passwordController.text.trim();
 
     //  1. Login Admin
-    if (emailInput == 'admin@haitime.com' && passwordInput == 'admin123') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login sebagai Admin berhasil!')),
-      );
+    // if (emailInput == 'admin@haitime.com' && passwordInput == 'admin123') {
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     const SnackBar(content: Text('Login sebagai Admin berhasil!')),
+    //   );
 
-      //  Simpan status login admin
-      await PreferenceHandler.saveLogin(true);
-      await PreferenceHandler.setEmail(emailInput);
+    //   //  Simpan status login admin
+    //   await PreferenceHandler.saveLogin(true);
+    //   await PreferenceHandler.setEmail(emailInput);
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const DashboardAdminPage()),
-      );
-      return;
-    }
+    //   Navigator.pushReplacement(
+    //     context,
+    //     MaterialPageRoute(builder: (_) => const DashboardAdminPage()),
+    //   );
+    //   return;
+    // }
 
     //  2. Login User
     if (emailInput == registeredEmail && passwordInput == registeredPassword) {
@@ -68,8 +67,7 @@ class _LoginPageState extends State<LoginPage> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute( builder: (_) => BottomNavigator()
-)
+        MaterialPageRoute(builder: (_) => BottomNavigator()),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

@@ -298,7 +298,6 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
 
   Widget _buildGreetingCard() {
     final now = DateFormat("HH:mm").format(DateTime.now());
-    final timezone = DateFormat("z").format(DateTime.now());
 
     return Container(
       width: double.infinity,
@@ -535,6 +534,19 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
                         ],
                       ),
                     ),
+                    //test alarm kegiatan
+                    // ElevatedButton(
+                    //   onPressed: () async {
+                    //     await NotifikasiService.safeSchedule(
+                    //       id: 999998,
+                    //       title: "Test Alarm",
+                    //       body: "Alarm test dalam 10 detik",
+                    //       date: DateTime.now().add(Duration(seconds: 15)),
+                    //       soundResource: 'alarm',
+                    //     );
+                    //   },
+                    //   child: Text("TEST ALARM"),
+                    // ),
                   ],
                 ),
               ),
@@ -778,7 +790,7 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
                     : Text(
                         _userLocation ?? "Lokasi tidak tersedia",
                         style: const TextStyle(
-                          fontSize: 16,
+                          fontSize: 13,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -823,7 +835,7 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
       margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       child: Stack(
         children: [
-          // 🔵 Background animasi langit
+          //  Background animasi langit
           ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: SizedBox(
@@ -835,7 +847,7 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
             ),
           ),
 
-          // 🔵 Overlay gelap agar teks bisa dibaca
+          //  Overlay gelap agar teks bisa dibaca
           ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: Container(
@@ -844,8 +856,7 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
               color: const Color.fromARGB(255, 255, 255, 255).withOpacity(0.25),
             ),
           ),
-
-          // 🔵 Konten card (anti overflow)
+          //  Konten card (anti overflow)
           Positioned.fill(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -865,7 +876,7 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
                         ),
                       ),
 
-                      // 🔥 FIX OVERFLOW → wrap dengan Flexible
+                      //  FIX OVERFLOW → wrap dengan Flexible
                       Flexible(
                         child: TextButton(
                           style: TextButton.styleFrom(

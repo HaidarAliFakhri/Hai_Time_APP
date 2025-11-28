@@ -133,37 +133,40 @@ class _TambahKegiatanPageFirebaseState
   }
 
   // ================= SIMPAN =================
-  void _simpanKegiatan() async {
-    if (_isSaving) return; // mencegah klik ganda
+  Future<void> _simpanKegiatan() async {
+    if (_isSaving) return;
     if (!_formKey.currentState!.validate()) return;
 
     final user = _auth.currentUser;
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Silakan login terlebih dahulu.")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Silakan login terlebih dahulu.")),
+        );
+      }
       return;
     }
 
     setState(() => _isSaving = true);
 
-    // Validasi & parsing waktu
     final parsedTime = _parseTime(_waktuController.text);
     if (parsedTime == null) {
       setState(() => _isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Format waktu tidak valid. Contoh: 17:30"),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Format waktu tidak valid. Contoh: 17:30"),
+          ),
+        );
+      }
       return;
     }
 
     try {
       final nowIso = DateTime.now().toIso8601String();
 
-      // Build objek (sesuai model KegiatanFirebase yang ada)
-      final data = KegiatanFirebase(
+      // Build objek awal (notifId akan di-set nanti)
+      KegiatanFirebase data = KegiatanFirebase(
         docId: widget.kegiatan?.docId,
         judul: _judulController.text.trim(),
         lokasi: _lokasiController.text.trim(),
@@ -178,58 +181,87 @@ class _TambahKegiatanPageFirebaseState
         updatedAt: nowIso,
       );
 
-      final notifDate = _notifDate(data);
+      // Hitung tanggal notif (gabungan tanggal + waktu - pengingat)
+      // Asumsi: _notifDate mengembalikan DateTime (non-nullable).
+      final DateTime notifDate = _notifDate(data);
 
+      // EDIT
       if (widget.kegiatan != null) {
-        // EDIT
-        // 1) Try cancel old notification (two attempts: raw docId and mapped safe id)
-        try {
-          final raw = int.tryParse(widget.kegiatan!.docId ?? "");
-          if (raw != null) {
-            // cancel original raw id (some apps may have used numeric small ids)
-            await NotifikasiService.safeCancel(raw);
+        // 1) Cancel old notification jika ada (notifId nullable pada model)
+        final int? oldNotifId = widget.kegiatan!.notifId;
+        if (oldNotifId != null) {
+          await NotifikasiService.safeCancel(oldNotifId);
+          debugPrint('Cancelled old notifId=$oldNotifId (from model)');
+        } else {
+          // defensive fallback: mencoba membatalkan jika docId berisi angka (legacy)
+          await NotifikasiService.safeCancelMaybe(widget.kegiatan!.docId);
+          debugPrint(
+            'Attempted fallback cancel using docId ${widget.kegiatan!.docId}',
+          );
+        }
 
-            // cancel mapped safe id in case earlier implementation used a mapping
-            final mapped = (raw % 2147483647).toInt();
-            if (mapped != raw) await NotifikasiService.safeCancel(mapped);
-          }
-        } catch (_) {}
-
+        // 2) Update data umum ke Firestore (tanpa notifId)
+        data = data.copyWith(docId: widget.kegiatan!.docId);
         await _service.updateKegiatan(user.uid, data);
 
-        // 2) schedule new notification using safe id
-        final notifId = NotifikasiService.generateSafeNotifId();
+        // 3) Buat notifId baru, schedule, dan simpan notifId ke Firestore
+        final int notifId = NotifikasiService.generateSafeNotifId();
+        data = data.copyWith(notifId: notifId);
+
         if (!notifDate.isBefore(DateTime.now())) {
           await NotifikasiService.safeSchedule(
             id: notifId,
             title: "Pengingat Kegiatan",
             body: "${data.judul} dimulai jam ${data.waktu}",
             date: notifDate,
+            payload: "kegiatan_${data.docId ?? notifId}",
+            soundResource: 'alarm', // pastikan file alarm tersedia
           );
+          debugPrint('Scheduled new notifId=$notifId at $notifDate for edit');
+        } else {
+          debugPrint('NotifDate is in the past, skipping scheduling for edit');
         }
+
+        // 4) Simpan notifId ke dokumen (update hanya field notifId)
+        // Asumsi docId non-null karena editing existing doc
+        await _service.updateKegiatanNotifId(user.uid, data.docId!, notifId);
       } else {
         // ADD
-        await _service.addKegiatan(user.uid, data);
+        // 1) Simpan doc awal ke Firestore dan dapatkan docId (addKegiatan mengembalikan String)
+        final String docId = await _service.addKegiatan(user.uid, data);
 
-        // schedule notifikasi using safe 32-bit id
-        final notifId = NotifikasiService.generateSafeNotifId();
+        // 2) Generate notifId, update doc dengan notifId, schedule notif
+        final int notifId = NotifikasiService.generateSafeNotifId();
+        data = data.copyWith(docId: docId, notifId: notifId);
+
         if (!notifDate.isBefore(DateTime.now())) {
           await NotifikasiService.safeSchedule(
             id: notifId,
             title: "Pengingat Kegiatan",
             body: "${data.judul} dimulai jam ${data.waktu}",
             date: notifDate,
+            payload: "kegiatan_$docId",
+            soundResource: 'alarm',
           );
+          debugPrint('Scheduled new notifId=$notifId at $notifDate for add');
+        } else {
+          debugPrint('NotifDate is in the past, skipping scheduling for add');
         }
+
+        // 3) Simpan notifId ke Firestore (update field notifId saja)
+        await _service.updateKegiatanNotifId(user.uid, docId, notifId);
       }
 
       if (!mounted) return;
+
+      // selesai: navigasi kembali ke Home
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const HomePageFirebase()),
         (route) => false,
       );
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('Error saving kegiatan: $e\n$st');
       if (mounted) {
         ScaffoldMessenger.of(
           context,

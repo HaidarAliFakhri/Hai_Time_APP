@@ -1,13 +1,17 @@
+// lib/pages/jadwal_page.dart
 import 'dart:async';
+import 'dart:io';
 
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:intl/intl.dart';
 import 'package:ionicons/ionicons.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
+/// Halaman Jadwal Sholat + scheduling adzan
 class JadwalPage extends StatefulWidget {
   final VoidCallback? onBackToHome;
 
@@ -25,13 +29,14 @@ class _JadwalPageState extends State<JadwalPage> {
   final FlutterLocalNotificationsPlugin _notifikasi =
       FlutterLocalNotificationsPlugin();
 
+  // DEFAULT: semua OFF (sesuai permintaan)
   final List<Map<String, dynamic>> jadwalSholat = [
     {
       "nama": "Subuh",
       "waktu": "04:45",
       "pengingat": "10 menit sebelumnya",
       "ikon": Icons.brightness_2_outlined,
-      "aktif": true,
+      "aktif": false,
       "selesai": false,
     },
     {
@@ -39,7 +44,7 @@ class _JadwalPageState extends State<JadwalPage> {
       "waktu": "11:42",
       "pengingat": "10 menit sebelumnya",
       "ikon": Icons.wb_sunny_outlined,
-      "aktif": true,
+      "aktif": false,
       "selesai": false,
     },
     {
@@ -47,7 +52,7 @@ class _JadwalPageState extends State<JadwalPage> {
       "waktu": "14:55",
       "pengingat": "10 menit sebelumnya",
       "ikon": Icons.wb_twilight,
-      "aktif": true,
+      "aktif": false,
       "selesai": false,
     },
     {
@@ -55,7 +60,7 @@ class _JadwalPageState extends State<JadwalPage> {
       "waktu": "17:47",
       "pengingat": "10 menit sebelumnya",
       "ikon": Icons.nightlight_round_outlined,
-      "aktif": true,
+      "aktif": false,
       "selesai": false,
     },
     {
@@ -63,25 +68,37 @@ class _JadwalPageState extends State<JadwalPage> {
       "waktu": "18:59",
       "pengingat": "10 menit sebelumnya",
       "ikon": Icons.nightlight_round,
-      "aktif": true,
+      "aktif": false,
       "selesai": false,
     },
   ];
 
+  // channel id constant — gunakan v2 agar tidak terpengaruh channel lama
+  static const String _channelId = 'adzan_channel_v2';
+  static const String _channelName = 'Adzan Reminder';
+  static const String _channelDesc = 'Notifikasi pengingat waktu sholat';
+
   @override
   void initState() {
     super.initState();
+    // timezone
     tzdata.initializeTimeZones();
-    tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
+    try {
+      tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
+    } catch (_) {}
+
     _initNotifikasi();
-    _loadStatus(); //  muat status aktif/tidak dari SharedPreferences
-    _updateStatusSholat();
-    _mintaIzinNotifikasi();
-    _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
+    _loadStatus().then((_) {
+      // Setelah load status, update UI dan schedule sesuai status
       _updateStatusSholat();
+      _jadwalkanSemuaSholat();
     });
 
-    _jadwalkanSemuaSholat();
+    // cek tiap 30 detik supaya lebih responsif (tapi jangan spaming)
+    _timer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      _updateStatusSholat();
+      _checkAndTriggerImmediateNotification();
+    });
   }
 
   @override
@@ -90,81 +107,157 @@ class _JadwalPageState extends State<JadwalPage> {
     super.dispose();
   }
 
-  ///  Inisialisasi notifikasi lokal
+  /// Inisialisasi plugin notifikasi
   Future<void> _initNotifikasi() async {
-  const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-  const initSettings = InitializationSettings(android: androidInit);
+    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
 
-  await _notifikasi.initialize(
-    initSettings,
-    onDidReceiveNotificationResponse: (NotificationResponse response) async {
-      if (response.payload == 'stop_adzan') {
-        //  Matikan suara adzan
-        if (_adzanSedangBerbunyi) {
-          _adzanSedangBerbunyi = false;
-          await _notifikasi.cancelAll(); // hentikan semua notifikasi aktif
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Adzan dimatikan')),
-          );
+    // Aktifkan requestSoundPermission agar iOS boleh memutar suara
+    final darwinInit = DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: true,
+    );
+
+    final initSettings = InitializationSettings(
+      android: androidInit,
+      iOS: darwinInit,
+    );
+
+    await _notifikasi.initialize(
+      initSettings,
+      onDidReceiveNotificationResponse: (NotificationResponse response) async {
+        final payload = response.payload;
+        if (payload == 'stop_adzan') {
+          if (_adzanSedangBerbunyi) {
+            _adzanSedangBerbunyi = false;
+            await _notifikasi.cancelAll();
+            if (mounted) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Adzan dimatikan')));
+            }
+          }
+        }
+      },
+      onDidReceiveBackgroundNotificationResponse: _notificationTapBackground,
+    );
+
+    // create android channel (required Android 8+)
+    if (Platform.isAndroid) {
+      final androidPlugin = _notifikasi
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+
+      if (androidPlugin != null) {
+        final channel = AndroidNotificationChannel(
+          _channelId,
+          _channelName,
+          description: _channelDesc,
+          importance: Importance.max,
+          playSound: true,
+          sound: const RawResourceAndroidNotificationSound('adzan'),
+        );
+        try {
+          await androidPlugin.createNotificationChannel(channel);
+          debugPrint('Created/updated channel: $_channelId with sound adzan');
+        } catch (e) {
+          debugPrint('createNotificationChannel error: $e');
+        }
+      } else {
+        debugPrint('Android plugin impl is null — cannot create channel');
+      }
+    }
+
+    // request permissions
+    await _requestPermissions();
+  }
+
+  @pragma('vm:entry-point')
+  static void _notificationTapBackground(NotificationResponse response) {
+    try {
+      debugPrint('Background notification tapped: ${response.payload}');
+    } catch (e) {
+      debugPrint('background handler error: $e');
+    }
+  }
+
+  Future<void> _requestPermissions() async {
+    if (Platform.isAndroid) {
+      final androidImpl = _notifikasi
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+
+      try {
+        await androidImpl?.requestNotificationsPermission();
+      } catch (e) {
+        debugPrint('requestNotificationsPermission failed: $e');
+        try {
+          final status = await Permission.notification.status;
+          if (!status.isGranted) await Permission.notification.request();
+        } catch (e2) {
+          debugPrint('permission_handler fallback failed: $e2');
         }
       }
-    },
-  );
-    //  Tambahkan konfigurasi channel manual agar aman di Android <8
-  // const androidDetails = AndroidNotificationDetails(
-  //   'adzan_channel',
-  //   'Adzan Reminder',
-  //   channelDescription: 'Notifikasi pengingat waktu sholat',
-  //   importance: Importance.max,
-  //   priority: Priority.high,
-  //   playSound: true,
-  //   enableVibration: true,
-  // );
-  //  Tes notifikasi untuk memastikan izin dan channel aktif
-  // await _notifikasi.show(
-  //   999,
-  //   'Notifikasi Siap ',
-  //   'Sistem pengingat adzan aktif.',
-  //   const NotificationDetails(android: androidDetails),
-  // );
 
-}
-    Future<void> _mintaIzinNotifikasi() async {
-  final androidPlugin = _notifikasi.resolvePlatformSpecificImplementation<
-      AndroidFlutterLocalNotificationsPlugin>();
-  await androidPlugin?.requestNotificationsPermission();
-}
+      try {
+        await androidImpl?.requestExactAlarmsPermission();
+      } catch (e) {
+        debugPrint('requestExactAlarmsPermission not available or failed: $e');
+      }
+    }
 
+    if (Platform.isIOS) {
+      final iosImpl = _notifikasi
+          .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin
+          >();
+      try {
+        await iosImpl?.requestPermissions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+      } catch (e) {
+        debugPrint('iOS requestPermissions failed: $e');
+      }
+    }
+  }
 
-  ///  Simpan status switch ke SharedPreferences
+  /// Simpan status switch ke SharedPreferences
   Future<void> _simpanStatus(String nama, bool aktif) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('aktif_$nama', aktif);
   }
 
-  ///  Muat status switch dari SharedPreferences saat pertama kali dibuka
+  /// Muat status switch dari SharedPreferences
   Future<void> _loadStatus() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       for (var data in jadwalSholat) {
         final saved = prefs.getBool('aktif_${data["nama"]}');
-        if (saved != null) {
-          data["aktif"] = saved;
-        }
+        // default false jika belum ada
+        data["aktif"] = saved ?? false;
       }
     });
   }
 
-  ///  Jadwalkan semua notifikasi adzan
+  /// Batalkan semua jadwal lama lalu schedule ulang semua notifikasi
   Future<void> _jadwalkanSemuaSholat() async {
-    _adzanSedangBerbunyi = true;
+    // batalkan dulu untuk mencegah duplicate
+    try {
+      await _notifikasi.cancelAll();
+    } catch (e) {
+      debugPrint('cancelAll failed: $e');
+    }
 
     final now = DateTime.now();
     final format = DateFormat("HH:mm");
 
     for (int i = 0; i < jadwalSholat.length; i++) {
       final data = jadwalSholat[i];
-      if (data["aktif"] != true) continue; // ❗ Skip kalau dinonaktifkan
+      if (data["aktif"] != true) continue;
 
       final waktu = format.parse(data["waktu"]);
       final waktuHariIni = DateTime(
@@ -175,63 +268,161 @@ class _JadwalPageState extends State<JadwalPage> {
         waktu.minute,
       );
 
-      final waktuFinal = now.isAfter(waktuHariIni)
+      final scheduledDate = now.isAfter(waktuHariIni)
           ? waktuHariIni.add(const Duration(days: 1))
           : waktuHariIni;
 
-      await _notifikasi.zonedSchedule(
-  i,
-  "Waktu Sholat ${data["nama"]}",
-  "Sudah masuk waktu ${data["nama"]}. Ayo sholat dulu 🕌",
-  tz.TZDateTime.from(waktuFinal, tz.local),
-  NotificationDetails(
-    android: AndroidNotificationDetails(
-      'adzan_channel',
-      'Adzan Reminder',
-      channelDescription: 'Notifikasi pengingat waktu sholat',
+      final tzScheduled = tz.TZDateTime.from(scheduledDate, tz.local);
+
+      final androidDetails = AndroidNotificationDetails(
+        _channelId,
+        _channelName,
+        channelDescription: _channelDesc,
+        importance: Importance.max,
+        priority: Priority.high,
+        playSound: true,
+        enableVibration: true,
+        sound: const RawResourceAndroidNotificationSound('adzan'),
+        actions: <AndroidNotificationAction>[
+          AndroidNotificationAction(
+            'stop_adzan',
+            'Matikan Adzan 🔇',
+            showsUserInterface: true,
+            cancelNotification: true,
+          ),
+        ],
+      );
+
+      final darwinDetails = DarwinNotificationDetails(
+        sound: 'adzan.aiff',
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
+      final details = NotificationDetails(
+        android: androidDetails,
+        iOS: darwinDetails,
+      );
+
+      final String title = "Waktu Sholat ${data['nama']}";
+      final String body =
+          "Sudah masuk waktu ${data['nama']}. Ayo sholat dulu 🕌";
+      final String payload = "adzan_${data['nama']}";
+
+      try {
+        await _notifikasi.zonedSchedule(
+          i, // id = index
+          title,
+          body,
+          tzScheduled,
+          details,
+          payload: payload,
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        );
+        debugPrint('Scheduled ${data['nama']} at $tzScheduled (id=$i)');
+      } catch (e) {
+        debugPrint('zonedSchedule failed for ${data["nama"]}: $e');
+      }
+    }
+  }
+
+  /// Cek tiap interval; jika waktu sekarang tepat sama dengan salah satu jadwal (HH:mm),
+  /// trigger notifikasi segera (berguna jika sistem tidak mengeksekusi zonedSchedule tepat waktu)
+  void _checkAndTriggerImmediateNotification() {
+    final now = DateTime.now();
+    final current = DateFormat('HH:mm').format(now);
+
+    for (var data in jadwalSholat) {
+      if (data['aktif'] != true) continue;
+      final waktu = data['waktu'] as String;
+      if (waktu == current) {
+        _showAdzanNow(data['nama']);
+      }
+    }
+  }
+
+  /// Tampilkan notifikasi adzan segera (digunakan oleh check immediate)
+  Future<void> _showAdzanNow(String nama) async {
+    if (_adzanSedangBerbunyi) return; // hindari tumpang tindih
+    _adzanSedangBerbunyi = true;
+
+    final androidDetails = AndroidNotificationDetails(
+      _channelId,
+      _channelName,
+      channelDescription: _channelDesc,
       importance: Importance.max,
       priority: Priority.high,
       playSound: true,
       enableVibration: true,
-      sound: RawResourceAndroidNotificationSound('adzan'),
+      sound: const RawResourceAndroidNotificationSound('adzan'),
       actions: <AndroidNotificationAction>[
         AndroidNotificationAction(
-          'stop_adzan', // id unik
+          'stop_adzan',
           'Matikan Adzan 🔇',
           showsUserInterface: true,
           cancelNotification: true,
         ),
       ],
-    ),
-  ),
-  payload: 'stop_adzan',
-  androidAllowWhileIdle: true,
-  uiLocalNotificationDateInterpretation:
-      UILocalNotificationDateInterpretation.absoluteTime,
-);
+    );
+
+    final darwinDetails = DarwinNotificationDetails(
+      sound: 'adzan.aiff',
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    final details = NotificationDetails(
+      android: androidDetails,
+      iOS: darwinDetails,
+    );
+
+    try {
+      await _notifikasi.show(
+        generateSafeNotifId(),
+        'Waktu Sholat $nama',
+        'Sudah masuk waktu $nama. Ayo sholat dulu 🕌',
+        details,
+        payload: 'adzan_$nama',
+      );
+
+      // reset flag setelah 2 menit agar bisa berbunyi lagi untuk jadwal lain
+      Future.delayed(const Duration(minutes: 2), () {
+        _adzanSedangBerbunyi = false;
+      });
+    } catch (e) {
+      debugPrint('show immediate notification failed: $e');
+      _adzanSedangBerbunyi = false;
     }
   }
 
-  ///  Update status sholat di UI
+  /// Generate safe 32-bit id
+  int generateSafeNotifId() {
+    final ms = DateTime.now().millisecondsSinceEpoch;
+    return (ms % 2147483647).toInt();
+  }
+
+  /// Update status sholat di UI (sudah lewat / belum)
   void _updateStatusSholat() {
     final now = DateTime.now();
-    final format = DateFormat("HH:mm");
+    final fmt = DateFormat('HH:mm');
 
     setState(() {
       for (var data in jadwalSholat) {
-        final waktuSholat = format.parse(data["waktu"]);
+        final waktu = fmt.parse(data['waktu'] as String);
         final waktuHariIni = DateTime(
           now.year,
           now.month,
           now.day,
-          waktuSholat.hour,
-          waktuSholat.minute,
+          waktu.hour,
+          waktu.minute,
         );
-        data["selesai"] = now.isAfter(waktuHariIni);
+        data['selesai'] = now.isAfter(waktuHariIni);
       }
 
       nextPrayer = jadwalSholat.firstWhere((data) {
-        final waktu = format.parse(data["waktu"]);
+        final waktu = fmt.parse(data['waktu'] as String);
         final waktuHariIni = DateTime(
           now.year,
           now.month,
@@ -244,7 +435,6 @@ class _JadwalPageState extends State<JadwalPage> {
     });
   }
 
-  ///  Hitung sisa waktu menuju sholat berikutnya
   String _hitungSisaWaktu(String waktu) {
     final now = DateTime.now();
     final format = DateFormat("HH:mm");
@@ -295,18 +485,20 @@ class _JadwalPageState extends State<JadwalPage> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Align(
-            alignment: Alignment.topLeft,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () {
-                Navigator.pop(context);
- // kembali ke tab Home
-              },
-            ),
-            ),
+                    alignment: Alignment.topLeft,
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ),
                   const SizedBox(height: 10),
-                  const Icon(Ionicons.moon_outline,
-                      color: Colors.white, size: 60),
+                  const Icon(
+                    Ionicons.moon_outline,
+                    color: Colors.white,
+                    size: 60,
+                  ),
                   const SizedBox(height: 10),
                   const Text(
                     "Jadwal Sholat",
@@ -318,8 +510,10 @@ class _JadwalPageState extends State<JadwalPage> {
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    DateFormat("EEEE, d MMMM yyyy", "id_ID")
-                        .format(DateTime.now()),
+                    DateFormat(
+                      "EEEE, d MMMM yyyy",
+                      "id_ID",
+                    ).format(DateTime.now()),
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: Colors.white70),
                   ),
@@ -344,17 +538,32 @@ class _JadwalPageState extends State<JadwalPage> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text("Waktu Sholat Berikutnya",
-                                style: TextStyle(
-                                    color: Colors.white70, fontSize: 13)),
+                            const Text(
+                              "Waktu Sholat Berikutnya",
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                              ),
+                            ),
                             const SizedBox(height: 6),
-                            Text(currentNext["nama"],
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold)),
-                            Text(_hitungSisaWaktu(currentNext["waktu"]),
-                                style: const TextStyle(color: Colors.white70)),
+                            Text(
+                              currentNext["nama"],
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              _hitungSisaWaktu(currentNext["waktu"]),
+                              style: const TextStyle(color: Colors.white70),
+                            ),
+
+                            //test adzan
+                            // ElevatedButton(
+                            //   onPressed: () => _showAdzanNow('Subuh'),
+                            //   child: const Text('Test Adzan Now'),
+                            // ),
                           ],
                         ),
                         Text(
@@ -387,11 +596,13 @@ class _JadwalPageState extends State<JadwalPage> {
                         data["aktif"],
                         data["selesai"],
                         highlight: data == nextPrayer,
-                        onChanged: (val) {
+                        onChanged: (val) async {
                           setState(() {
                             data["aktif"] = val;
                           });
-                          _simpanStatus(data["nama"], val);
+                          await _simpanStatus(data["nama"], val);
+                          // reschedule when toggled
+                          await _jadwalkanSemuaSholat();
                         },
                       ),
                       const SizedBox(height: 12),
@@ -412,7 +623,6 @@ class _JadwalPageState extends State<JadwalPage> {
     String subtitle,
     IconData icon,
     bool isOn,
-    
     bool done, {
     bool highlight = false,
     required Function(bool) onChanged,
@@ -439,9 +649,13 @@ class _JadwalPageState extends State<JadwalPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 16)),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
                 const SizedBox(height: 4),
                 Text(subtitle, style: const TextStyle(color: Colors.grey)),
                 const SizedBox(height: 6),
@@ -458,13 +672,17 @@ class _JadwalPageState extends State<JadwalPage> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(time,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16)),
+              Text(
+                time,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
               const SizedBox(height: 8),
               Switch(
                 value: isOn,
-                activeColor: Colors.blue,
+                activeThumbColor: Colors.blue,
                 inactiveThumbColor: Colors.grey,
                 onChanged: (val) => onChanged(val),
               ),

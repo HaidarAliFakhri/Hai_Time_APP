@@ -4,7 +4,6 @@ import 'package:hai_time_app/page/form_register_firebase.dart';
 import 'package:hai_time_app/page/home_page_firebase.dart';
 import 'package:hai_time_app/preferences/preferences_handler.dart';
 import 'package:hai_time_app/services/firebase.dart';
-import 'package:hai_time_app/view/dashborad_admin.dart';
 
 class LoginPageFireBase extends StatefulWidget {
   const LoginPageFireBase({super.key});
@@ -34,23 +33,23 @@ class _LoginPageFireBaseState extends State<LoginPageFireBase> {
     final emailInput = emailController.text.trim();
     final passwordInput = passwordController.text.trim();
 
-    // 1️⃣ LOGIN ADMIN (tetap sama)
-    if (emailInput == 'admin@haitime.com' && passwordInput == 'admin123') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login sebagai Admin berhasil!')),
-      );
+    //LOGIN ADMIN (tetap sama)
+    // if (emailInput == 'admin@haitime.com' && passwordInput == 'admin123') {
+    //   ScaffoldMessenger.of(context).showSnackBar(
+    //     const SnackBar(content: Text('Login sebagai Admin berhasil!')),
+    //   );
 
-      await PreferenceHandler.saveLogin(true);
-      await PreferenceHandler.setEmail(emailInput);
+    //   await PreferenceHandler.saveLogin(true);
+    //   await PreferenceHandler.setEmail(emailInput);
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const DashboardAdminPage()),
-      );
-      return;
-    }
+    //   Navigator.pushReplacement(
+    //     context,
+    //     MaterialPageRoute(builder: (_) => const DashboardAdminPage()),
+    //   );
+    //   return;
+    // }
 
-    // 2️⃣ LOGIN USER FIREBASE
+    //  LOGIN USER FIREBASE
     try {
       final user = await FirebaseService.loginUser(
         email: emailInput,

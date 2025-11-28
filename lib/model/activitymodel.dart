@@ -7,7 +7,7 @@ class KegiatanFirebase {
   String? catatan;
   String status;
   int pengingat;
-  
+
   String? createdAt;
   String? updatedAt;
   int? notifId;
@@ -48,9 +48,13 @@ class KegiatanFirebase {
           : (map['notifId'] != null
                 ? int.tryParse(map['notifId'].toString())
                 : null),
-      // ✅ Ambil koordinat dari Firestore
-      latitude: map['latitude'] != null ? (map['latitude'] as num).toDouble() : null,
-      longitude: map['longitude'] != null ? (map['longitude'] as num).toDouble() : null,          
+      //  Ambil koordinat dari Firestore
+      latitude: map['latitude'] != null
+          ? (map['latitude'] as num).toDouble()
+          : null,
+      longitude: map['longitude'] != null
+          ? (map['longitude'] as num).toDouble()
+          : null,
     );
   }
 

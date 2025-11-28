@@ -1,4 +1,4 @@
-// services/notification_service.dart
+// lib/services/notification_service.dart
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -7,126 +7,104 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
-@pragma('vm:entry-point') // penting supaya Flutter tidak tree-shake fungsi ini
-void notificationTapBackground(NotificationResponse response) {
-  // minimal: jangan panggil context UI di sini.
-  // simpan payload/log atau hanya debugPrint
+@pragma('vm:entry-point')
+void _notificationTapBackground(NotificationResponse response) {
   try {
-    final payload = response.payload;
-    debugPrint('Background notification tapped. payload: $payload');
-    // jika mau lakukan logic non-UI, lakukan di sini (synchronous/simple)
-  } catch (e) {
-    debugPrint('Error in background notification handler: $e');
+    debugPrint('Background notification tapped: ${response.payload}');
+  } catch (e, st) {
+    debugPrint('Error in background handler: $e\n$st');
   }
 }
 
-/// Notifikasi lokal menggunakan flutter_local_notifications + timezone
 class NotifikasiService {
-  static final FlutterLocalNotificationsPlugin notif =
+  NotifikasiService._();
+
+  static final FlutterLocalNotificationsPlugin _notif =
       FlutterLocalNotificationsPlugin();
 
-  static const String _channelId = 'kegiatan_channel';
+  static const String _channelId = 'kegiatan_channel_v1';
   static const String _channelName = 'Pengingat Kegiatan';
   static const String _channelDescription = 'Channel untuk pengingat kegiatan';
 
-  /// init harus dipanggil sekali dari main() sebelum schedule
   static Future<void> init({void Function(String? payload)? onTap}) async {
-    // timezone safe init
     try {
       tz.initializeTimeZones();
     } catch (_) {}
 
-    // Android init
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    // iOS init (Darwin style settings) — safe untuk banyak versi
-    final iosInit = DarwinInitializationSettings(
-      requestSoundPermission: false,
-      requestBadgePermission: false,
-      requestAlertPermission: false,
-      onDidReceiveLocalNotification: (id, title, body, payload) {
-        debugPrint('iOS legacy local notification: $id (payload:$payload)');
-      },
+    final darwinInit = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
     );
 
-    final settings = InitializationSettings(android: androidInit, iOS: iosInit);
+    final settings = InitializationSettings(
+      android: androidInit,
+      iOS: darwinInit,
+    );
 
-    // initialize with tap handlers
-    await notif.initialize(
+    await _notif.initialize(
       settings,
-      onDidReceiveNotificationResponse: (NotificationResponse response) {
+      onDidReceiveNotificationResponse: (response) {
         try {
-          final String? payload = response.payload;
+          final payload = response.payload;
           if (onTap != null) onTap(payload);
-        } catch (e) {
-          debugPrint("Error handling notification tap: $e");
+        } catch (e, st) {
+          debugPrint('Error handling tap: $e\n$st');
         }
       },
-      // kirim top-level handler (jangan gunakan closure di sini)
-      onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
+      onDidReceiveBackgroundNotificationResponse: _notificationTapBackground,
     );
 
-    // Create Android channel (Android 8+)
     if (Platform.isAndroid) {
-      final androidChannel = AndroidNotificationChannel(
-        _channelId,
-        _channelName,
-        description: _channelDescription,
-        importance: Importance.max,
-      );
-
-      final androidPlugin = notif
+      final androidImpl = _notif
           .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin
           >();
-
-      if (androidPlugin != null) {
+      if (androidImpl != null) {
+        final channel = AndroidNotificationChannel(
+          _channelId,
+          _channelName,
+          description: _channelDescription,
+          importance: Importance.max,
+        );
         try {
-          await androidPlugin.createNotificationChannel(androidChannel);
-        } catch (e) {
-          debugPrint('Gagal membuat channel Android: $e');
+          await androidImpl.createNotificationChannel(channel);
+          debugPrint('Notification channel created/verified: $_channelId');
+        } catch (e, st) {
+          debugPrint('Failed creating channel: $e\n$st');
         }
       }
-
-      // Request runtime permission for Android 13+ (POST_NOTIFICATIONS)
       try {
         final status = await Permission.notification.status;
         if (!status.isGranted) {
           await Permission.notification.request();
         }
-      } catch (e) {
-        debugPrint('Gagal request permission notification (Android): $e');
+      } catch (e, st) {
+        debugPrint('Permission.request error (android): $e\n$st');
       }
     }
 
-    // Request permissions on iOS — use dynamic resolution to avoid typing issues
     if (Platform.isIOS) {
       try {
-        // resolvePlatformSpecificImplementation without concrete type parameter
-        // returns platform impl or null. We call requestPermissions dynamically.
-        final dynamic iosImpl = notif.resolvePlatformSpecificImplementation();
+        final iosImpl = _notif
+            .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin
+            >();
         if (iosImpl != null) {
-          // many platform impls (Darwin plugin) expose requestPermissions({alert,badge,sound})
-          try {
-            await iosImpl.requestPermissions(
-              alert: true,
-              badge: true,
-              sound: true,
-            );
-          } catch (e) {
-            // fallback: some older impls use different method signature — ignore
-            debugPrint('iOS impl resolved but requestPermissions failed: $e');
-          }
-        } else {
-          debugPrint('iOS platform-specific impl not available (null)');
+          await iosImpl.requestPermissions(
+            alert: true,
+            badge: true,
+            sound: true,
+          );
         }
-      } catch (e) {
-        debugPrint('iOS permission request failed: $e');
+      } catch (e, st) {
+        debugPrint('iOS requestPermissions failed: $e\n$st');
       }
     }
   }
 
-  /// Generate id aman 32-bit signed
   static int generateSafeNotifId() {
     final ms = DateTime.now().millisecondsSinceEpoch;
     return (ms % 2147483647).toInt();
@@ -138,89 +116,150 @@ class NotifikasiService {
     required String body,
     required DateTime date,
     String? payload,
+    String? soundResource,
   }) async {
     try {
-      // ensure tz
       try {
         tz.initializeTimeZones();
       } catch (_) {}
 
       final tzDate = tz.TZDateTime.from(date, tz.local);
 
-      final androidDetails = AndroidNotificationDetails(
-        _channelId,
-        _channelName,
-        channelDescription: _channelDescription,
-        importance: Importance.max,
-        priority: Priority.high,
-        playSound: true,
-        ticker: 'Pengingat Kegiatan',
-      );
+      AndroidNotificationDetails androidDetails;
+      if (soundResource != null && soundResource.isNotEmpty) {
+        androidDetails = AndroidNotificationDetails(
+          _channelId,
+          _channelName,
+          channelDescription: _channelDescription,
+          importance: Importance.max,
+          priority: Priority.max,
+          playSound: true,
+          sound: RawResourceAndroidNotificationSound(soundResource),
+        );
+      } else {
+        androidDetails = AndroidNotificationDetails(
+          _channelId,
+          _channelName,
+          channelDescription: _channelDescription,
+          importance: Importance.max,
+          priority: Priority.max,
+          playSound: true,
+        );
+      }
 
-      final iosDetails = DarwinNotificationDetails();
+      DarwinNotificationDetails iosDetails;
+      if (soundResource != null && soundResource.isNotEmpty) {
+        iosDetails = DarwinNotificationDetails(
+          sound: '$soundResource.aiff',
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        );
+      } else {
+        iosDetails = const DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        );
+      }
 
-      final platform = NotificationDetails(
+      final platformDetails = NotificationDetails(
         android: androidDetails,
         iOS: iosDetails,
       );
 
-      await notif.zonedSchedule(
+      await _notif.zonedSchedule(
         id,
         title,
         body,
         tzDate,
-        platform,
+        platformDetails,
         payload: payload,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
       );
-    } catch (e) {
-      debugPrint('schedule error: $e');
+      debugPrint('Scheduled notif id=$id at $tzDate payload=$payload');
+    } catch (e, st) {
+      debugPrint('schedule error: $e\n$st');
       rethrow;
     }
   }
 
-  static Future<void> cancel(int id) async {
-    await notif.cancel(id);
-  }
-
-  static Future<void> cancelAll() async {
-    await notif.cancelAll();
-  }
-
-  static Future<List<int>> pendingNotificationIds() async {
-    final pending = await notif.pendingNotificationRequests();
-    return pending.map((p) => p.id).toList();
-  }
-
-  // SAFE WRAPPERS
   static Future<void> safeSchedule({
     required int id,
     required String title,
     required String body,
     required DateTime date,
     String? payload,
+    String? soundResource,
   }) async {
     try {
-      if (date.isBefore(DateTime.now())) return;
+      if (date.isBefore(DateTime.now())) {
+        debugPrint('safeSchedule: date is in the past, skipping id=$id');
+        return;
+      }
       await schedule(
         id: id,
         title: title,
         body: body,
         date: date,
         payload: payload,
+        soundResource: soundResource,
       );
-    } catch (e) {
-      debugPrint("Notifikasi gagal dijadwalkan (safe): $e");
+    } catch (e, st) {
+      debugPrint('safeSchedule failed: $e\n$st');
     }
   }
 
+  /// cancel wrapper (safe)
   static Future<void> safeCancel(int id) async {
     try {
-      await cancel(id);
-    } catch (e) {
-      debugPrint("Gagal cancel notifikasi id=$id: $e");
+      await _notif.cancel(id);
+      debugPrint('safeCancel: cancelled id=$id');
+    } catch (e, st) {
+      debugPrint('safeCancel failed for id=$id : $e\n$st');
+    }
+  }
+
+  /// Attempt to cancel when you might have a String or null that could be parseable to int.
+  /// Useful when old code stored string IDs or you tried canceling using docId accidentally.
+  static Future<void> safeCancelMaybe(String? maybeId) async {
+    if (maybeId == null) return;
+    final raw = int.tryParse(maybeId);
+    if (raw != null) {
+      await safeCancel(raw);
+      // also try mapped 32-bit safe variant (defensive)
+      final mapped = (raw % 2147483647).toInt();
+      if (mapped != raw) await safeCancel(mapped);
+    } else {
+      debugPrint('safeCancelMaybe: could not parse "$maybeId" to int');
+    }
+  }
+
+  static Future<void> cancel(int id) async {
+    try {
+      await _notif.cancel(id);
+      debugPrint('Cancelled notif id=$id');
+    } catch (e, st) {
+      debugPrint('cancel failed: $e\n$st');
+    }
+  }
+
+  static Future<void> cancelAll() async {
+    try {
+      await _notif.cancelAll();
+      debugPrint('Cancelled all notifications');
+    } catch (e, st) {
+      debugPrint('cancelAll failed: $e\n$st');
+    }
+  }
+
+  static Future<List<int>> pendingNotificationIds() async {
+    try {
+      final pending = await _notif.pendingNotificationRequests();
+      return pending.map((p) => p.id).toList();
+    } catch (e, st) {
+      debugPrint('pendingNotificationIds failed: $e\n$st');
+      return [];
     }
   }
 }

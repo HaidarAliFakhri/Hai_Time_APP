@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hai_time_app/page/home_page_firebase.dart';
+import 'package:hai_time_app/page/kalender_kegiatan_page.dart';
 import 'package:hai_time_app/view/prayer_schedule_page.dart';
 import 'package:hai_time_app/view/weather_page.dart';
 
@@ -27,6 +28,8 @@ class _BottomNavigatorFirebaseState extends State<BottomNavigatorFirebase> {
       JadwalPage(onBackToHome: () => _onItemTapped(0)),
       //  CuacaPage
       CuacaPage(onBackToHome: () => _onItemTapped(0)),
+      //kegiatanpage
+      KalenderPageFirebase(onBackToHome: () => _onItemTapped(0)),
     ];
   }
 
@@ -63,6 +66,11 @@ class _BottomNavigatorFirebaseState extends State<BottomNavigatorFirebase> {
             icon: Icon(Icons.cloud_outlined),
             activeIcon: Icon(Icons.cloud),
             label: "Cuaca",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.note),
+            activeIcon: Icon(Icons.cloud),
+            label: "Kegiatan",
           ),
         ],
       ),

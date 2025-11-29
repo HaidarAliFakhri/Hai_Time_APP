@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hai_time_app/page/bottom_navigator_firebase.dart';
+import 'package:hai_time_app/page/forget_password_firebase.dart';
 import 'package:hai_time_app/page/form_register_firebase.dart';
-import 'package:hai_time_app/page/home_page_firebase.dart';
 import 'package:hai_time_app/preferences/preferences_handler.dart';
 import 'package:hai_time_app/services/firebase.dart';
 
@@ -186,7 +186,7 @@ class _LoginPageFireBaseState extends State<LoginPageFireBase> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const HomePageFirebase(),
+                                builder: (context) => const ForgotPasswordPage(),
                               ),
                             );
                           },

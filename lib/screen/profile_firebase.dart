@@ -668,12 +668,12 @@ class _ProfilePageFirebaseState extends State<ProfilePageFirebase> {
                             title: const Text("Email"),
                             subtitle: Text(email),
                           ),
-                          const Divider(),
-                          ListTile(
-                            leading: const Icon(Icons.tag, color: Colors.blue),
-                            title: const Text("Username"),
-                            subtitle: Text(username),
-                          ),
+                          
+                          // ListTile(
+                          //   leading: const Icon(Icons.tag, color: Colors.blue),
+                          //   title: const Text("Username"),
+                          //   subtitle: Text(username),
+                          // ),
                           const Divider(),
                           ListTile(
                             leading: const Icon(

@@ -4,7 +4,7 @@ import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:hai_time_app/l10n/app_localizations.dart';
 import 'package:hai_time_app/page/bottom_navigator_firebase.dart';
-import 'package:hai_time_app/page/login_page.dart';
+import 'package:hai_time_app/page/login_page_firebase.dart';
 import 'package:hai_time_app/utils/locale_controler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -461,7 +461,7 @@ class _SettingPageFirebaseState extends State<SettingPageFirebase> {
                     Navigator.pushAndRemoveUntil(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const LoginPage(),
+                        builder: (context) => const LoginPageFireBase(),
                       ),
                       (route) => false,
                     );

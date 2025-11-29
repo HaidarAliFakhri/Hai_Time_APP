@@ -1,9 +1,9 @@
 // lib/pages/jadwal_page.dart
 import 'dart:async';
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:hai_time_app/utils/notification_adzan.dart';
 import 'package:intl/intl.dart';
 import 'package:ionicons/ionicons.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -23,7 +23,7 @@ class JadwalPage extends StatefulWidget {
 
 class _JadwalPageState extends State<JadwalPage> {
   late Timer _timer;
-  bool _adzanSedangBerbunyi = false;
+
 
   Map<String, dynamic>? nextPrayer;
   final FlutterLocalNotificationsPlugin _notifikasi =
@@ -124,23 +124,38 @@ class _JadwalPageState extends State<JadwalPage> {
     );
 
     await _notifikasi.initialize(
-      initSettings,
-      onDidReceiveNotificationResponse: (NotificationResponse response) async {
-        final payload = response.payload;
-        if (payload == 'stop_adzan') {
-          if (_adzanSedangBerbunyi) {
-            _adzanSedangBerbunyi = false;
-            await _notifikasi.cancelAll();
-            if (mounted) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('Adzan dimatikan')));
-            }
-          }
+  initSettings,
+  onDidReceiveNotificationResponse: (NotificationResponse response) async {
+    // Cek berdasarkan actionId (BENAR untuk tombol "Matikan Adzan")
+    final actionId = response.actionId;
+
+    if (actionId == 'stop_adzan') {
+      // Jika audio sedang diputar, stop melalui service global
+      if (AdzanService.instance.isPlaying) {
+        try {
+          await AdzanService.instance.stop();
+        } catch (e) {
+          debugPrint('Error stopping adzan: $e');
         }
-      },
-      onDidReceiveBackgroundNotificationResponse: _notificationTapBackground,
-    );
+
+        // Batalkan semua notifikasi adzan yang masih tampil
+        try {
+          await _notifikasi.cancelAll();
+        } catch (e) {
+          debugPrint('cancelAll failed: $e');
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Adzan dimatikan')),
+          );
+        }
+      }
+    }
+  },
+  onDidReceiveBackgroundNotificationResponse: _notificationTapBackground,
+);
+
 
     // create android channel (required Android 8+)
     if (Platform.isAndroid) {
@@ -330,72 +345,85 @@ class _JadwalPageState extends State<JadwalPage> {
   /// Cek tiap interval; jika waktu sekarang tepat sama dengan salah satu jadwal (HH:mm),
   /// trigger notifikasi segera (berguna jika sistem tidak mengeksekusi zonedSchedule tepat waktu)
   void _checkAndTriggerImmediateNotification() {
-    final now = DateTime.now();
-    final current = DateFormat('HH:mm').format(now);
+  final now = DateTime.now();
+  final current = DateFormat('HH:mm').format(now);
 
-    for (var data in jadwalSholat) {
-      if (data['aktif'] != true) continue;
-      final waktu = data['waktu'] as String;
-      if (waktu == current) {
-        _showAdzanNow(data['nama']);
-      }
+  for (var data in jadwalSholat) {
+    if (data['aktif'] != true) continue;
+    final waktu = data['waktu'] as String;
+    if (waktu == current) {
+      // gunakan nama + tanggal untuk uniqueness
+      _showAdzanNow(data['nama']);
     }
   }
+}
+
 
   /// Tampilkan notifikasi adzan segera (digunakan oleh check immediate)
   Future<void> _showAdzanNow(String nama) async {
-    if (_adzanSedangBerbunyi) return; // hindari tumpang tindih
-    _adzanSedangBerbunyi = true;
-
-    final androidDetails = AndroidNotificationDetails(
-      _channelId,
-      _channelName,
-      channelDescription: _channelDesc,
-      importance: Importance.max,
-      priority: Priority.high,
-      playSound: true,
-      enableVibration: true,
-      sound: const RawResourceAndroidNotificationSound('adzan'),
-      actions: <AndroidNotificationAction>[
-        AndroidNotificationAction(
-          'stop_adzan',
-          'Matikan Adzan 🔇',
-          showsUserInterface: true,
-          cancelNotification: true,
-        ),
-      ],
-    );
-
-    final darwinDetails = DarwinNotificationDetails(
-      sound: 'adzan.aiff',
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-    );
-
-    final details = NotificationDetails(
-      android: androidDetails,
-      iOS: darwinDetails,
-    );
-
-    try {
-      await _notifikasi.show(
-        generateSafeNotifId(),
-        'Waktu Sholat $nama',
-        'Sudah masuk waktu $nama. Ayo sholat dulu 🕌',
-        details,
-        payload: 'adzan_$nama',
-      );
-
-      // reset flag setelah 2 menit agar bisa berbunyi lagi untuk jadwal lain
-      Future.delayed(const Duration(minutes: 2), () {
-        _adzanSedangBerbunyi = false;
-      });
-    } catch (e) {
-      debugPrint('show immediate notification failed: $e');
-      _adzanSedangBerbunyi = false;
-    }
+  final now = DateTime.now();
+  final key = DateFormat('yyyy-MM-dd|HH:mm').format(now); // unik per menit
+  if (!AdzanService.instance.markTriggered(key)) {
+    debugPrint('Already triggered for $key -> skip');
+    return;
   }
+
+  if (AdzanService.instance.isPlaying) {
+    debugPrint('Adzan already playing globally -> skip');
+    return;
+  }
+
+  // mulai audio (asset path: sesuaikan; jika kamu punya assets/adzan.mp3 -> 'adzan.mp3')
+  AdzanService.instance.playAsset('adzan.mp3');
+
+  // Tampilkan notifikasi (tetap diperlukan untuk tombol stop)
+  final androidDetails = AndroidNotificationDetails(
+    _channelId,
+    _channelName,
+    channelDescription: _channelDesc,
+    importance: Importance.max,
+    priority: Priority.high,
+    playSound: true,
+    enableVibration: true,
+    sound: const RawResourceAndroidNotificationSound('adzan'),
+    actions: <AndroidNotificationAction>[
+      AndroidNotificationAction(
+        'stop_adzan', // actionId
+        'Matikan Adzan 🔇',
+        showsUserInterface: true,
+        cancelNotification: true,
+      ),
+    ],
+    // Opsi tambahan agar notif lebih "persistent" sampai user stop:
+    ongoing: true,
+    autoCancel: false,
+  );
+
+  final darwinDetails = DarwinNotificationDetails(
+    sound: 'adzan.aiff',
+    presentAlert: true,
+    presentBadge: true,
+    presentSound: true,
+  );
+
+  final details = NotificationDetails(android: androidDetails, iOS: darwinDetails);
+
+  try {
+    await _notifikasi.show(
+      generateSafeNotifId(),
+      'Waktu Sholat $nama',
+      'Sudah masuk waktu $nama. Ayo sholat dulu 🕌',
+      details,
+      payload: 'adzan_$nama',
+    );
+
+    // Biarkan AdzanService yang mengatur durasi; kalau mau reset flag setelah X
+    // AdzanService.instance akan update isPlaying=false di stop()
+  } catch (e) {
+    debugPrint('show immediate notification failed: $e');
+  }
+}
+
 
   /// Generate safe 32-bit id
   int generateSafeNotifId() {

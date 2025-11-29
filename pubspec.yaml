@@ -29,6 +29,7 @@ environment:
 # versions available, run `flutter pub outdated`.
 dependencies:
   android_alarm_manager_plus: ^5.0.0
+  table_calendar: ^3.0.8
   audioplayers: ^6.0.0
   circle_bottom_navigation: ^2.0.0
   cloud_firestore: ^6.1.0

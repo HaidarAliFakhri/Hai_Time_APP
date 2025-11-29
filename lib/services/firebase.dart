@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hai_time_app/model/user_firebase_model.dart';
 
 class FirebaseService {
+  
   static final FirebaseAuth auth = FirebaseAuth.instance;
   static final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
@@ -96,4 +97,42 @@ class FirebaseService {
 
     return model;
   }
+  static Future<void> sendPasswordResetEmail({required String email}) async {
+    try {
+      await auth.sendPasswordResetEmail(email: email.trim());
+    } on FirebaseAuthException catch (e) {
+      // rethrow agar UI bisa menampilkan pesan sesuai error code
+      throw e;
+    } catch (e) {
+      throw Exception("Gagal mengirim email reset: $e");
+    }
+  }
+
+  /// Verifikasi kode reset (oobCode) dan dapatkan email terkait.
+  /// Gunakan ini ketika user membuka link di-app (opsional).
+  static Future<String> verifyPasswordResetCode(String oobCode) async {
+    try {
+      final email = await auth.verifyPasswordResetCode(oobCode);
+      return email; // email user yang terkait
+    } on FirebaseAuthException catch (e) {
+      throw e;
+    } catch (e) {
+      throw Exception("Verifikasi kode reset gagal: $e");
+    }
+  }
+
+  /// Konfirmasi reset password (set password baru) menggunakan oobCode.
+  static Future<void> confirmPasswordReset({
+    required String oobCode,
+    required String newPassword,
+  }) async {
+    try {
+      await auth.confirmPasswordReset(code: oobCode, newPassword: newPassword);
+    } on FirebaseAuthException catch (e) {
+      throw e;
+    } catch (e) {
+      throw Exception("Gagal mengatur password baru: $e");
+    }
+  }
+
 }

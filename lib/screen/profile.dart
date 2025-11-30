@@ -7,9 +7,8 @@ import 'package:hai_time_app/page/bottom_navigator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:ui';
-
-
 import '../db/db_activity.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -619,140 +618,140 @@ class _ProfilePageState extends State<ProfilePage> {
                           return Column(
                             children: selesai.map((k) {
                               return Column(
-  children: selesai.map((k) {
-    return GestureDetector(
-      onLongPress: () async {
-        final confirm = await showModalBottomSheet<bool>(
-          context: context,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          builder: (ctx) => Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[400],
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
+                            children: selesai.map((k) {
+                              return GestureDetector(
+                                onLongPress: () async {
+                                  final confirm = await showModalBottomSheet<bool>(
+                                    context: context,
+                                    shape: const RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                                    ),
+                                    builder: (ctx) => Padding(
+                                      padding: const EdgeInsets.all(20),
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Container(
+                                            width: 40,
+                                            height: 5,
+                                            decoration: BoxDecoration(
+                                              color: Colors.grey[400],
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                          ),
 
-                const SizedBox(height: 20),
+                                          const SizedBox(height: 20),
 
-                const Text(
-                  "Hapus Aktivitas?",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
+                                          const Text(
+                                            "Hapus Aktivitas?",
+                                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                          ),
 
-                const SizedBox(height: 10),
+                                          const SizedBox(height: 10),
 
-                Text(
-                  "Apakah kamu yakin ingin menghapus aktivitas ini?",
-                  style: TextStyle(color: Colors.grey[700]),
-                  textAlign: TextAlign.center,
-                ),
+                                          Text(
+                                            "Apakah kamu yakin ingin menghapus aktivitas ini?",
+                                            style: TextStyle(color: Colors.grey[700]),
+                                            textAlign: TextAlign.center,
+                                          ),
 
-                const SizedBox(height: 20),
+                                          const SizedBox(height: 20),
 
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.redAccent,
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: () => Navigator.of(ctx).pop(true),
-                  child: const Text("Hapus", style: TextStyle(color: Colors.white)),
-                ),
+                                          ElevatedButton(
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.redAccent,
+                                              minimumSize: const Size(double.infinity, 50),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                            ),
+                                            onPressed: () => Navigator.of(ctx).pop(true),
+                                            child: const Text("Hapus", style: TextStyle(color: Colors.white)),
+                                          ),
 
-                const SizedBox(height: 8),
+                                          const SizedBox(height: 8),
 
-                OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 50),
-                    side: const BorderSide(color: Colors.grey),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: () => Navigator.of(ctx).pop(false),
-                  child: const Text("Batal"),
-                ),
-              ],
-            ),
-          ),
-        );
+                                          OutlinedButton(
+                                            style: OutlinedButton.styleFrom(
+                                              minimumSize: const Size(double.infinity, 50),
+                                              side: const BorderSide(color: Colors.grey),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius: BorderRadius.circular(12),
+                                              ),
+                                            ),
+                                            onPressed: () => Navigator.of(ctx).pop(false),
+                                            child: const Text("Batal"),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
 
-        if (confirm == true) {
-          final deletedKegiatan = k;
-          await db.deleteKegiatan(k.id!);
-          db.notifyListeners();
+                                  if (confirm == true) {
+                                    final deletedKegiatan = k;
+                                    await db.deleteKegiatan(k.id!);
+                                    db.notifyListeners();
 
-          // SNACKBAR UNDO
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: Colors.transparent,
-              elevation: 0,
-              duration: const Duration(seconds: 4),
-              content: ClipRRect(
-                borderRadius: BorderRadius.circular(18),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: const Color.fromARGB(255, 0, 2, 99).withOpacity(0.25),
-                      border: Border.all(color: const Color.fromARGB(255, 0, 0, 0).withOpacity(0.4)),
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.info_outline, color: Colors.white),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            "‘${k.judul}’ telah dihapus",
-                            style: const TextStyle(color: Colors.white, fontSize: 15),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () async {
-                            await db.insertKegiatan(deletedKegiatan);
-                            db.notifyListeners();
-                          },
-                          child: const Text(
-                            "Undo",
-                            style: TextStyle(
-                              color: Color.fromARGB(255, 255, 0, 0),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        }
-      },
+                                    // SNACKBAR UNDO
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        behavior: SnackBarBehavior.floating,
+                                        backgroundColor: Colors.transparent,
+                                        elevation: 0,
+                                        duration: const Duration(seconds: 4),
+                                        content: ClipRRect(
+                                          borderRadius: BorderRadius.circular(18),
+                                          child: BackdropFilter(
+                                            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                                              decoration: BoxDecoration(
+                                                color: const Color.fromARGB(255, 0, 2, 99).withOpacity(0.25),
+                                                border: Border.all(color: const Color.fromARGB(255, 0, 0, 0).withOpacity(0.4)),
+                                                borderRadius: BorderRadius.circular(18),
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  const Icon(Icons.info_outline, color: Colors.white),
+                                                  const SizedBox(width: 12),
+                                                  Expanded(
+                                                    child: Text(
+                                                      "‘${k.judul}’ telah dihapus",
+                                                      style: const TextStyle(color: Colors.white, fontSize: 15),
+                                                    ),
+                                                  ),
+                                                  TextButton(
+                                                    onPressed: () async {
+                                                      await db.insertKegiatan(deletedKegiatan);
+                                                      db.notifyListeners();
+                                                    },
+                                                    child: const Text(
+                                                      "Undo",
+                                                      style: TextStyle(
+                                                        color: Color.fromARGB(255, 255, 0, 0),
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                },
 
-      child: _buildActivityCard(
-        k.judul,
-        k.tanggal,
-        "Selesai",
-        true,
-      ),
-    );
-  }).toList(),
-); }).toList(),
+                                child: _buildActivityCard(
+                                  k.judul,
+                                  k.tanggal,
+                                  "Selesai",
+                                  true,
+                                ),
+                              );
+                            }).toList(),
+                          ); }).toList(),
                           );
                         },
                       );

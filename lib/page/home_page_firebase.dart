@@ -372,7 +372,7 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
             children: [
               // label kecil di atas countdown (sekarang tepat di atas)
               Text(
-                "Time Now",
+                "Sekarang",
                 style: TextStyle(
                   color: Colors.black54,
                   fontSize: 12,

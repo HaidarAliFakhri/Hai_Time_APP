@@ -202,278 +202,302 @@ class _KalenderPageFirebaseState extends State<KalenderPageFirebase> {
 
   // --- KEGIATAN CARD (kalender + event list) ---
   Widget _buildKegiatanCard() {
-    if (user == null) {
-      return Container(
-        padding: const EdgeInsets.all(15),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color.fromARGB(255, 12, 158, 255), Color.fromARGB(255, 67, 64, 221)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(20),
+  if (user == null) {
+    return Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color.fromARGB(255, 12, 158, 255), Color.fromARGB(255, 67, 64, 221)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        child: const Text(
-          "Silakan login untuk melihat kegiatan.",
-          style: TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
-        ),
-      );
-    }
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: const Text(
+        "Silakan login untuk melihat kegiatan.",
+        style: TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
+      ),
+    );
+  }
 
-    return StreamBuilder<List<KegiatanFirebase>>(
-      stream: _service.getKegiatanUser(user!.uid),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: const Color.fromARGB(255, 255, 255, 255),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Center(
-              child: CircularProgressIndicator(color: Color.fromARGB(255, 122, 213, 255)),
-            ),
-          );
-        }
-
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          // reset cache when no data
-          _eventsCache = {};
-          _eventsCacheKey = "";
-          return Container(
-            padding: const EdgeInsets.all(35),
-            decoration: BoxDecoration(
-              color: const Color.fromARGB(255, 49, 128, 247),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Text(
-              "Belum ada kegiatan.\nTambahkan kegiatanmu sekarang!",
-              style: TextStyle(color: Colors.white),
-            ),
-          );
-        }
-
-        final kegiatanList = snapshot.data!;
-
-        // BUILD / REUSE CACHE
-        _buildEventsCache(kegiatanList);
-
-        // hitung kegiatan aktif untuk header-count
-        final kegiatanAktif = kegiatanList.where((k) => !_isKegiatanSelesaiModel(k)).toList();
-
+  return StreamBuilder<List<KegiatanFirebase>>(
+    stream: _service.getKegiatanUser(user!.uid),
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
         return Container(
-          padding: const EdgeInsets.all(12),
-          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: const Color.fromARGB(255, 255, 255, 255),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.blue.shade200),
+            borderRadius: BorderRadius.circular(16),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "Kegiatan Anda",
-                    style: TextStyle(
-                      fontSize: 18,
+          child: const Center(
+            child: CircularProgressIndicator(color: Color.fromARGB(255, 122, 213, 255)),
+          ),
+        );
+      }
+
+      if (!snapshot.hasData || snapshot.data!.isEmpty) {
+        // reset cache when no data
+        _eventsCache = {};
+        _eventsCacheKey = "";
+        return Container(
+          padding: const EdgeInsets.all(35),
+          decoration: BoxDecoration(
+            color: const Color.fromARGB(255, 49, 128, 247),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Text(
+            "Belum ada kegiatan.\nTambahkan kegiatanmu sekarang!",
+            style: TextStyle(color: Colors.white),
+          ),
+        );
+      }
+
+      final kegiatanList = snapshot.data!;
+
+      // BUILD / REUSE CACHE
+      _buildEventsCache(kegiatanList);
+
+      // hitung kegiatan aktif untuk header-count
+      final kegiatanAktif = kegiatanList.where((k) => !_isKegiatanSelesaiModel(k)).toList();
+
+      return Container(
+        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          color: const Color.fromARGB(255, 255, 255, 255),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.blue.shade200),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "Kegiatan Anda",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color.fromARGB(255, 0, 0, 0),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color.fromARGB(255, 52, 141, 243),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    "${kegiatanAktif.length} Kegiatan",
+                    style: const TextStyle(
+                      color: Colors.white,
                       fontWeight: FontWeight.bold,
-                      color: Color.fromARGB(255, 0, 0, 0),
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color.fromARGB(255, 52, 141, 243),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      "${kegiatanAktif.length} Kegiatan",
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // Calendar with markers
+            TableCalendar<KegiatanFirebase>(
+              firstDay: DateTime.utc(2000, 1, 1),
+              lastDay: DateTime.utc(2100, 12, 31),
+              focusedDay: _focusedDay,
+              selectedDayPredicate: (day) =>
+                  _selectedDay != null && _normalize(day) == _normalize(_selectedDay!),
+              eventLoader: (day) {
+                return _eventsCache[_normalize(day)] ?? [];
+              },
+              calendarFormat: CalendarFormat.month,
+              onDaySelected: (selectedDay, focusedDay) {
+                // jika klik tanggal yang sama -> jangan setState (hindari rebuild)
+                if (_selectedDay != null && _normalize(selectedDay) == _normalize(_selectedDay!)) {
+                  _focusedDay = focusedDay;
+                  return;
+                }
+
+                // setState hanya ketika seleksi tanggal berubah
+                setState(() {
+                  _selectedDay = selectedDay;
+                  _focusedDay = focusedDay;
+                });
+              },
+              calendarStyle: const CalendarStyle(
+                markerDecoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                ),
+                markersMaxCount: 1,
+              ),
+              headerStyle: const HeaderStyle(
+                formatButtonVisible: false,
+                titleCentered: true,
+              ),
+              calendarBuilders: CalendarBuilders(
+                markerBuilder: (context, date, events) {
+                  final dayEvents = _eventsCache[_normalize(date)];
+                  if (dayEvents == null || dayEvents.isEmpty) return const SizedBox.shrink();
+
+                  return Positioned(
+                    bottom: 6,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: const Color.fromARGB(255, 12, 0, 180),
+                        shape: BoxShape.circle,
                       ),
                     ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 12),
-
-              // Calendar with markers
-              TableCalendar<KegiatanFirebase>(
-                firstDay: DateTime.utc(2000, 1, 1),
-                lastDay: DateTime.utc(2100, 12, 31),
-                focusedDay: _focusedDay,
-                selectedDayPredicate: (day) =>
-                    _selectedDay != null && _normalize(day) == _normalize(_selectedDay!),
-                eventLoader: (day) {
-                  return _eventsCache[_normalize(day)] ?? [];
+                  );
                 },
-                calendarFormat: CalendarFormat.month,
-                onDaySelected: (selectedDay, focusedDay) {
-                  // jika klik tanggal yang sama -> jangan setState (hindari rebuild)
-                  if (_selectedDay != null && _normalize(selectedDay) == _normalize(_selectedDay!)) {
-                    // hanya fokus kalender (untuk navigasi bulan) — tapi tidak rebuild card
-                    _focusedDay = focusedDay;
-                    return;
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            // Jika ada events pada selected day -> tampilkan satu card per kegiatan (gabungkan saran di dalamnya)
+            if (_selectedDay != null && (_eventsCache[_normalize(_selectedDay!)]?.isNotEmpty ?? false))
+              _buildCard(
+                child: Builder(builder: (context) {
+                  final key = _normalize(_selectedDay!);
+                  final dayEvents = List<KegiatanFirebase>.from(_eventsCache[key] ?? <KegiatanFirebase>[]);
+                  final activeEvents = dayEvents.where((k) => !_isKegiatanSelesaiModel(k)).toList();
+
+                  // jika tidak ada event aktif
+                  if (activeEvents.isEmpty) {
+                    return const SizedBox.shrink();
                   }
 
-                  // setState hanya ketika seleksi tanggal berubah
-                  setState(() {
-                    _selectedDay = selectedDay;
-                    _focusedDay = focusedDay;
-                  });
+                  // tampilkan satu card per kegiatan, masing-masing card berisi judul, waktu, lokasi, saran
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 8),
+                      const Text("Ringkasan hari ini:", style: TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      // Gantikan bagian mapping activeEvents.map(...) dengan kode ini:
+                      Column(
+                        children: activeEvents.map((k) {
+                          final terlewat = _isKegiatanTerlewat(k);
+                          return Padding(
+                        padding: const EdgeInsets.only(bottom: 10.0),
+                        child: Material(
+                          color: const Color.fromARGB(169, 147, 224, 255),
+                          borderRadius: BorderRadius.circular(12),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => KegiatanPageFirebase(kegiatan: k),
+                                ),
+                              );
+                            },
 
-                  final dayEvents = _eventsCache[_normalize(selectedDay)] ?? [];
-                  if (dayEvents.isEmpty) {
-                    return;
-                  }
-                },
-                calendarStyle: const CalendarStyle(
-                  markerDecoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                  ),
-                  markersMaxCount: 1,
-                ),
-                headerStyle: const HeaderStyle(
-                  formatButtonVisible: false,
-                  titleCentered: true,
-                ),
-                // custom marker builder: tampilkan dot kecil bila ada event
-                calendarBuilders: CalendarBuilders(
-                  markerBuilder: (context, date, events) {
-                    final dayEvents = _eventsCache[_normalize(date)];
-                    if (dayEvents == null || dayEvents.isEmpty) return const SizedBox.shrink();
-
-                    // return dot / badge
-                    return Positioned(
-                      bottom: 6,
-                      child: Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: const Color.fromARGB(255, 12, 0, 180), // warna dot (sesuaikan)
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              // Quick preview: hanya tampilkan ringkasan bila selectedDay ada
-              if (_selectedDay != null && (_eventsCache[_normalize(_selectedDay!)]?.isNotEmpty ?? false))
-                Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 8),
-                  const Text("Ringkasan hari ini:", style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 6),
-                  // daftar kegiatan (jika ada) untuk selected day
-                  ...? _eventsCache[_normalize(_selectedDay!)]
-
-              ?.where((k) => !_isKegiatanSelesaiModel(k))
-              .map((k)  {
-
-                    final terlewat = _isKegiatanTerlewat(k);
-
-                    return Card(
-                      color: terlewat ? const Color(0xFFFFEBEE) : Colors.white, // sedikit merah pucat kalau terlewat
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        title: Text(
-                          k.judul,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: terlewat ? Colors.red.shade700 : Colors.black,
-                          ),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              k.waktu,
-                              style: TextStyle(
-                                color: terlewat ? Colors.red.shade700 : Colors.black54,
+                            // CHILD HARUS PALING BAWAH
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                            ),
-                            if (terlewat)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 4.0),
-                                child: Row(
-                                  children: const [
-                                    Icon(Icons.error_outline, size: 14, color: Colors.red),
-                                    SizedBox(width: 6),
-                                    Text(
-                                      "Kegiatan terlewat",
-                                      style: TextStyle(
-                                        color: Colors.red,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Judul + status
+                                  Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          k.judul,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ),
+                                      if (terlewat)
+                                        const Icon(Icons.schedule, color: Colors.red, size: 18),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+
+                                  // Jam + lokasi
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.access_time,
+                                          size: 14, color: Colors.blueGrey),
+                                      const SizedBox(width: 6),
+                                      Text(k.waktu, style: const TextStyle(fontSize: 13)),
+                                      const SizedBox(width: 12),
+                                      const Icon(Icons.location_on,
+                                          size: 14, color: Colors.blueGrey),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          k.lokasi,
+                                          style: const TextStyle(fontSize: 13),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+
+                                  const SizedBox(height: 8),
+
+                                  // saran keberangkatan
+                                  if (k.saranBerangkat != null &&
+                                      k.saranBerangkat!.trim().isNotEmpty)
+                                    Container(
+                                      width: double.infinity,
+                                      padding:
+                                          const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFFFF3E0),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: Colors.orange.shade100),
+                                      ),
+                                      child: Text(
+                                        k.saranBerangkat!,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.orange,
+                                        ),
                                       ),
                                     ),
-                                  ],
-                                ),
+                                ],
                               ),
-                              ],
                             ),
-                              trailing: terlewat
-                                  ? null
-                                  : const Icon(Icons.chevron_right, color: Colors.black45),
-                              onTap: () async {
-                      // buka halaman detail / edit. Halaman detail harus `Navigator.pop(context, 'done')`
-                      // ketika user menandai selesai — lihat penjelasan setelah kode.
-                      final result = await Navigator.push<String?>(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => KegiatanPageFirebase(kegiatan: k),
+                          ),
                         ),
                       );
 
-                      // Jika halaman detail mengembalikan 'done' maka hapus item dari cache lokal (instan)
-                      if (result == 'done') {
-                      final key = _normalize(_selectedDay!);
-                      final String removedId = (k.docId ?? '').toString();
-
-                      setState(() {
-                        _eventsCache[key]?.removeWhere((e) {
-                          final ei = (e.docId ?? '').toString();
-                          return ei == removedId;
-                        });
-
-                        if (_eventsCache[key]?.isEmpty ?? false) {
-                          _eventsCache.remove(key);
-                        }
-                      });
-                    }
-
-                    else {
-                        // bisa kosong — biarkan stream meng-handle update jika ada perubahan di server
-                      }
-                    },
+                      }).toList(),
                     ),
-                    );
-                    }).toList(),
-                   ],
-                    )
 
-                      else
-                        const SizedBox.shrink(),
                     ],
-                  ),
-                );
-              },
-            );
-          }
+                  );
+                }),
+              )
+            else
+              const SizedBox.shrink(),
+          ],
+        ),
+      );
+    },
+  );
+}
+
 
   @override
   Widget build(BuildContext context) {

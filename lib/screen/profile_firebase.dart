@@ -11,7 +11,6 @@ import 'package:hai_time_app/page/bottom_navigator_firebase.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import '../db/db_activity.dart';
 
 class ProfilePageFirebase extends StatefulWidget {
@@ -128,19 +127,36 @@ class _ProfilePageFirebaseState extends State<ProfilePageFirebase> {
   }
 
   Future<void> _loadJoinDate() async {
-    final prefs = await SharedPreferences.getInstance();
-    final storedDate = prefs.getString('join_date');
-
-    if (storedDate == null) {
-      final now = DateTime.now();
-      final formatted =
-          "${now.day.toString().padLeft(2, '0')} ${_namaBulan(now.month)} ${now.year}";
-      await prefs.setString('join_date', formatted);
+  try {
+    // coba ambil dari Firebase Auth jika user login via Firebase
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null && user.metadata.creationTime != null) {
+      final DateTime created = user.metadata.creationTime!.toLocal();
+      final formatted = "${created.day.toString().padLeft(2, '0')} ${_namaBulan(created.month)} ${created.year}";
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('join_date', formatted); // simpan lokal juga
       if (mounted) setState(() => bergabung = formatted);
-    } else {
-      if (mounted) setState(() => bergabung = storedDate);
+      return;
     }
+  } catch (e) {
+    debugPrint("Gagal ambil join date dari Firebase: $e");
+    // lanjut ke fallback
   }
+
+  // fallback: jika tidak ada Firebase user / error, gunakan SharedPreferences (saat pendaftaran lokal)
+  final prefs = await SharedPreferences.getInstance();
+  final storedDate = prefs.getString('join_date');
+
+  if (storedDate == null || storedDate.trim().isEmpty) {
+    final now = DateTime.now();
+    final formatted = "${now.day.toString().padLeft(2, '0')} ${_namaBulan(now.month)} ${now.year}";
+    await prefs.setString('join_date', formatted);
+    if (mounted) setState(() => bergabung = formatted);
+  } else {
+    if (mounted) setState(() => bergabung = storedDate);
+  }
+}
+
 
   String _namaBulan(int bulan) {
     const bulanIndo = [

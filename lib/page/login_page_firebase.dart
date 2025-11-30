@@ -107,8 +107,8 @@ class _LoginPageFireBaseState extends State<LoginPageFireBase> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.cloud, size: 80, color: Colors.white),
-                    const SizedBox(height: 16),
+                    Image.asset('assets/images/logo/logo_login.png', height: 190),
+                    
                     const Text(
                       "HaiTime",
                       style: TextStyle(
@@ -176,7 +176,7 @@ class _LoginPageFireBaseState extends State<LoginPageFireBase> {
                       },
                     ),
 
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 15),
 
                     Row(
                       mainAxisAlignment: MainAxisAlignment.start,
@@ -191,7 +191,7 @@ class _LoginPageFireBaseState extends State<LoginPageFireBase> {
                             );
                           },
                           child: const Text(
-                            "Forget Password",
+                            "Lupa Password",
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
@@ -237,10 +237,10 @@ class _LoginPageFireBaseState extends State<LoginPageFireBase> {
                             color: Colors.white70,
                           ),
                         ),
-                        Text(
-                          "Or continue with",
-                          style: TextStyle(color: Colors.white70, fontSize: 14),
-                        ),
+                        // Text(
+                        //   "Or continue with",
+                        //   style: TextStyle(color: Colors.white70, fontSize: 14),
+                        // ),
                         Expanded(
                           child: Divider(
                             thickness: 1,
@@ -251,7 +251,7 @@ class _LoginPageFireBaseState extends State<LoginPageFireBase> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 10),
 
                     // Tombol Sosial Media
                     // Row(
@@ -264,7 +264,6 @@ class _LoginPageFireBaseState extends State<LoginPageFireBase> {
                     //     _socialButton("assets/images/icon/twitter.jpg"),
                     //   ],
                     // ),
-                    const SizedBox(height: 20),
 
                     // Register
                     Row(
@@ -285,7 +284,7 @@ class _LoginPageFireBaseState extends State<LoginPageFireBase> {
                             );
                           },
                           child: const Text(
-                            "Register",
+                            "Daftar",
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,

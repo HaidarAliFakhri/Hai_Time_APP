@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:geocoding/geocoding.dart';
@@ -5,7 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:hai_time_app/l10n/app_localizations.dart';
 import 'package:hai_time_app/page/bottom_navigator_firebase.dart';
 import 'package:hai_time_app/page/login_page_firebase.dart';
-import 'package:hai_time_app/utils/locale_controler.dart';
+// import 'package:hai_time_app/utils/locale_controler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -40,10 +41,10 @@ class _SettingPageFirebaseState extends State<SettingPageFirebase> {
     }
   }
 
-  Future<void> _saveLanguagePreference(String language) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('selectedLanguage', language);
-  }
+  // Future<void> _saveLanguagePreference(String language) async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   await prefs.setString('selectedLanguage', language);
+  // }
 
   Future<void> _loadLanguagePreference() async {
     final prefs = await SharedPreferences.getInstance();
@@ -53,28 +54,28 @@ class _SettingPageFirebaseState extends State<SettingPageFirebase> {
     });
   }
 
-  Future<void> _showTestNotification() async {
-    const AndroidNotificationDetails androidDetails =
-        AndroidNotificationDetails(
-          'adzan_channel',
-          'Notifikasi Adzan',
-          channelDescription: 'Pengingat waktu sholat',
-          importance: Importance.max,
-          priority: Priority.high,
-          playSound: true,
-        );
+  // Future<void> _showTestNotification() async {
+  //   const AndroidNotificationDetails androidDetails =
+  //       AndroidNotificationDetails(
+  //         'adzan_channel',
+  //         'Notifikasi Adzan',
+  //         channelDescription: 'Pengingat waktu sholat',
+  //         importance: Importance.max,
+  //         priority: Priority.high,
+  //         playSound: true,
+  //       );
 
-    const NotificationDetails notifDetails = NotificationDetails(
-      android: androidDetails,
-    );
+  //   const NotificationDetails notifDetails = NotificationDetails(
+  //     android: androidDetails,
+  //   );
 
-    await flutterLocalNotificationsPlugin.show(
-      0,
-      'HaiTime',
-      'Contoh notifikasi aktif!',
-      notifDetails,
-    );
-  }
+  //   await flutterLocalNotificationsPlugin.show(
+  //     0,
+  //     'HaiTime',
+  //     'Contoh notifikasi aktif!',
+  //     notifDetails,
+  //   );
+  // }
 
   Future<void> _initNotifications() async {
     const AndroidInitializationSettings androidInit =
@@ -93,10 +94,10 @@ class _SettingPageFirebaseState extends State<SettingPageFirebase> {
     });
   }
 
-  Future<void> _savePreferences(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    prefs.setBool('isPushNotif', value);
-  }
+  // Future<void> _savePreferences(bool value) async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   prefs.setBool('isPushNotif', value);
+  // }
 
   //  Fungsi ambil lokasi otomatis
   Future<void> _getCurrentLocation() async {
@@ -190,92 +191,92 @@ class _SettingPageFirebaseState extends State<SettingPageFirebase> {
     _timezone = "GMT$sign$hours";
   }
 
-  void _showLanguageBottomSheet() {
-    final localizations = AppLocalizations.of(context)!;
+  // void _showLanguageBottomSheet() {
+  //   final localizations = AppLocalizations.of(context)!;
 
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Text(
-                  localizations.choose_language,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              // 🇮🇩 Bahasa Indonesia
-              ListTile(
-                leading: const Icon(Icons.language, color: Colors.blue),
-                title: const Text("Bahasa Indonesia"),
-                trailing: selectedLanguage == "Bahasa Indonesia"
-                    ? const Icon(Icons.check, color: Colors.green)
-                    : null,
-                onTap: () {
-                  setState(() => selectedLanguage = "Bahasa Indonesia");
+  //   showModalBottomSheet(
+  //     context: context,
+  //     shape: const RoundedRectangleBorder(
+  //       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+  //     ),
+  //     builder: (context) {
+  //       return Container(
+  //         padding: const EdgeInsets.all(16),
+  //         child: Column(
+  //           mainAxisSize: MainAxisSize.min,
+  //           crossAxisAlignment: CrossAxisAlignment.start,
+  //           children: [
+  //             Center(
+  //               child: Text(
+  //                 localizations.choose_language,
+  //                 style: const TextStyle(
+  //                   fontSize: 18,
+  //                   fontWeight: FontWeight.bold,
+  //                 ),
+  //               ),
+  //             ),
+  //             const SizedBox(height: 16),
+  //             // 🇮🇩 Bahasa Indonesia
+  //             ListTile(
+  //               leading: const Icon(Icons.language, color: Colors.blue),
+  //               title: const Text("Bahasa Indonesia"),
+  //               trailing: selectedLanguage == "Bahasa Indonesia"
+  //                   ? const Icon(Icons.check, color: Colors.green)
+  //                   : null,
+  //               onTap: () {
+  //                 setState(() => selectedLanguage = "Bahasa Indonesia");
 
-                  _saveLanguagePreference("Bahasa Indonesia");
+  //                 _saveLanguagePreference("Bahasa Indonesia");
 
-                  // 🔵 Ubah bahasa global (TANPA widget.onLocaleChanged)
-                  LocaleController.changeLocale(const Locale('id'));
+  //                 // 🔵 Ubah bahasa global (TANPA widget.onLocaleChanged)
+  //                 LocaleController.changeLocale(const Locale('id'));
 
-                  Navigator.pop(context);
+  //                 Navigator.pop(context);
 
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        AppLocalizations.of(context)!.language_set_to_indonesia,
-                      ),
-                    ),
-                  );
-                },
-              ),
+  //                 ScaffoldMessenger.of(context).showSnackBar(
+  //                   SnackBar(
+  //                     content: Text(
+  //                       AppLocalizations.of(context)!.language_set_to_indonesia,
+  //                     ),
+  //                   ),
+  //                 );
+  //               },
+  //             ),
 
-              // 🇬🇧 English
-              ListTile(
-                leading: const Icon(Icons.language, color: Colors.blue),
-                title: const Text("English"),
-                trailing: selectedLanguage == "English"
-                    ? const Icon(Icons.check, color: Colors.green)
-                    : null,
-                onTap: () {
-                  setState(() => selectedLanguage = "English");
+  //             // 🇬🇧 English
+  //             ListTile(
+  //               leading: const Icon(Icons.language, color: Colors.blue),
+  //               title: const Text("English"),
+  //               trailing: selectedLanguage == "English"
+  //                   ? const Icon(Icons.check, color: Colors.green)
+  //                   : null,
+  //               onTap: () {
+  //                 setState(() => selectedLanguage = "English");
 
-                  _saveLanguagePreference("English");
+  //                 _saveLanguagePreference("English");
 
-                  // 🔵 Ubah bahasa global (tanpa widget.onLocaleChanged)
-                  LocaleController.changeLocale(const Locale('en'));
+  //                 //  Ubah bahasa global (tanpa widget.onLocaleChanged)
+  //                 LocaleController.changeLocale(const Locale('en'));
 
-                  Navigator.pop(context);
+  //                 Navigator.pop(context);
 
-                  Future.delayed(const Duration(milliseconds: 200), () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          AppLocalizations.of(context)!.language_set_to_english,
-                        ),
-                      ),
-                    );
-                  });
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+  //                 Future.delayed(const Duration(milliseconds: 200), () {
+  //                   ScaffoldMessenger.of(context).showSnackBar(
+  //                     SnackBar(
+  //                       content: Text(
+  //                         AppLocalizations.of(context)!.language_set_to_english,
+  //                       ),
+  //                     ),
+  //                   );
+  //                 });
+  //               },
+  //             ),
+  //           ],
+  //         ),
+  //       );
+  //     },
+  //   );
+  // }
 
   // Dialog Peringatan Lokasi
   void _showLocationDialog({
@@ -376,41 +377,41 @@ class _SettingPageFirebaseState extends State<SettingPageFirebase> {
             ),
 
             const SizedBox(height: 16),
-            _buildSectionTitle(localizations.section_notification, textColor),
-            _buildSwitchTile(
-              Icons.notifications,
-              localizations.push_notification,
-              localizations.push_notification_desc,
-              isPushNotif,
-              (v) async {
-                setState(() => isPushNotif = v);
-                await _savePreferences(v);
-                if (v) {
-                  await _showTestNotification();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(localizations.notif_enabled)),
-                  );
-                } else {
-                  await flutterLocalNotificationsPlugin.cancelAll();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(localizations.notif_disabled)),
-                  );
-                }
-              },
-              cardColor,
-              textColor,
-            ),
+            // _buildSectionTitle(localizations.section_notification, textColor),
+            // _buildSwitchTile(
+            //   Icons.notifications,
+            //   localizations.push_notification,
+            //   localizations.push_notification_desc,
+            //   isPushNotif,
+            //   (v) async {
+            //     setState(() => isPushNotif = v);
+            //     await _savePreferences(v);
+            //     if (v) {
+            //       await _showTestNotification();
+            //       ScaffoldMessenger.of(context).showSnackBar(
+            //         SnackBar(content: Text(localizations.notif_enabled)),
+            //       );
+            //     } else {
+            //       await flutterLocalNotificationsPlugin.cancelAll();
+            //       ScaffoldMessenger.of(context).showSnackBar(
+            //         SnackBar(content: Text(localizations.notif_disabled)),
+            //       );
+            //     }
+            //   },
+            //   cardColor,
+            //   textColor,
+            // ),
 
             const SizedBox(height: 16),
-            _buildSectionTitle(localizations.section_language, textColor),
-            _buildNavTile(
-              Icons.language,
-              localizations.app_language,
-              selectedLanguage,
-              cardColor,
-              textColor,
-              onTap: _showLanguageBottomSheet,
-            ),
+            // _buildSectionTitle(localizations.section_language, textColor),
+            // _buildNavTile(
+            //   Icons.language,
+            //   localizations.app_language,
+            //   selectedLanguage,
+            //   cardColor,
+            //   textColor,
+            //   onTap: _showLanguageBottomSheet,
+            // ),
 
             const SizedBox(height: 16),
             _buildSectionTitle(localizations.section_about, textColor),
@@ -451,22 +452,32 @@ class _SettingPageFirebaseState extends State<SettingPageFirebase> {
                         ),
                         TextButton(
                           onPressed: () => Navigator.pop(context, true),
-                          child: const Text("Logout"),
+                          child: const Text("Logout", style: TextStyle(color: Colors.red)),
                         ),
                       ],
                     ),
                   );
 
-                  if (confirm == true && context.mounted) {
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const LoginPageFireBase(),
-                      ),
-                      (route) => false,
-                    );
+                  if (confirm == true) {
+                    // 1. FIREBASE LOGOUT
+                    await FirebaseAuth.instance.signOut();
+
+                    // 2. HAPUS SEMUA SESI SHARED PREFERENCES (kalau lu simpan data lain)
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.clear();
+                    await prefs.remove('join_date');
+
+                    // 3. NAVIGATE DAN HAPUS SEMUA ROUTE
+                    if (mounted) {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LoginPageFireBase()),
+                        (route) => false,
+                      );
+                    }
                   }
                 },
+
                 icon: const Icon(Icons.logout, color: Colors.red),
                 label: const Text(
                   "Keluar dari Akun",

@@ -68,8 +68,8 @@ class _BottomNavigatorFirebaseState extends State<BottomNavigatorFirebase> {
             label: "Cuaca",
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.note),
-            activeIcon: Icon(Icons.cloud),
+            icon: Icon(Icons.notes_outlined),
+            activeIcon: Icon(Icons.note),
             label: "Kegiatan",
           ),
         ],

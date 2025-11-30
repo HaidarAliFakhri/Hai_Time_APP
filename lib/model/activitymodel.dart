@@ -1,5 +1,5 @@
 class KegiatanFirebase {
-  String? docId; // ID dokumen Firebase
+  String? docId;
   String judul;
   String lokasi;
   String tanggal;
@@ -13,6 +13,10 @@ class KegiatanFirebase {
   int? notifId;
   final double? latitude;
   final double? longitude;
+
+  // <-- fields yang penting untuk fiturmu
+  final double? jarakManualKm;      // jarak yang user isi (km)
+  final String? saranBerangkat;     // teks saran yang disimpan
 
   KegiatanFirebase({
     this.docId,
@@ -28,10 +32,25 @@ class KegiatanFirebase {
     this.notifId,
     this.latitude,
     this.longitude,
+    this.jarakManualKm,
+    this.saranBerangkat,
   });
 
-  // FROM FIREBASE
+  // FROM FIREBASE (Map -> Model)
   factory KegiatanFirebase.fromMap(Map<String, dynamic> map, String docId) {
+    double? parseDouble(dynamic v) {
+      if (v == null) return null;
+      if (v is double) return v;
+      if (v is int) return v.toDouble();
+      return double.tryParse(v.toString().replaceAll(',', '.'));
+    }
+
+    int? parseInt(dynamic v) {
+      if (v == null) return null;
+      if (v is int) return v;
+      return int.tryParse(v.toString());
+    }
+
     return KegiatanFirebase(
       docId: docId,
       judul: map['judul'] ?? '',
@@ -43,22 +62,16 @@ class KegiatanFirebase {
       pengingat: map['pengingat'] ?? 0,
       createdAt: map['createdAt'],
       updatedAt: map['updatedAt'],
-      notifId: map['notifId'] is int
-          ? map['notifId'] as int
-          : (map['notifId'] != null
-                ? int.tryParse(map['notifId'].toString())
-                : null),
-      //  Ambil koordinat dari Firestore
-      latitude: map['latitude'] != null
-          ? (map['latitude'] as num).toDouble()
-          : null,
-      longitude: map['longitude'] != null
-          ? (map['longitude'] as num).toDouble()
-          : null,
+      notifId: parseInt(map['notifId']),
+      latitude: parseDouble(map['latitude']),
+      longitude: parseDouble(map['longitude']),
+      // penting: ambil jarak manual & saran jika ada
+      jarakManualKm: parseDouble(map['jarakManualKm']),
+      saranBerangkat: map['saranBerangkat'] as String?,
     );
   }
 
-  // TO FIRESTORE
+  // TO FIRESTORE (Model -> Map)
   Map<String, dynamic> toMap() {
     return {
       'judul': judul,
@@ -73,9 +86,13 @@ class KegiatanFirebase {
       'notifId': notifId,
       'latitude': latitude,
       'longitude': longitude,
+      // simpan jarak manual & saran jika ada
+      'jarakManualKm': jarakManualKm,
+      'saranBerangkat': saranBerangkat,
     };
   }
 
+  // copyWith: sertakan field baru juga
   KegiatanFirebase copyWith({
     String? docId,
     String? judul,
@@ -90,6 +107,8 @@ class KegiatanFirebase {
     int? notifId,
     double? latitude,
     double? longitude,
+    double? jarakManualKm,
+    String? saranBerangkat,
   }) {
     return KegiatanFirebase(
       docId: docId ?? this.docId,
@@ -105,6 +124,8 @@ class KegiatanFirebase {
       notifId: notifId ?? this.notifId,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      jarakManualKm: jarakManualKm ?? this.jarakManualKm,
+      saranBerangkat: saranBerangkat ?? this.saranBerangkat,
     );
   }
 }

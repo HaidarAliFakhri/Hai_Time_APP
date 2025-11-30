@@ -2,7 +2,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:hai_time_app/model/activitymodel.dart';
-import 'package:hai_time_app/page/home_page_firebase.dart';
+import 'package:hai_time_app/page/bottom_navigator_firebase.dart';
 import 'package:hai_time_app/services/activity_service.dart';
 import 'package:hai_time_app/services/notification_service.dart';
 import 'package:hai_time_app/view/custom_app_bar.dart';
@@ -257,7 +257,7 @@ class _TambahKegiatanPageFirebaseState
       // selesai: navigasi kembali ke Home
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const HomePageFirebase()),
+        MaterialPageRoute(builder: (_) => const BottomNavigatorFirebase()),
         (route) => false,
       );
     } catch (e, st) {
@@ -367,18 +367,18 @@ class _TambahKegiatanPageFirebaseState
               ),
             ),
             const SizedBox(height: 10),
-            DropdownButtonFormField<int>(
-              initialValue: _pengingatMenit,
-              decoration: const InputDecoration(labelText: "Pengingat"),
-              onChanged: (v) => setState(() => _pengingatMenit = v ?? 0),
-              items: const [
-                DropdownMenuItem(value: 0, child: Text("Tidak ada")),
-                DropdownMenuItem(value: 5, child: Text("5 menit sebelum")),
-                DropdownMenuItem(value: 10, child: Text("10 menit sebelum")),
-                DropdownMenuItem(value: 30, child: Text("30 menit sebelum")),
-                DropdownMenuItem(value: 60, child: Text("1 jam sebelum")),
-              ],
-            ),
+            // DropdownButtonFormField<int>(
+            //   initialValue: _pengingatMenit,
+            //   decoration: const InputDecoration(labelText: "Pengingat"),
+            //   onChanged: (v) => setState(() => _pengingatMenit = v ?? 0),
+            //   items: const [
+            //     DropdownMenuItem(value: 0, child: Text("Tidak ada")),
+            //     DropdownMenuItem(value: 5, child: Text("5 menit sebelum")),
+            //     DropdownMenuItem(value: 10, child: Text("10 menit sebelum")),
+            //     DropdownMenuItem(value: 30, child: Text("30 menit sebelum")),
+            //     DropdownMenuItem(value: 60, child: Text("1 jam sebelum")),
+            //   ],
+            // ),
             const SizedBox(height: 10),
             TextFormField(
               controller: _catatanController,

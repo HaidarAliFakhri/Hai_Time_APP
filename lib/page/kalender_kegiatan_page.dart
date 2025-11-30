@@ -373,108 +373,107 @@ class _KalenderPageFirebaseState extends State<KalenderPageFirebase> {
               // Quick preview: hanya tampilkan ringkasan bila selectedDay ada
               if (_selectedDay != null && (_eventsCache[_normalize(_selectedDay!)]?.isNotEmpty ?? false))
                 Column(
-  crossAxisAlignment: CrossAxisAlignment.start,
-  children: [
-    const SizedBox(height: 8),
-    const Text("Ringkasan hari ini:", style: TextStyle(fontWeight: FontWeight.bold)),
-    const SizedBox(height: 6),
-    // daftar kegiatan (jika ada) untuk selected day
-    ...? _eventsCache[_normalize(_selectedDay!)]
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 8),
+                  const Text("Ringkasan hari ini:", style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  // daftar kegiatan (jika ada) untuk selected day
+                  ...? _eventsCache[_normalize(_selectedDay!)]
 
-?.where((k) => !_isKegiatanSelesaiModel(k))
-.map((k)  {
+              ?.where((k) => !_isKegiatanSelesaiModel(k))
+              .map((k)  {
 
-      final terlewat = _isKegiatanTerlewat(k);
+                    final terlewat = _isKegiatanTerlewat(k);
 
-      return Card(
-        color: terlewat ? const Color(0xFFFFEBEE) : Colors.white, // sedikit merah pucat kalau terlewat
-        child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          title: Text(
-            k.judul,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: terlewat ? Colors.red.shade700 : Colors.black,
-            ),
-          ),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                k.waktu,
-                style: TextStyle(
-                  color: terlewat ? Colors.red.shade700 : Colors.black54,
-                ),
-              ),
-              if (terlewat)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4.0),
-                  child: Row(
-                    children: const [
-                      Icon(Icons.error_outline, size: 14, color: Colors.red),
-                      SizedBox(width: 6),
-                      Text(
-                        "Kegiatan terlewat",
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
+                    return Card(
+                      color: terlewat ? const Color(0xFFFFEBEE) : Colors.white, // sedikit merah pucat kalau terlewat
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        title: Text(
+                          k.judul,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: terlewat ? Colors.red.shade700 : Colors.black,
+                          ),
                         ),
-                      ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              k.waktu,
+                              style: TextStyle(
+                                color: terlewat ? Colors.red.shade700 : Colors.black54,
+                              ),
+                            ),
+                            if (terlewat)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4.0),
+                                child: Row(
+                                  children: const [
+                                    Icon(Icons.error_outline, size: 14, color: Colors.red),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      "Kegiatan terlewat",
+                                      style: TextStyle(
+                                        color: Colors.red,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              ],
+                            ),
+                              trailing: terlewat
+                                  ? null
+                                  : const Icon(Icons.chevron_right, color: Colors.black45),
+                              onTap: () async {
+                      // buka halaman detail / edit. Halaman detail harus `Navigator.pop(context, 'done')`
+                      // ketika user menandai selesai — lihat penjelasan setelah kode.
+                      final result = await Navigator.push<String?>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => KegiatanPageFirebase(kegiatan: k),
+                        ),
+                      );
+
+                      // Jika halaman detail mengembalikan 'done' maka hapus item dari cache lokal (instan)
+                      if (result == 'done') {
+                      final key = _normalize(_selectedDay!);
+                      final String removedId = (k.docId ?? '').toString();
+
+                      setState(() {
+                        _eventsCache[key]?.removeWhere((e) {
+                          final ei = (e.docId ?? '').toString();
+                          return ei == removedId;
+                        });
+
+                        if (_eventsCache[key]?.isEmpty ?? false) {
+                          _eventsCache.remove(key);
+                        }
+                      });
+                    }
+
+                    else {
+                        // bisa kosong — biarkan stream meng-handle update jika ada perubahan di server
+                      }
+                    },
+                    ),
+                    );
+                    }).toList(),
+                   ],
+                    )
+
+                      else
+                        const SizedBox.shrink(),
                     ],
                   ),
-                ),
-            ],
-          ),
-          trailing: terlewat
-              ? null
-              : const Icon(Icons.chevron_right, color: Colors.black45),
-          onTap: () async {
-  // buka halaman detail / edit. Halaman detail harus `Navigator.pop(context, 'done')`
-  // ketika user menandai selesai — lihat penjelasan setelah kode.
-  final result = await Navigator.push<String?>(
-    context,
-    MaterialPageRoute(
-      builder: (_) => KegiatanPageFirebase(kegiatan: k),
-    ),
-  );
-
-  // Jika halaman detail mengembalikan 'done' maka hapus item dari cache lokal (instan)
-  if (result == 'done') {
-  final key = _normalize(_selectedDay!);
-  final String removedId = (k.docId ?? '').toString();
-
-  setState(() {
-    _eventsCache[key]?.removeWhere((e) {
-      final ei = (e.docId ?? '').toString();
-      return ei == removedId;
-    });
-
-    if (_eventsCache[key]?.isEmpty ?? false) {
-      _eventsCache.remove(key);
-    }
-  });
-}
-
-else {
-    // bisa kosong — biarkan stream meng-handle update jika ada perubahan di server
-  }
-},
-
-        ),
-      );
-    }).toList(),
-  ],
-)
-
-              else
-                const SizedBox.shrink(),
-            ],
-          ),
-        );
-      },
-    );
-  }
+                );
+              },
+            );
+          }
 
   @override
   Widget build(BuildContext context) {

@@ -24,8 +24,9 @@ class KalenderPageFirebase extends StatefulWidget {
 class _KalenderPageFirebaseState extends State<KalenderPageFirebase> {
   final KegiatanService _service = KegiatanService();
   final user = FirebaseAuth.instance.currentUser;
+  final ValueNotifier<DateTime?> _selectedDayNotifier = ValueNotifier<DateTime?>(null);
   DateTime _focusedDay = DateTime.now();
-  DateTime? _selectedDay;
+  
 
   // events cache sama seperti di HomePage untuk performa
   Map<DateTime, List<KegiatanFirebase>> _eventsCache = {};
@@ -227,7 +228,7 @@ class _KalenderPageFirebaseState extends State<KalenderPageFirebase> {
         return Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: const Color.fromARGB(255, 255, 255, 255),
+            color: Colors.white,
             borderRadius: BorderRadius.circular(16),
           ),
           child: const Center(
@@ -237,42 +238,41 @@ class _KalenderPageFirebaseState extends State<KalenderPageFirebase> {
       }
 
       if (!snapshot.hasData || snapshot.data!.isEmpty) {
-        // reset cache when no data
         _eventsCache = {};
         _eventsCacheKey = "";
-        return Container(
-          padding: const EdgeInsets.all(35),
-          decoration: BoxDecoration(
-            color: const Color.fromARGB(255, 49, 128, 247),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: const Text(
-            "Belum ada kegiatan.\nTambahkan kegiatanmu sekarang!",
-            style: TextStyle(color: Colors.white),
+        return Center(
+          child: Container(
+            padding: const EdgeInsets.all(35),
+            decoration: BoxDecoration(
+              color: Color.fromARGB(255, 49, 128, 247),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Text(
+              "Belum ada kegiatan.\nTambahkan kegiatanmu sekarang!",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         );
       }
 
       final kegiatanList = snapshot.data!;
-
-      // BUILD / REUSE CACHE
       _buildEventsCache(kegiatanList);
 
-      // hitung kegiatan aktif untuk header-count
-      final kegiatanAktif = kegiatanList.where((k) => !_isKegiatanSelesaiModel(k)).toList();
+      final kegiatanAktif =
+          kegiatanList.where((k) => !_isKegiatanSelesaiModel(k)).toList();
 
       return Container(
         padding: const EdgeInsets.all(12),
         margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
-          color: const Color.fromARGB(255, 255, 255, 255),
+          color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.blue.shade200),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -281,16 +281,13 @@ class _KalenderPageFirebaseState extends State<KalenderPageFirebase> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Color.fromARGB(255, 0, 0, 0),
+                    color: Colors.black,
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color.fromARGB(255, 52, 141, 243),
+                    color: Color.fromARGB(255, 52, 141, 243),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -306,191 +303,136 @@ class _KalenderPageFirebaseState extends State<KalenderPageFirebase> {
 
             const SizedBox(height: 12),
 
-            // Calendar with markers
-            TableCalendar<KegiatanFirebase>(
-              firstDay: DateTime.utc(2000, 1, 1),
-              lastDay: DateTime.utc(2100, 12, 31),
-              focusedDay: _focusedDay,
-              selectedDayPredicate: (day) =>
-                  _selectedDay != null && _normalize(day) == _normalize(_selectedDay!),
-              eventLoader: (day) {
-                return _eventsCache[_normalize(day)] ?? [];
+            // ⬇⬇⬇ GANTI TABLECALENDAR LAMA DENGAN CalendarBox BARU
+            CalendarBox(
+              events: _eventsCache,
+              initialFocusedDay: _focusedDay,
+              onDaySelected: (selected) {
+                _selectedDayNotifier.value = selected;
               },
-              calendarFormat: CalendarFormat.month,
-              onDaySelected: (selectedDay, focusedDay) {
-                // jika klik tanggal yang sama -> jangan setState (hindari rebuild)
-                if (_selectedDay != null && _normalize(selectedDay) == _normalize(_selectedDay!)) {
-                  _focusedDay = focusedDay;
-                  return;
-                }
-
-                // setState hanya ketika seleksi tanggal berubah
-                setState(() {
-                  _selectedDay = selectedDay;
-                  _focusedDay = focusedDay;
-                });
-              },
-              calendarStyle: const CalendarStyle(
-                markerDecoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                ),
-                markersMaxCount: 1,
-              ),
-              headerStyle: const HeaderStyle(
-                formatButtonVisible: false,
-                titleCentered: true,
-              ),
-              calendarBuilders: CalendarBuilders(
-                markerBuilder: (context, date, events) {
-                  final dayEvents = _eventsCache[_normalize(date)];
-                  if (dayEvents == null || dayEvents.isEmpty) return const SizedBox.shrink();
-
-                  return Positioned(
-                    bottom: 6,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: const Color.fromARGB(255, 12, 0, 180),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  );
-                },
-              ),
             ),
 
             const SizedBox(height: 8),
 
-            // Jika ada events pada selected day -> tampilkan satu card per kegiatan (gabungkan saran di dalamnya)
-            if (_selectedDay != null && (_eventsCache[_normalize(_selectedDay!)]?.isNotEmpty ?? false))
-              _buildCard(
-                child: Builder(builder: (context) {
-                  final key = _normalize(_selectedDay!);
-                  final dayEvents = List<KegiatanFirebase>.from(_eventsCache[key] ?? <KegiatanFirebase>[]);
-                  final activeEvents = dayEvents.where((k) => !_isKegiatanSelesaiModel(k)).toList();
+            // ⬇⬇⬇ Ringkasan kegiatan TANPA MERUBAH KALENDER
+            ValueListenableBuilder<DateTime?>(
+              valueListenable: _selectedDayNotifier,
+              builder: (context, selectedDay, _) {
+                if (selectedDay == null) return const SizedBox.shrink();
 
-                  // jika tidak ada event aktif
-                  if (activeEvents.isEmpty) {
-                    return const SizedBox.shrink();
-                  }
+                final key = _normalize(selectedDay);
+                final events = _eventsCache[key] ?? [];
+                final active = events.where((k) => !_isKegiatanSelesaiModel(k)).toList();
 
-                  // tampilkan satu card per kegiatan, masing-masing card berisi judul, waktu, lokasi, saran
-                  return Column(
+                if (active.isEmpty) return const SizedBox.shrink();
+
+                return _buildCard(
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 8),
-                      const Text("Ringkasan hari ini:", style: TextStyle(fontWeight: FontWeight.bold)),
+                      const Text(
+                        "Ringkasan hari ini:",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                       const SizedBox(height: 8),
-                      // Gantikan bagian mapping activeEvents.map(...) dengan kode ini:
-                      Column(
-                        children: activeEvents.map((k) {
-                          final terlewat = _isKegiatanTerlewat(k);
-                          return Padding(
-                        padding: const EdgeInsets.only(bottom: 10.0),
-                        child: Material(
-                          color: const Color.fromARGB(169, 147, 224, 255),
-                          borderRadius: BorderRadius.circular(12),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(12),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => KegiatanPageFirebase(kegiatan: k),
-                                ),
-                              );
-                            },
 
-                            // CHILD HARUS PALING BAWAH
-                            child: Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                              decoration: BoxDecoration(
+                      Column(
+                        children: active.map((k) {
+                          final terlewat = _isKegiatanTerlewat(k);
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: Material(
+                              color: const Color.fromARGB(169, 147, 224, 255),
+                              borderRadius: BorderRadius.circular(12),
+                              child: InkWell(
                                 borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Judul + status
-                                  Row(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => KegiatanPageFirebase(kegiatan: k),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Expanded(
-                                        child: Text(
-                                          k.judul,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w700,
-                                            fontSize: 16,
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              k.judul,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 16,
+                                              ),
+                                            ),
+                                          ),
+                                          if (terlewat)
+                                            const Icon(Icons.schedule,
+                                                color: Colors.red, size: 18),
+                                        ],
+                                      ),
+
+                                      const SizedBox(height: 6),
+
+                                      Row(
+                                        children: [
+                                          const Icon(Icons.access_time,
+                                              size: 14, color: Colors.blueGrey),
+                                          const SizedBox(width: 6),
+                                          Text(k.waktu),
+                                          const SizedBox(width: 12),
+                                          const Icon(Icons.location_on,
+                                              size: 14, color: Colors.blueGrey),
+                                          const SizedBox(width: 6),
+                                          Expanded(
+                                            child: Text(
+                                              k.lokasi,
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+
+                                      const SizedBox(height: 8),
+
+                                      if (k.saranBerangkat != null &&
+                                          k.saranBerangkat!.trim().isNotEmpty)
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFFFF3E0),
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(
+                                                color: Colors.orange.shade100),
+                                          ),
+                                          child: Text(
+                                            k.saranBerangkat!,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.orange,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                      if (terlewat)
-                                        const Icon(Icons.schedule, color: Colors.red, size: 18),
                                     ],
                                   ),
-                                  const SizedBox(height: 6),
-
-                                  // Jam + lokasi
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.access_time,
-                                          size: 14, color: Colors.blueGrey),
-                                      const SizedBox(width: 6),
-                                      Text(k.waktu, style: const TextStyle(fontSize: 13)),
-                                      const SizedBox(width: 12),
-                                      const Icon(Icons.location_on,
-                                          size: 14, color: Colors.blueGrey),
-                                      const SizedBox(width: 6),
-                                      Expanded(
-                                        child: Text(
-                                          k.lokasi,
-                                          style: const TextStyle(fontSize: 13),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                  const SizedBox(height: 8),
-
-                                  // saran keberangkatan
-                                  if (k.saranBerangkat != null &&
-                                      k.saranBerangkat!.trim().isNotEmpty)
-                                    Container(
-                                      width: double.infinity,
-                                      padding:
-                                          const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFFFF3E0),
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(color: Colors.orange.shade100),
-                                      ),
-                                      child: Text(
-                                        k.saranBerangkat!,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.orange,
-                                        ),
-                                      ),
-                                    ),
-                                ],
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                      );
-
-                      }).toList(),
-                    ),
-
+                          );
+                        }).toList(),
+                      ),
                     ],
-                  );
-                }),
-              )
-            else
-              const SizedBox.shrink(),
+                  ),
+                );
+              },
+            ),
           ],
         ),
       );
@@ -499,18 +441,40 @@ class _KalenderPageFirebaseState extends State<KalenderPageFirebase> {
 }
 
 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Kalender & Cuaca"),
-        // leading: IconButton(
-        //   icon: const Icon(Icons.arrow_back, color: Colors.white),
-        //               onPressed: () {
-        //                 Navigator.pop(context); // kembali ke HomePageFirebase
-        //   },
-        // ),
+  centerTitle: true,
+  elevation: 0,
+  backgroundColor: Colors.transparent,
+  // bentuk lengkung di bagian bawah
+  shape: const RoundedRectangleBorder(
+    borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+  ),
+  // gradient dibungkus ClipRRect agar radius terlihat
+  flexibleSpace: ClipRRect(
+    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
+    child: Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF2196F3), Color(0xFF64B5F6)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
+    ),
+  ),
+  title: const Text(
+  "Kalender & Cuaca",
+  style: TextStyle(
+    color: Colors.white,          // ⬅ warna tulisan jadi putih
+    fontWeight: FontWeight.w600,
+  ),
+),
+),
+
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -532,6 +496,84 @@ class _KalenderPageFirebaseState extends State<KalenderPageFirebase> {
           }
         },
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+class CalendarBox extends StatefulWidget {
+  final Map<DateTime, List<KegiatanFirebase>> events;
+  final DateTime initialFocusedDay;
+  final void Function(DateTime selectedDay) onDaySelected;
+
+  const CalendarBox({
+    Key? key,
+    required this.events,
+    required this.initialFocusedDay,
+    required this.onDaySelected,
+  }) : super(key: key);
+
+  @override
+  State<CalendarBox> createState() => _CalendarBoxState();
+}
+
+class _CalendarBoxState extends State<CalendarBox> {
+  late DateTime _focusedDay;
+  DateTime? _selectedDay;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusedDay = widget.initialFocusedDay;
+  }
+
+  @override
+  void didUpdateWidget(covariant CalendarBox oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // jika events berubah, jangan reset selectedDay — biarkan tetap dipilih di internal calendar
+    // tetapi jika focusedDay di parent berubah, update fokus
+    _focusedDay = widget.initialFocusedDay;
+  }
+
+  DateTime _normalize(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  @override
+  Widget build(BuildContext context) {
+    return TableCalendar<KegiatanFirebase>(
+      locale: 'id_ID',
+      firstDay: DateTime.utc(2000, 1, 1),
+      lastDay: DateTime.utc(2100, 12, 31),
+      focusedDay: _focusedDay,
+      selectedDayPredicate: (day) => _selectedDay != null && _normalize(day) == _normalize(_selectedDay!),
+      eventLoader: (day) => widget.events[_normalize(day)] ?? [],
+      calendarFormat: CalendarFormat.month,
+      onDaySelected: (selectedDay, focusedDay) {
+        setState(() {
+          _selectedDay = selectedDay;
+          _focusedDay = focusedDay;
+        });
+        widget.onDaySelected(selectedDay); // notify parent (ringkasan)
+      },
+      calendarStyle: const CalendarStyle(
+        markerDecoration: BoxDecoration(shape: BoxShape.circle),
+        markersMaxCount: 1,
+      ),
+      headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
+      calendarBuilders: CalendarBuilders(
+        markerBuilder: (context, date, events) {
+          final dayEvents = widget.events[_normalize(date)];
+          if (dayEvents == null || dayEvents.isEmpty) return const SizedBox.shrink();
+          return Positioned(
+            bottom: 6,
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: const Color.fromARGB(255, 12, 0, 180),
+                shape: BoxShape.circle,
+              ),
+            ),
+          );
+        },
       ),
     );
   }

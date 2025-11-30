@@ -10,7 +10,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:hai_time_app/screen/profile_firebase.dart';
 import 'package:hai_time_app/screen/setting_firebase.dart';
 import 'package:hai_time_app/services/weather_service.dart';
-import 'package:hai_time_app/view/prayer_schedule_page.dart';
 import 'package:hai_time_app/view/weather_page.dart';
 import 'package:hai_time_app/widget/sky_animation.dart';
 import 'package:intl/intl.dart';
@@ -23,8 +22,9 @@ enum SkyTime { subuh, dzuhur, ashar, maghrib, isya }
 class HomePageFirebase extends StatefulWidget {
   final Function(Locale)? onLocaleChanged;
   final VoidCallback? onGoToWeather;
+  final VoidCallback? onGoToJadwal;
 
-  const HomePageFirebase({super.key, this.onLocaleChanged, this.onGoToWeather});
+  const HomePageFirebase({super.key, this.onLocaleChanged, this.onGoToWeather,this.onGoToJadwal,});
 
   @override
   State<HomePageFirebase> createState() => _HomePageFirebaseState();
@@ -825,70 +825,69 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
 
   //  CARD JADWAL SHOLAT
   Widget _buildPrayerCard() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      child: Stack(
-        children: [
-          //  Background animasi langit
-          ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: SizedBox(
-              height: 280,
-              width: double.infinity,
-              child: SkyAnimation(
-                time: getSkyTime(),
-              ), // tidak diubah dari sebelumnya
+  return Container(
+    margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+    child: Stack(
+      children: [
+        // Background animasi langit (tinggi tetap 280)
+        ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: SizedBox(
+            height: 280,
+            width: double.infinity,
+            child: SkyAnimation(
+              time: getSkyTime(),
             ),
           ),
+        ),
 
-          //  Overlay gelap agar teks bisa dibaca
-          ClipRRect(
+        // Overlay gelap (gunakan Positioned.fill supaya persis menutupi background)
+        Positioned.fill(
+          child: ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: Container(
-              height: 270,
-              width: double.infinity,
               color: const Color.fromARGB(255, 255, 255, 255).withOpacity(0.25),
             ),
           ),
-          //  Konten card (anti overflow)
-          Positioned.fill(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+        ),
+
+        // Konten card (jangan overflow — allow scroll jika perlu)
+        Positioned.fill(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: SingleChildScrollView(
+              // hanya scroll kalau diperlukan
+              physics: const BouncingScrollPhysics(),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min, // biar tidak memaksa mengisi ruang tak perlu
                 children: [
                   // TITLE + LIHAT SEMUA
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        "Jadwal Sholat Hari Ini",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                      const Expanded(
+                        child: Text(
+                          "Jadwal Sholat Hari Ini",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
 
-                      //  FIX OVERFLOW → wrap dengan Flexible
-                      Flexible(
-                        child: TextButton(
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.white,
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const JadwalPage(),
-                              ),
-                            );
-                          },
-                          child: const Text(
-                            "Lihat semua",
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                      // wrap button agar responsif
+                      TextButton(
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(48, 32),
                         ),
+                        onPressed: () {
+                          widget.onGoToJadwal?.call();
+                        },
+                        child: const Text("Lihat semua"),
                       ),
                     ],
                   ),
@@ -936,10 +935,12 @@ class _HomePageFirebaseState extends State<HomePageFirebase>
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
+
 }
 
 //  REUSABLE PRAYER ROW

@@ -512,15 +512,15 @@ class _JadwalPageState extends State<JadwalPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Align(
-                    alignment: Alignment.topLeft,
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                    ),
-                  ),
+                  // Align(
+                  //   alignment: Alignment.topLeft,
+                  //   child: IconButton(
+                  //     icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  //     onPressed: () {
+                  //       Navigator.pop(context);
+                  //     },
+                  //   ),
+                  // ),
                   const SizedBox(height: 10),
                   const Icon(
                     Ionicons.moon_outline,

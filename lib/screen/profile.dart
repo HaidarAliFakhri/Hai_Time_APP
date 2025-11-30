@@ -7,7 +7,6 @@ import 'package:hai_time_app/page/bottom_navigator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geocoding/geocoding.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:ui';
 import '../db/db_activity.dart';
 

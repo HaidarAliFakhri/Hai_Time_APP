@@ -1,3 +1,5 @@
+// lib/page/cuaca_page.dart
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -14,7 +16,7 @@ class CuacaPage extends StatefulWidget {
 }
 
 class _CuacaPageState extends State<CuacaPage>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   Map<String, dynamic>? _weatherData;
   List<dynamic>? _forecastData;
   bool _loading = false;
@@ -22,25 +24,46 @@ class _CuacaPageState extends State<CuacaPage>
   final String _apiKey = '757e4c25a793b77a4fc31b2e5bf9959c';
 
   late AnimationController _animController;
+  Timer? _autoRefreshTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _animController =
         AnimationController(vsync: this, duration: const Duration(seconds: 5))
           ..repeat();
+    // initial fetch
     fetchWeather();
+
+    // optional auto-refresh every 10 minutes
+    _autoRefreshTimer = Timer.periodic(const Duration(minutes: 10), (_) {
+      if (mounted) fetchWeather();
+    });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _autoRefreshTimer?.cancel();
     _animController.dispose();
     super.dispose();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // refresh when app returns to foreground
+      fetchWeather();
+    }
+  }
+
   Future<void> fetchWeather() async {
+    if (!mounted) return;
     setState(() => _loading = true);
+
     try {
+      // check location permission
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
@@ -48,10 +71,17 @@ class _CuacaPageState extends State<CuacaPage>
 
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
+        // permission denied - bail out gracefully
+        if (mounted) {
+          setState(() {
+            _weatherData = null;
+            _forecastData = null;
+          });
+        }
         throw Exception('Izin lokasi ditolak.');
       }
 
-      Position position = await Geolocator.getCurrentPosition(
+      final Position position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high);
 
       final currentUrl =
@@ -63,15 +93,29 @@ class _CuacaPageState extends State<CuacaPage>
       final forecastRes = await http.get(Uri.parse(forecastUrl));
 
       if (currentRes.statusCode == 200 && forecastRes.statusCode == 200) {
+        final currentJson = jsonDecode(currentRes.body) as Map<String, dynamic>;
+        final forecastJson = jsonDecode(forecastRes.body) as Map<String, dynamic>;
+        if (!mounted) return;
         setState(() {
-          _weatherData = jsonDecode(currentRes.body);
-          _forecastData = jsonDecode(forecastRes.body)['list'];
+          _weatherData = currentJson;
+          _forecastData = (forecastJson['list'] as List<dynamic>?) ?? [];
+        });
+      } else {
+        // non-200 response: clear data so UI shows retry
+        if (!mounted) return;
+        setState(() {
+          _weatherData = null;
+          _forecastData = null;
         });
       }
-    } catch (e) {
-      debugPrint('Error: $e');
+    } catch (e, st) {
+      debugPrint('fetchWeather error: $e\n$st');
+      if (mounted) {
+        // keep previous data if any, but if none, leave null
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
-    setState(() => _loading = false);
   }
 
   List<Color> _getBackgroundGradient() {
@@ -79,7 +123,7 @@ class _CuacaPageState extends State<CuacaPage>
       return [Colors.blueAccent, Colors.indigo];
     }
 
-    String main = _weatherData!['weather'][0]['main'].toLowerCase();
+    String main = (_weatherData!['weather']?[0]?['main'] ?? '').toString().toLowerCase();
 
     if (main.contains('rain')) {
       return [Colors.indigo.shade600, Colors.indigo.shade900];
@@ -103,7 +147,7 @@ class _CuacaPageState extends State<CuacaPage>
     return Scaffold(
       body: Stack(
         children: [
-          //  Background
+          // Background gradient
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -114,15 +158,15 @@ class _CuacaPageState extends State<CuacaPage>
             ),
           ),
 
-          //  Animasi Cuaca
+          // Animated weather overlay (only when we have condition)
           if (_weatherData != null)
             AnimatedWeatherEffect(
               mainCondition:
-                  _weatherData!['weather'][0]['main'].toString().toLowerCase(),
+                  _weatherData!['weather']?[0]?['main']?.toString().toLowerCase() ?? '',
               controller: _animController,
             ),
 
-          //  Konten Cuaca
+          // Content
           _loading
               ? const Center(child: CircularProgressIndicator(color: Colors.white))
               : _weatherData == null
@@ -143,62 +187,50 @@ class _CuacaPageState extends State<CuacaPage>
   }
 
   Widget _buildWeatherContent() {
+    // safe-guard: require _weatherData not null here
+    final weather = _weatherData!;
     return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 40),
-        child: Column(
-          children: [
-            const SizedBox(height: 16),
-            
-            Align(
-            alignment: Alignment.topLeft,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () {
-                widget.onBackToHome?.call(); // kembali ke tab Home
-              },
-            ),
-            ),
-            Text(
-              "${_weatherData!['name']}, ${_weatherData!['sys']['country']}",
-              style: const TextStyle(color: Colors.white70, fontSize: 14),
-            ),
-            const SizedBox(height: 6),
-            Icon(_getWeatherIcon(), color: Colors.yellowAccent, size: 70),
-            Text(
-              "${_weatherData!['main']['temp'].round()}°C",
-              style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.bold, fontSize: 40),
-            ),
-            Text(
-              _weatherData!['weather'][0]['description']
-                  .toString()
-                  .toUpperCase(),
-              style: const TextStyle(color: Colors.white70, fontSize: 16),
-            ),
-            Text(
-              "Terasa seperti ${_weatherData!['main']['feels_like'].round()}°C",
-              style: const TextStyle(color: Colors.white70, fontSize: 13),
-            ),
-            const SizedBox(height: 20),
-
-            //  Detail info
-            _buildWeatherDetailCard(),
-            const SizedBox(height: 20),
-
-            //  Prakiraan 12 Jam ke Depan
-            if (_forecastData != null) _buildHourlyForecast(),
-
-            //  Prakiraan 5 Hari ke Depan
-            if (_forecastData != null) _buildDailyForecast(),
-          ],
+      child: RefreshIndicator(
+        onRefresh: fetchWeather,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.only(bottom: 40),
+          child: Column(
+            children: [
+              const SizedBox(height: 16),
+              Text(
+                "${weather['name'] ?? '-'}, ${weather['sys']?['country'] ?? '-'}",
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+              const SizedBox(height: 6),
+              Icon(_getWeatherIcon(), color: Colors.yellowAccent, size: 70),
+              Text(
+                "${(weather['main']?['temp'] ?? 0).round()}°C",
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold, fontSize: 40),
+              ),
+              Text(
+                weather['weather']?[0]?['description']?.toString().toUpperCase() ?? '',
+                style: const TextStyle(color: Colors.white70, fontSize: 16),
+              ),
+              Text(
+                "Terasa seperti ${(weather['main']?['feels_like'] ?? 0).round()}°C",
+                style: const TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+              const SizedBox(height: 20),
+              _buildWeatherDetailCard(),
+              const SizedBox(height: 20),
+              if (_forecastData != null) _buildHourlyForecast(),
+              if (_forecastData != null) _buildDailyForecast(),
+            ],
+          ),
         ),
       ),
     );
   }
 
   IconData _getWeatherIcon() {
-    String main = _weatherData!['weather'][0]['main'].toLowerCase();
+    final main = (_weatherData?['weather']?[0]?['main'] ?? '').toString().toLowerCase();
     if (main.contains('cloud')) return Ionicons.cloud_outline;
     if (main.contains('rain')) return Ionicons.rainy_outline;
     if (main.contains('thunder')) return Ionicons.thunderstorm_outline;
@@ -208,6 +240,14 @@ class _CuacaPageState extends State<CuacaPage>
   }
 
   Widget _buildWeatherDetailCard() {
+    final humidity = _weatherData?['main']?['humidity'] ?? '-';
+    final wind = _weatherData?['wind']?['speed'] ?? '-';
+    final visibilityRaw = _weatherData?['visibility'];
+    final visibility = (visibilityRaw != null && visibilityRaw is num)
+        ? (visibilityRaw / 1000).toStringAsFixed(1)
+        : '-';
+    final pressure = _weatherData?['main']?['pressure'] ?? '-';
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(16),
@@ -225,23 +265,22 @@ class _CuacaPageState extends State<CuacaPage>
           _WeatherInfo(
             icon: Ionicons.water_outline,
             label: "Kelembapan",
-            value: "${_weatherData!['main']['humidity']}%",
+            value: "$humidity%",
           ),
           _WeatherInfo(
             icon: Ionicons.leaf_outline,
             label: "Angin",
-            value: "${_weatherData!['wind']['speed']} m/s",
+            value: "$wind m/s",
           ),
           _WeatherInfo(
             icon: Ionicons.eye_outline,
             label: "Jarak Pandang",
-            value:
-                "${(_weatherData!['visibility'] / 1000).toStringAsFixed(1)} km",
+            value: "$visibility km",
           ),
           _WeatherInfo(
             icon: Ionicons.speedometer_outline,
             label: "Tekanan",
-            value: "${_weatherData!['main']['pressure']} hPa",
+            value: "$pressure hPa",
           ),
         ],
       ),
@@ -249,7 +288,7 @@ class _CuacaPageState extends State<CuacaPage>
   }
 
   Widget _buildHourlyForecast() {
-    final next12Hours = _forecastData!.take(12).toList();
+    final next12Hours = (_forecastData ?? []).take(12).toList();
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Column(
@@ -265,8 +304,9 @@ class _CuacaPageState extends State<CuacaPage>
               itemCount: next12Hours.length,
               itemBuilder: (context, i) {
                 final item = next12Hours[i];
-                final dt = DateTime.fromMillisecondsSinceEpoch(item['dt'] * 1000);
-                final icon = item['weather'][0]['icon'];
+                final dt = DateTime.fromMillisecondsSinceEpoch((item['dt'] as int) * 1000);
+                final icon = item['weather']?[0]?['icon'] ?? '01d';
+                final temp = (item['main']?['temp'] ?? 0).round();
                 return Container(
                   margin: const EdgeInsets.only(right: 12),
                   width: 75,
@@ -276,13 +316,9 @@ class _CuacaPageState extends State<CuacaPage>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text("${dt.hour}:00",
-                          style: const TextStyle(fontWeight: FontWeight.bold)),
-                      Image.network(
-                        "https://openweathermap.org/img/wn/$icon.png",
-                        width: 40,
-                      ),
-                      Text("${item['main']['temp'].round()}°C"),
+                      Text("${dt.hour}:00", style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Image.network("https://openweathermap.org/img/wn/$icon.png", width: 40),
+                      Text("$temp°C"),
                     ],
                   ),
                 );
@@ -295,9 +331,9 @@ class _CuacaPageState extends State<CuacaPage>
   }
 
   Widget _buildDailyForecast() {
-    // Kelompokkan per tanggal (ambil jam 12:00)
-    final days = _forecastData!
-        .where((item) => item['dt_txt'].toString().contains("12:00:00"))
+    final safeForecast = _forecastData ?? [];
+    final days = safeForecast
+        .where((item) => (item['dt_txt']?.toString() ?? '').contains("12:00:00"))
         .take(10)
         .toList();
 
@@ -311,10 +347,10 @@ class _CuacaPageState extends State<CuacaPage>
           const SizedBox(height: 10),
           Column(
             children: days.map((item) {
-              final dt = DateTime.fromMillisecondsSinceEpoch(item['dt'] * 1000);
-              final desc = item['weather'][0]['description'];
-              final icon = item['weather'][0]['icon'];
-              final temp = item['main']['temp'].round();
+              final dt = DateTime.fromMillisecondsSinceEpoch((item['dt'] as int) * 1000);
+              final desc = item['weather']?[0]?['description'] ?? '';
+              final icon = item['weather']?[0]?['icon'] ?? '01d';
+              final temp = (item['main']?['temp'] ?? 0).round();
               return Container(
                 margin: const EdgeInsets.only(bottom: 10),
                 padding: const EdgeInsets.all(12),
@@ -327,26 +363,19 @@ class _CuacaPageState extends State<CuacaPage>
                   children: [
                     Row(
                       children: [
-                        Image.network("https://openweathermap.org/img/wn/$icon.png",
-                            width: 40),
+                        Image.network("https://openweathermap.org/img/wn/$icon.png", width: 40),
                         const SizedBox(width: 10),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              "${_dayName(dt.weekday)}, ${dt.day} ${_monthName(dt.month)}",
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            Text(desc,
-                                style: const TextStyle(
-                                    color: Colors.grey, fontSize: 13)),
+                            Text("${_dayName(dt.weekday)}, ${dt.day} ${_monthName(dt.month)}",
+                                style: const TextStyle(fontWeight: FontWeight.bold)),
+                            Text(desc, style: const TextStyle(color: Colors.grey, fontSize: 13)),
                           ],
                         )
                       ],
                     ),
-                    Text("$temp°C",
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text("$temp°C", style: const TextStyle(fontWeight: FontWeight.bold)),
                   ],
                 ),
               );
@@ -382,13 +411,12 @@ class _CuacaPageState extends State<CuacaPage>
 }
 
 // ─────────────────────────────
-///  Widget Info Cuaca
+/// Widget Info Cuaca
 class _WeatherInfo extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-  const _WeatherInfo(
-      {required this.icon, required this.label, required this.value});
+  const _WeatherInfo({required this.icon, required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -405,9 +433,7 @@ class _WeatherInfo extends StatelessWidget {
           const SizedBox(height: 6),
           Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
           const SizedBox(height: 4),
-          Text(value,
-              style:
-                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
         ],
       ),
     );
@@ -415,12 +441,11 @@ class _WeatherInfo extends StatelessWidget {
 }
 
 // ─────────────────────────────
-///  Animasi Cuaca Otomatis
+/// Animasi Cuaca Otomatis
 class AnimatedWeatherEffect extends StatelessWidget {
   final String mainCondition;
   final AnimationController controller;
-  const AnimatedWeatherEffect(
-      {super.key, required this.mainCondition, required this.controller});
+  const AnimatedWeatherEffect({super.key, required this.mainCondition, required this.controller});
 
   @override
   Widget build(BuildContext context) {
@@ -439,7 +464,7 @@ class AnimatedWeatherEffect extends StatelessWidget {
   }
 }
 
-//  Hujan
+// Hujan
 class RainAnimation extends StatelessWidget {
   final AnimationController controller;
   const RainAnimation({super.key, required this.controller});
@@ -464,13 +489,10 @@ class _RainPainter extends CustomPainter {
   _RainPainter(this.random, this.progress);
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withOpacity(0.4)
-      ..strokeWidth = 2;
+    final paint = Paint()..color = Colors.white.withOpacity(0.4)..strokeWidth = 2;
     for (int i = 0; i < 90; i++) {
       double x = random.nextDouble() * size.width;
-      double y =
-          (random.nextDouble() * size.height + progress * size.height) % size.height;
+      double y = (random.nextDouble() * size.height + progress * size.height) % size.height;
       canvas.drawLine(Offset(x, y), Offset(x, y + 10), paint);
     }
   }
@@ -478,12 +500,14 @@ class _RainPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _RainPainter oldDelegate) => true;
 }
-//  Awan
+
+// Awan
 class CloudAnimation extends StatelessWidget {
   final AnimationController controller;
   const CloudAnimation({super.key, required this.controller});
   @override
   Widget build(BuildContext context) {
+    // Return a positioned widget that expects to be placed inside a Stack
     return AnimatedBuilder(
       animation: controller,
       builder: (_, __) {
@@ -497,7 +521,7 @@ class CloudAnimation extends StatelessWidget {
   }
 }
 
-//  Petir
+// Petir
 class ThunderAnimation extends StatelessWidget {
   final AnimationController controller;
   const ThunderAnimation({super.key, required this.controller});
@@ -507,9 +531,7 @@ class ThunderAnimation extends StatelessWidget {
       animation: controller,
       builder: (_, __) {
         bool flash = controller.value > 0.9;
-        return Container(
-          color: flash ? Colors.white.withOpacity(0.5) : Colors.transparent,
-        );
+        return Container(color: flash ? Colors.white.withOpacity(0.5) : Colors.transparent);
       },
     );
   }
@@ -543,8 +565,7 @@ class _SnowPainter extends CustomPainter {
     final paint = Paint()..color = Colors.white.withOpacity(0.9);
     for (int i = 0; i < 50; i++) {
       double x = random.nextDouble() * size.width;
-      double y =
-          (random.nextDouble() * size.height + progress * size.height) % size.height;
+      double y = (random.nextDouble() * size.height + progress * size.height) % size.height;
       canvas.drawCircle(Offset(x, y), 3, paint);
     }
   }
@@ -553,7 +574,7 @@ class _SnowPainter extends CustomPainter {
   bool shouldRepaint(covariant _SnowPainter oldDelegate) => true;
 }
 
-//  Cerah
+// Cerah
 class SunAnimation extends StatelessWidget {
   final AnimationController controller;
   const SunAnimation({super.key, required this.controller});

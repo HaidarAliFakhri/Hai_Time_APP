@@ -58,7 +58,7 @@ class _LoginPageFireBaseState extends State<LoginPageFireBase> {
 
       if (user == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Email atau password salah")),
+          const SnackBar(content: Text("Email atau Kata Sandi salah")),
         );
         return;
       }
@@ -150,7 +150,7 @@ class _LoginPageFireBaseState extends State<LoginPageFireBase> {
                       controller: passwordController,
                       obscureText: _isHidden,
                       decoration: InputDecoration(
-                        hintText: "Password",
+                        hintText: "Kata Sandi",
                         filled: true,
                         fillColor: Colors.white.withOpacity(0.85),
                         prefixIcon: const Icon(Icons.lock),
@@ -191,7 +191,7 @@ class _LoginPageFireBaseState extends State<LoginPageFireBase> {
                             );
                           },
                           child: const Text(
-                            "Lupa Password",
+                            "Lupa Kata Sandi",
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,

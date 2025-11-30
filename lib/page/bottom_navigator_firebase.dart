@@ -23,7 +23,10 @@ class _BottomNavigatorFirebaseState extends State<BottomNavigatorFirebase> {
     super.initState();
     _pages = [
       //  HomePage kirim callback ke Cuaca
-      HomePageFirebase(onGoToWeather: () => _onItemTapped(2)),
+      HomePageFirebase(
+    onGoToWeather: () => _onItemTapped(2),
+    onGoToJadwal: () => _onItemTapped(1), // ⬅ Tambahan
+  ),
       //  JadwalPage
       JadwalPage(onBackToHome: () => _onItemTapped(0)),
       //  CuacaPage

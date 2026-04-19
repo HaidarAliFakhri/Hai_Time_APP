@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:hai_time_app/page/home_page_firebase.dart';
 import 'package:hai_time_app/page/kalender_kegiatan_page.dart';
-import 'package:hai_time_app/view/prayer_schedule_page.dart';
+//import 'package:hai_time_app/view/prayer_schedule_page.dart';
 import 'package:hai_time_app/view/weather_page.dart';
+import 'package:hai_time_app/view/ecommerce_page.dart';
 
 class BottomNavigatorFirebase extends StatefulWidget {
   //
@@ -25,14 +26,15 @@ class _BottomNavigatorFirebaseState extends State<BottomNavigatorFirebase> {
       //  HomePage kirim callback ke Cuaca
       HomePageFirebase(
     onGoToWeather: () => _onItemTapped(2),
-    onGoToJadwal: () => _onItemTapped(1), // ⬅ Tambahan
+    // onGoToJadwal: () => _onItemTapped(1), // ⬅ Tambahan
   ),
       //  JadwalPage
-      JadwalPage(onBackToHome: () => _onItemTapped(0)),
+      //JadwalPage(onBackToHome: () => _onItemTapped(0)),
       //  CuacaPage
       CuacaPage(onBackToHome: () => _onItemTapped(0)),
       //kegiatanpage
       KalenderPageFirebase(onBackToHome: () => _onItemTapped(0)),
+      EcomercePage(onBackToHome: () => _onItemTapped(0)),
     ];
   }
 
@@ -60,11 +62,11 @@ class _BottomNavigatorFirebaseState extends State<BottomNavigatorFirebase> {
             activeIcon: Icon(Icons.home),
             label: "Beranda",
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.schedule_outlined),
-            activeIcon: Icon(Icons.schedule),
-            label: "Jadwal",
-          ),
+          // BottomNavigationBarItem(
+          //   icon: Icon(Icons.schedule_outlined),
+          //   activeIcon: Icon(Icons.schedule),
+          //   label: "Jadwal",
+          // ),
           BottomNavigationBarItem(
             icon: Icon(Icons.cloud_outlined),
             activeIcon: Icon(Icons.cloud),
@@ -74,6 +76,11 @@ class _BottomNavigatorFirebaseState extends State<BottomNavigatorFirebase> {
             icon: Icon(Icons.notes_outlined),
             activeIcon: Icon(Icons.note),
             label: "Kegiatan",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.shopping_cart_outlined),
+            activeIcon: Icon(Icons.shopping_cart),
+            label: "E-commerce",
           ),
         ],
       ),
